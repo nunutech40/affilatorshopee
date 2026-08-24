@@ -8,6 +8,7 @@ Web app pribadi untuk menyimpan produk curated affiliate Shopee, merapikan data 
 - [PRD](PRD.md)
 - [TRD](TRD.md)
 - [TODO](TODO.md)
+- [AI Coder Guide](AI-CODER-GUIDE.md)
 
 ## Inti Produk
 

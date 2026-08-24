@@ -11,6 +11,7 @@ Dokumen sumber:
 - `PRD.md` - kebutuhan produk dan scope MVP
 - `TRD.md` - arsitektur teknis, API, database schema, dan testing
 - `Owner-Requirement.md` - konteks dan keputusan produk
+- `AI-CODER-GUIDE.md` - guardrail coding assistant dan review Luna
 
 ---
 
@@ -160,3 +161,5 @@ Dokumen sumber:
 - User tetap meng-upload media dan menekan Post secara manual di X.
 - API key OpenRouter hanya berada di backend.
 - Setiap phase besar sebaiknya dibuat dalam commit terpisah.
+- DeepSeek Flash boleh mengerjakan implementasi sesuai `AI-CODER-GUIDE.md`; Luna melakukan review akhir sebelum merge atau push.
+- Jangan mengubah `OPENROUTER_MODEL` hanya karena coding model diganti.

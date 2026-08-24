@@ -8,6 +8,7 @@ Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan A
 - [TRD](TRD.md) - arsitektur teknis dan kontrak API
 - [TODO](TODO.md) - tahapan implementasi
 - [Owner Requirement](Owner-Requirement.md) - konteks dan keputusan produk
+- [AI Coder Guide](AI-CODER-GUIDE.md) - workflow DeepSeek Flash dan review Luna
 
 ## Alur MVP
 

@@ -30,9 +30,9 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Caption template dan variasi
 - Hashtag selector
 - Share ke X via Web Intent dan clipboard
-- Riwayat posting sederhana tanpa pencatatan akun
+- Riwayat posting sederhana tanpa menyimpan identitas akun X
 
-Threads, Chrome Extension, media storage, dan manajemen multi-akun adalah roadmap lanjutan.
+Threads, Chrome Extension, dan media storage adalah roadmap lanjutan.
 
 ## Tech Stack
 

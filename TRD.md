@@ -19,7 +19,7 @@ status: aligned-with-prd
 | AI | OpenRouter |
 | Deployment | Docker Compose di Orbstack |
 
-MVP hanya mencakup web app pribadi dan alur posting manual ke X. Tidak ada autentikasi, manajemen akun sosial, media storage backend, Threads, atau Chrome Extension pada MVP.
+MVP hanya mencakup web app pribadi dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Tidak ada autentikasi operator, media storage backend, Threads, atau Chrome Extension pada MVP.
 
 ## 2. Arsitektur Sistem
 
@@ -181,7 +181,7 @@ CREATE INDEX idx_post_logs_product_id ON post_logs(product_id);
 CREATE INDEX idx_post_logs_posted_at ON post_logs(posted_at DESC);
 ```
 
-Tidak ada `account_id`. Riwayat dapat berisi beberapa posting untuk produk dan platform yang sama.
+Identitas akun X tidak disimpan. Riwayat dapat berisi beberapa posting untuk produk dan platform yang sama.
 
 ### 4.3 Tabel caption_variations
 
@@ -355,7 +355,7 @@ Request:
 }
 ```
 
-`count` dibatasi 2-3. Variasi dibuat oleh template service, disimpan di `caption_variations`, dan tidak terikat ke akun.
+`count` dibatasi 2-3. Variasi dibuat oleh template service, disimpan di `caption_variations`, dan tidak terikat ke identitas akun X.
 
 ```http
 GET /api/products/{id}/caption-variations
@@ -522,7 +522,7 @@ Prompt wajib menginstruksikan AI untuk:
 - `ShareButton.vue` - copy clipboard dan buka X.
 - `PostLogForm.vue` - catat posting setelah user selesai posting di X.
 
-Tidak ada `AccountsView`, `accountStore`, `MediaUploader`, atau flow pemilihan akun pada MVP.
+MVP tidak memiliki flow pemilihan akun; akun X yang digunakan mengikuti session login di browser user.
 
 ### 8.3 State
 
@@ -650,7 +650,6 @@ Gunakan satu migration tool yang dipilih saat setup, misalnya `golang-migrate/mi
 - Chrome Extension untuk membantu paste caption.
 - Integrasi Threads.
 - Media storage di backend atau S3/CDN.
-- Manajemen banyak akun dan status posting per akun.
 - Scheduling dan analytics.
 - Auth, multi-user, dan admin panel.
 

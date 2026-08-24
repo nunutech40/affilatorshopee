@@ -18,9 +18,9 @@ Dokumen sumber:
 
 - [x] Tetapkan stack final: Go, PostgreSQL, Vue 3, Vite, Tailwind, Pinia
 - [x] Tetapkan scope MVP: produk, AI reformat, caption, hashtag, share X, post log
-- [x] Keluarkan manajemen akun, Threads, Chrome Extension, dan media storage dari MVP
+- [x] Keluarkan manajemen identitas akun X, Threads, Chrome Extension, dan media storage dari MVP
 - [x] Tetapkan produk boleh diposting berulang kali
-- [x] Tetapkan post log tidak memakai `account_id`
+- [x] Tetapkan post log tidak menyimpan identitas akun X
 - [x] Tetapkan AI reformat langsung menyimpan hasil tanpa preview
 - [ ] Finalisasi API request/response dan HTTP status code
 - [ ] Finalisasi template caption dan placeholder
@@ -92,7 +92,7 @@ Dokumen sumber:
 - [ ] Implementasikan `GET /api/share/x?caption=...`
 - [ ] Implementasikan copy caption ke clipboard di frontend
 - [ ] Implementasikan form `Catat Posting`
-- [ ] Pastikan post log tidak membutuhkan akun
+- [ ] Pastikan post log tidak menyimpan identitas akun X
 - [ ] Test URL encoding untuk spasi, newline, emoji, dan karakter khusus
 - [ ] Test posting berulang pada produk yang sama
 
@@ -134,7 +134,6 @@ Dokumen sumber:
 - [ ] Chrome Extension untuk membantu paste caption
 - [ ] Integrasi Threads
 - [ ] Media storage backend atau S3/CDN
-- [ ] Manajemen akun dan status posting per akun
 - [ ] Scheduling dan analytics
 - [ ] Auth dan multi-user
 
@@ -143,7 +142,7 @@ Dokumen sumber:
 ## Catatan untuk AI Coder
 
 - Gunakan `PRD.md` sebagai source of truth produk dan `TRD.md` sebagai source of truth teknis.
-- Jangan membuat fitur akun, Threads, extension, atau media storage sebelum Phase 8.
+- Jangan membuat fitur Threads, extension, atau media storage sebelum Phase 8.
 - Data mentah harus selalu dipertahankan.
 - AI boleh memperbaiki data, tetapi tidak boleh mengarang proof, harga, rating, atau urgency.
 - Produk tidak berubah menjadi status `posted`; posting dicatat sebagai `post_logs` dan boleh berulang.

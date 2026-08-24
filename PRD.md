@@ -10,7 +10,7 @@ status: ready-for-coding
 
 AffiliatorShopee adalah web app pribadi untuk menyimpan produk affiliate Shopee yang sudah dikurasi, lalu memudahkan pembuatan caption dan posting berulang ke X.
 
-Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, multi-user, dan admin ditunda ke masa depan.
+Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, autentikasi operator/tim, dan admin ditunda ke masa depan.
 
 ## 2. Tujuan
 
@@ -25,7 +25,7 @@ Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, multi-user, dan adm
 - Bukan platform publik atau SaaS di fase awal
 - Bukan scraping otomatis Shopee
 - Bukan analitik/dashboard kompleks
-- Tidak ada autentikasi multi-user di MVP
+- Tidak ada autentikasi operator/tim di MVP
 
 ## 4. Target User
 
@@ -53,7 +53,7 @@ Web app dengan fitur:
 5. Buat variasi caption untuk posting ulang
 6. Tombol share ke X yang membuka tab dengan caption terisi
 7. Gambar/video tetap di-upload manual oleh user di X
-8. Catat riwayat posting tanpa mengikatnya ke akun tertentu
+8. Catat riwayat posting tanpa menyimpan identitas akun X
 
 ## 7. Flowchart Bisnis
 
@@ -267,7 +267,7 @@ flowchart TD
 - Input produk dari copy-paste user
 - AI dipakai terbatas untuk reformat data, bukan generate semua caption
 - Bulk reformat AI maksimal 20 produk per request
-- Tidak ada manajemen akun atau pencatatan akun pada MVP
+- Web app tidak login, memilih, atau menyimpan identitas akun X
 - Threads, Chrome extension, dan media storage backend bukan bagian MVP
 
 ## 15. Acceptance Criteria
@@ -290,7 +290,7 @@ Diberikan caption sudah jadi, ketika user klik "Share ke X", maka caption tersal
 
 ### AC-5: Riwayat Posting
 
-Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Catat Posting", maka post_log tercatat dengan caption, hashtag, platform, dan tanggal tanpa account_id.
+Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Catat Posting", maka post_log tercatat dengan caption, hashtag, platform, dan tanggal tanpa identitas akun X.
 
 ### AC-6: Variasi Caption
 
@@ -320,7 +320,6 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Scheduling post
 - Integrasi lebih dalam dengan X API
 - Chrome Extension untuk membantu paste caption
-- Manajemen akun dan status posting per akun
 - Integrasi Threads
 - Opsi dijual sebagai SaaS
 - Support platform lain: TikTok, Instagram, Facebook

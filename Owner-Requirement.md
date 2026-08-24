@@ -14,7 +14,7 @@ Web app pribadi untuk menyimpan produk-produk curated affiliate Shopee, lalu mem
 
 - Owner sendiri sebagai operator
 - Platform MVP: X
-- Platform lain dan multi-akun: roadmap
+- Platform lain: roadmap
 
 ## Model Konten yang Didukung
 

@@ -1,29 +1,28 @@
 ---
 type: owner-requirement
 project: AffiliatorShopee
-status: draft
+status: aligned-with-prd
 ---
 
 # Owner Requirement — AffiliatorShopee
 
 ## Tujuan Produk
 
-Web app untuk menyimpan produk-produk curated affiliate Shopee, lalu memudahkan posting ke banyak akun/platform tanpa harus menyusun caption dari nol setiap kali.
+Web app pribadi untuk menyimpan produk-produk curated affiliate Shopee, lalu memudahkan pembuatan caption dan posting berulang tanpa harus menyusun caption dari nol setiap kali.
 
 ## Target User
 
-- Pemilik banyak akun affiliate
-- Akun tanpa branding kuat
-- Akun branding
-- Platform: X, Threads, dan kemungkinan lainnya
+- Owner sendiri sebagai operator
+- Platform MVP: X
+- Platform lain dan multi-akun: roadmap
 
 ## Model Konten yang Didukung
 
-| Model | Channel | Karakteristik |
+| Model | Karakteristik |
 |---|---|---|
-| 4 Capture Models | X Akun 1 | Search, Reply, Trend, Problem Capture |
-| Curated Cheap/Value | X Akun 2 | Produk murah, berguna, deal |
-| Curated Branded | Threads | Brand dikenal, diskon, voucher, promo |
+| 4 Capture Models | Search, Reply, Trend, Problem Capture |
+| Curated Cheap/Value | Produk murah, berguna, deal |
+| Curated Branded | Brand dikenal, diskon, voucher, promo |
 
 ## Keputusan Penting: Tidak Auto-Posting Penuh
 
@@ -32,32 +31,32 @@ Owner belum menemukan cara otomatis posting yang aman dari deteksi bot platform 
 Solusi yang dipilih:
 
 ```text
-Simpan produk di web app
-→ Pilih produk + caption + hashtag
+Simpan produk mentah di web app
+→ AI merapikan dan menyimpan hasil
+→ Pilih caption + hashtag
 → Klik "Share ke X"
 → Tab X terbuka, caption terisi
-→ User login di browser yang sudah login akun X
-→ Upload gambar manual
+→ User upload gambar manual
 → Klik Post
+→ User catat posting jika berhasil
 ```
 
-Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetang mengontrol klik terakhir.
+Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap mengontrol klik terakhir.
 
 ## Fitur Utama
 
 ### 1. Manajemen Produk Curated
 
-- Tambah produk dengan data lengkap
+- Tambah produk dari data mentah dan link affiliate
 - Upload atau paste link gambar
 - Kategorikan cluster
-- Status posting per akun/platform
-- Tandai produk sudah diposting atau belum
+- Riwayat posting sederhana per produk
+- Produk boleh diposting berulang kali
 
 ### 2. Caption Generator
 
 - Generate caption dari template
 - Banyak variasi caption untuk satu produk
-- Bisa bedakan caption sedikit per akun
 - Template yang tersedia:
   - Direct Product
   - Keyword + Recommendation
@@ -76,20 +75,14 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetan
 - Tombol "Share ke X" dengan Twitter Web Intent
 - Caption sudah terisi otomatis
 - User tinggal upload gambar dan klik Post
-- Bisa pilih akun mana yang akan posting
-- Riwayat posting per akun
-
-### 5. Multi-akun Support
-
-- Daftar akun affiliate
-- Riwayat posting per akun
+- Riwayat posting berisi caption, hashtag, platform, dan waktu
 - Bukan automation penuh, hanya helper
 
-### 6. Dashboard Sederhana
+### 5. Dashboard Sederhana
 
 - Produk yang sudah/belum diposting
 - Riwayat caption
-- Status posting per platform
+- Jumlah dan waktu posting terakhir per produk
 
 ## Data Produk yang Disimpan
 
@@ -106,14 +99,17 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetan
 | sold_count | Jumlah terjual |
 | review_count | Jumlah penilaian |
 | cluster | Kategori/cluster |
-| model | cheap / branded |
+| keyword | Keyword utama untuk hook |
+| problem | Problem yang ingin diangkat |
+| content_model | capture / cheap / branded |
+| capture_angle | search / reply / trend / problem |
 | benefit_1 | Benefit utama |
 | benefit_2 | Benefit kedua |
 | benefit_3 | Benefit ketiga |
 | urgency | Voucher, stok, PO, flash sale |
 | caption_template | Template default |
 | hashtag_pool | Pilihan hashtag |
-| status | draft / ready / posted |
+| status | raw / reformatted / ready |
 | notes | Catatan tambahan |
 
 ## Prinsip Caption
@@ -126,11 +122,11 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetan
 - Urgency hanya kalau punya dasar nyata
 - CTA sederhana
 
-## Teknologi yang Disarankan
+## Teknologi Final
 
-- Frontend: Next.js atau HTML + Tailwind
-- Backend: Node.js/Express atau Go
-- Database: SQLite untuk MVP
+- Frontend: Vue 3 + Vite + Tailwind CSS + Pinia
+- Backend: Go
+- Database: PostgreSQL
 - Share: Twitter Web Intent
 - Gambar: user upload manual di tab X
 
@@ -142,4 +138,4 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetan
 
 ## Status
 
-Draft — menunggu MVP plan dan implementasi.
+Selaras dengan PRD dan TRD — siap dilanjutkan ke implementasi setelah kontrak teknis final.

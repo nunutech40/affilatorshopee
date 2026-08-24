@@ -1,133 +1,152 @@
-# TODO — AffiliatorShopee
+# TODO - AffiliatorShopee
 
 Project: AffiliatorShopee  
-Deskripsi: Web app pribadi untuk menyimpan produk affiliate Shopee, generate caption, dan membantu posting ke banyak akun/platform.  
+Deskripsi: Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan AI, membuat caption, dan membantu posting manual ke X.
 Target: MVP yang bisa dipakai sendiri.  
-Stack: Go, PostgreSQL, Vue 3 + Vite + Tailwind + Pinia, Chrome Extension Manifest V3, OpenRouter AI.  
+Stack: Go, PostgreSQL, Vue 3 + Vite + Tailwind + Pinia, OpenRouter AI.
 Deployment: Docker Compose di Orbstack.
 
-Dokumen pendukung:
-- `PRD.md` — kebutuhan produk, flowchart, acceptance criteria
-- `TRD.md` — arsitektur teknis, API spec, database schema, stack
-- `Owner-Requirement.md` — hasil brainstorming awal
-- `MVP-Plan.md` — rencana MVP sebelumnya
+Dokumen sumber:
+
+- `PRD.md` - kebutuhan produk dan scope MVP
+- `TRD.md` - arsitektur teknis, API, database schema, dan testing
+- `Owner-Requirement.md` - konteks dan keputusan produk
 
 ---
 
+## Phase 0: Keputusan dan Kontrak
+
+- [x] Tetapkan stack final: Go, PostgreSQL, Vue 3, Vite, Tailwind, Pinia
+- [x] Tetapkan scope MVP: produk, AI reformat, caption, hashtag, share X, post log
+- [x] Keluarkan manajemen akun, Threads, Chrome Extension, dan media storage dari MVP
+- [x] Tetapkan produk boleh diposting berulang kali
+- [x] Tetapkan post log tidak memakai `account_id`
+- [x] Tetapkan AI reformat langsung menyimpan hasil tanpa preview
+- [ ] Finalisasi API request/response dan HTTP status code
+- [ ] Finalisasi template caption dan placeholder
+- [ ] Pilih satu migration tool
+
 ## Phase 1: Project Setup
 
-- [ ] Inisialisasi repo Git di folder `AffiliatorShopee/`
-- [ ] Copy `PRD.md`, `TRD.md`, `Owner-Requirement.md`, `MVP-Plan.md` ke root repo
-- [ ] Backend: `go mod init github.com/nununugraha/affiliatorshopee`
-- [ ] Backend: buat struktur folder `cmd/api`, `internal/config`, `internal/db/migrations`, `internal/handler`, `internal/model`, `internal/repository`, `internal/service`, `internal/storage`, `web`, `extension`
-- [ ] Database: buat file migrasi `001_create_products.sql`
-- [ ] Database: buat file migrasi `002_create_accounts.sql`
-- [ ] Database: buat file migrasi `003_create_post_logs.sql`
-- [ ] Database: buat file migrasi `004_create_caption_variations.sql`
-- [ ] Docker: buat `Dockerfile` untuk Go backend
-- [ ] Docker: buat `docker-compose.yml` dengan service `db` (PostgreSQL) dan `app` (Go)
-- [ ] Environment: buat `.env.example`
-- [ ] Frontend: `npm create vite@latest web -- --template vue`
-- [ ] Frontend: install Tailwind CSS
-- [ ] Frontend: install Vue Router dan Pinia
-- [ ] Frontend: setup struktur folder `web/src/components`, `web/src/views`, `web/src/router`, `web/src/stores`
-- [ ] Verifikasi: `docker-compose up --build` berjalan tanpa error
+- [x] Repository Git tersedia di folder project
+- [ ] Inisialisasi module Go: `go mod init github.com/nununugraha/affiliatorshopee`
+- [ ] Buat struktur folder sesuai `TRD.md`
+- [ ] Buat `Dockerfile` untuk Go backend
+- [ ] Buat `docker-compose.yml` dengan service `db` dan `app`
+- [ ] Buat `.env.example` tanpa secret nyata
+- [ ] Buat project Vue dengan Vite di folder `web`
+- [ ] Install Tailwind CSS, Vue Router, Pinia, dan test runner frontend
+- [ ] Tambahkan endpoint `GET /healthz`
+- [ ] Verifikasi `docker compose up --build` berhasil
 
-## Phase 2: Backend Core
+## Phase 2: Database dan Backend Core
 
-- [ ] Model: buat `Product` struct
-- [ ] Model: buat `Account` struct
-- [ ] Model: buat `PostLog` struct
-- [ ] Model: buat `CaptionVariation` struct
-- [ ] Config: load environment variables `PORT`, `DATABASE_URL`, `STORAGE_PATH`, `AI_API_KEY`, `OPENROUTER_MODEL`
-- [ ] DB: buat koneksi PostgreSQL
-- [ ] DB: jalankan migrasi saat startup
-- [ ] Repository: implementasi `ProductRepository` (Create, GetByID, List, Update, Delete)
-- [ ] Repository: implementasi `AccountRepository` (Create, List)
-- [ ] Repository: implementasi `PostLogRepository` (Create, ListByProduct)
-- [ ] Service: implementasi `ProductService`
-- [ ] Handler: implementasi `ProductHandler`
-- [ ] Handler: implementasi `AccountHandler`
-- [ ] Router: setup HTTP router (chi atau gin)
-- [ ] Router: tambah endpoint dasar dan CORS
-- [ ] Verifikasi: endpoint `GET /api/products` dan `POST /api/products` bisa di-test via curl/Postman
+- [ ] Buat migration `001_create_products.sql`
+- [ ] Buat migration `002_create_post_logs.sql`
+- [ ] Buat migration `003_create_caption_variations.sql`
+- [ ] Buat koneksi PostgreSQL dan menjalankan migration saat startup
+- [ ] Buat model `Product`, `PostLog`, dan `CaptionVariation`
+- [ ] Buat config loader untuk `PORT`, `DATABASE_URL`, `AI_API_KEY`, `OPENROUTER_MODEL`, dan `ENV`
+- [ ] Implementasikan `ProductRepository`: Create, GetByID, List, Update, Delete
+- [ ] Implementasikan `PostLogRepository`: Create, List
+- [ ] Implementasikan `CaptionVariationRepository`: Create, List
+- [ ] Implementasikan validasi input produk
+- [ ] Setup router HTTP dan CORS localhost
+- [ ] Implementasikan API products
+- [ ] Implementasikan API post logs
+- [ ] Verifikasi CRUD product dan post log dengan automated API tests
 
 ## Phase 3: AI Reformat
 
-- [ ] Service: buat `AIService` dengan HTTP client ke OpenRouter
-- [ ] Service: prompt reformat produk sesuai TRD section 8.2
-- [ ] Service: parse response JSON dari OpenRouter
-- [ ] Service: validasi hasil AI sebelum update database
-- [ ] Handler: buat endpoint `POST /api/ai/reformat`
-- [ ] Handler: validasi maksimal 20 `product_ids`
-- [ ] Handler: update field produk dan ubah status ke `reformatted`
-- [ ] Verifikasi: bulk reformat 1–20 produk berhasil
+- [ ] Buat `AIService` dengan HTTP client ke OpenRouter
+- [ ] Buat prompt reformat sesuai `TRD.md`
+- [ ] Parse response JSON secara strict
+- [ ] Validasi ID, enum, angka, hashtag, dan field hasil AI
+- [ ] Pastikan `raw_text` tidak pernah tertimpa
+- [ ] Implementasikan `POST /api/ai/reformat`
+- [ ] Tolak request dengan lebih dari 20 `product_ids`
+- [ ] Simpan hasil AI langsung dan ubah status menjadi `reformatted`
+- [ ] Laporkan partial failure per produk
+- [ ] Test response valid, invalid, timeout, dan partial failure dengan mock server
 
 ## Phase 4: Caption Generator
 
-- [ ] Service: buat `CaptionService` dengan template engine
-- [ ] Service: load template Direct Product, Keyword + Recommendation, Problem-specific, Cheap/Value
-- [ ] Service: implementasi placeholder replacement
-- [ ] Service: helper format harga dan join hashtag
-- [ ] Handler: buat endpoint `POST /api/captions/generate`
-- [ ] Handler: buat endpoint `POST /api/captions/variations`
-- [ ] Verifikasi: generate caption dari produk dummy menghasilkan output sesuai template
+- [ ] Implementasikan registry template:
+  - [ ] `direct_product`
+  - [ ] `keyword_recommendation`
+  - [ ] `problem_specific`
+  - [ ] `cheap_value`
+- [ ] Implementasikan placeholder replacement dan fallback field
+- [ ] Hilangkan baris placeholder yang nilainya kosong
+- [ ] Implementasikan format Rupiah dan angka
+- [ ] Implementasikan character count Unicode
+- [ ] Validasi hashtag maksimal 3
+- [ ] Implementasikan `POST /api/captions/generate`
+- [ ] Implementasikan `POST /api/captions/variations`
+- [ ] Implementasikan `GET /api/products/{id}/caption-variations`
+- [ ] Test semua template, field kosong, hashtag, dan batas karakter
 
-## Phase 5: Share & Post Log
+## Phase 5: Share dan Post Log
 
-- [ ] Service: buat `ShareService` untuk generate Twitter Web Intent URL
-- [ ] Handler: buat endpoint `GET /api/share/x?caption=...` yang redirect ke Twitter intent
-- [ ] Handler: buat endpoint `POST /api/post-logs`
-- [ ] Verifikasi: share ke X membuka tab dengan caption ter-encode
-- [ ] Verifikasi: post log tersimpan di database
+- [ ] Implementasikan builder Twitter Web Intent URL
+- [ ] Implementasikan `GET /api/share/x?caption=...`
+- [ ] Implementasikan copy caption ke clipboard di frontend
+- [ ] Implementasikan form `Catat Posting`
+- [ ] Pastikan post log tidak membutuhkan akun
+- [ ] Test URL encoding untuk spasi, newline, emoji, dan karakter khusus
+- [ ] Test posting berulang pada produk yang sama
 
-## Phase 6: Chrome Extension
+## Phase 6: Frontend Core
 
-- [ ] Extension: buat `extension/manifest.json` Manifest V3
-- [ ] Extension: buat `extension/background.js`
-- [ ] Extension: buat `extension/content.js` untuk deteksi textarea X/Threads dan paste caption
-- [ ] Extension: buat `extension/popup.html` sederhana
-- [ ] Verifikasi: extension bisa di-load unpacked dan paste caption ke composer X
+- [ ] Buat Pinia `productStore`
+- [ ] Buat Pinia `captionStore`
+- [ ] Buat `HomeView.vue` dengan filter status, cluster, model, dan search
+- [ ] Buat `ProductList.vue`
+- [ ] Buat `ProductParser.vue` untuk paste raw text
+- [ ] Buat `ProductForm.vue` untuk edit produk
+- [ ] Buat `BulkReformat.vue` dengan batas maksimal 20 produk
+- [ ] Buat `ProductDetailView.vue`
+- [ ] Buat `CaptionGenerator.vue`
+- [ ] Buat `HashtagSelector.vue`
+- [ ] Buat `ShareButton.vue`
+- [ ] Buat `PostLogForm.vue`
+- [ ] Buat `PostLogsView.vue`
+- [ ] Setup base URL API
+- [ ] Tampilkan loading, success, dan error state
+- [ ] Verifikasi alur input sampai share melalui browser
 
-## Phase 7: Frontend
+## Phase 7: Integration dan Release MVP
 
-- [ ] Store: buat Pinia store `productStore`
-- [ ] Store: buat Pinia store `accountStore`
-- [ ] Store: buat Pinia store `captionStore`
-- [ ] View: buat `HomeView.vue` — daftar produk dengan filter status
-- [ ] Component: buat `ProductList.vue`
-- [ ] Component: buat `ProductForm.vue` untuk tambah produk
-- [ ] Component: buat `ProductParser.vue` textarea paste raw_text
-- [ ] Component: buat `BulkReformat.vue` checkbox + tombol bulk reformat
-- [ ] View: buat `ProductDetailView.vue`
-- [ ] Component: buat `CaptionGenerator.vue`
-- [ ] Component: buat `HashtagSelector.vue`
-- [ ] Component: buat `ShareButton.vue`
-- [ ] View: buat `AccountsView.vue`
-- [ ] View: buat `PostLogsView.vue`
-- [ ] Config: setup base URL API di frontend
-- [ ] Verifikasi: frontend bisa CRUD produk, reformat AI, generate caption, dan share
+- [ ] Integrasikan semua frontend call ke backend
+- [ ] Build frontend dengan `npm run build`
+- [ ] Backend serve `web/dist`
+- [ ] Tambahkan graceful shutdown
+- [ ] Tambahkan database readiness dan migration failure handling
+- [ ] Jalankan seluruh stack melalui `docker compose up --build`
+- [ ] Test persistence PostgreSQL setelah container restart
+- [ ] Test backup dan restore database lokal
+- [ ] Update `README.md` dengan setup, env, run, dan troubleshooting
+- [ ] Pastikan tidak ada secret di repository
+- [ ] Tandai MVP selesai setelah memenuhi Definition of Done di `TRD.md`
 
-## Phase 8: Integration & Polish
+## Phase 8: Roadmap Setelah MVP
 
-- [ ] Integrasi: frontend call backend untuk semua fitur utama
-- [ ] Build: frontend `npm run build` menghasilkan folder `web/dist`
-- [ ] Backend: serve static `web/dist`
-- [ ] Docker: `docker-compose up --build` berhasil menjalankan full stack
-- [ ] Testing: CRUD produk
-- [ ] Testing: AI reformat bulk max 20
-- [ ] Testing: generate caption dan variasi
-- [ ] Testing: share ke X
-- [ ] Testing: extension paste caption
-- [ ] Dokumentasi: update `README.md` dengan cara run
+- [ ] Chrome Extension untuk membantu paste caption
+- [ ] Integrasi Threads
+- [ ] Media storage backend atau S3/CDN
+- [ ] Manajemen akun dan status posting per akun
+- [ ] Scheduling dan analytics
+- [ ] Auth dan multi-user
 
 ---
 
 ## Catatan untuk AI Coder
 
-- Bacalah `PRD.md` dan `TRD.md` sebelum memulai setiap phase.
-- Setiap phase sebaiknya di-commit ke Git.
-- Gunakan OpenRouter dengan model default `google/gemini-flash-1.5` untuk fitur AI reformat.
-- Jangan bangun fitur di luar scope MVP tanpa persetujuan owner.
-- Media (gambar/video) tetap di-upload manual oleh user ke platform target.
-- Tidak ada auto-posting penuh untuk menghindari deteksi bot.
+- Gunakan `PRD.md` sebagai source of truth produk dan `TRD.md` sebagai source of truth teknis.
+- Jangan membuat fitur akun, Threads, extension, atau media storage sebelum Phase 8.
+- Data mentah harus selalu dipertahankan.
+- AI boleh memperbaiki data, tetapi tidak boleh mengarang proof, harga, rating, atau urgency.
+- Produk tidak berubah menjadi status `posted`; posting dicatat sebagai `post_logs` dan boleh berulang.
+- User tetap meng-upload media dan menekan Post secara manual di X.
+- API key OpenRouter hanya berada di backend.
+- Setiap phase besar sebaiknya dibuat dalam commit terpisah.

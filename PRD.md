@@ -8,7 +8,7 @@ status: ready-for-coding
 
 ## 1. Overview
 
-AffiliatorShopee adalah web app pribadi untuk menyimpan produk affiliate Shopee yang sudah dikurasi, lalu memudahkan pembuatan caption dan posting ke banyak akun/platform.
+AffiliatorShopee adalah web app pribadi untuk menyimpan produk affiliate Shopee yang sudah dikurasi, lalu memudahkan pembuatan caption dan posting berulang ke X.
 
 Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, multi-user, dan admin ditunda ke masa depan.
 
@@ -16,7 +16,7 @@ Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, multi-user, dan adm
 
 - Menyimpan produk curated dalam satu database
 - Mempercepat pembuatan caption affiliate yang mengikuti ilmu market ekonomi
-- Membantu posting ke banyak akun tanpa harus menyusun ulang dari nol
+- Membantu posting ulang tanpa harus menyusun caption dari nol
 - Mengurangi gesekan antara ide produk → caption → posting
 
 ## 3. Non-Goals
@@ -39,7 +39,7 @@ Posting produk affiliate secara manual memakan waktu karena:
 - harus membuka banyak tab produk
 - caption dibuat dari nol setiap kali
 - susah mengingat produk mana yang sudah diposting
-- susah membedakan angle untuk akun yang berbeda
+- susah memakai angle yang berbeda untuk satu produk
 - hashtag sering dipilih asal-asalan
 
 ## 6. Solusi
@@ -50,10 +50,10 @@ Web app dengan fitur:
 2. AI merapikan data mentah menjadi field lengkap
 3. Generate caption dari template yang sudah teruji
 4. Pilih hashtag berdasarkan cluster
-5. Buat variasi caption untuk beda akun
-6. Tombol share ke X/Threads yang membuka tab dengan caption terisi
-7. Chrome extension membantu auto-paste caption
-8. Gambar/video tetap di-upload manual oleh user
+5. Buat variasi caption untuk posting ulang
+6. Tombol share ke X yang membuka tab dengan caption terisi
+7. Gambar/video tetap di-upload manual oleh user di X
+8. Catat riwayat posting tanpa mengikatnya ke akun tertentu
 
 ## 7. Flowchart Bisnis
 
@@ -81,13 +81,11 @@ flowchart TD
     C --> D[Status: raw]
     D --> E{Panggil AI Reformat?}
     E -->|Ya| F[Bulk Reformat max 20]
-    F --> G[Preview Hasil]
-    G --> H{Sudah Benar?}
-    H -->|Ya| I[Save, Status: reformatted]
-    H -->|Tidak| J[Edit Manual]
+    F --> G[Simpan hasil AI, Status: reformatted]
+    G --> H[Edit manual bila perlu]
+    H --> I[Save, Status: ready]
+    E -->|Tidak| J[Edit manual via form]
     J --> I
-    E -->|Tidak| K[Simpan manual via form]
-    K --> I
 ```
 
 ### 7.3 Flow Generate Caption
@@ -101,10 +99,9 @@ flowchart TD
     E --> F{Lebih dari 280?}
     F -->|Ya| G[Tampilkan Peringatan]
     F -->|Tidak| H[Tampilkan Caption]
-    H --> I[Generate Variasi]
-    I --> J[Pilih Variasi per Akun]
-    J --> K[Pilih Hashtag]
-    K --> L[Share ke X]
+    H --> I[Generate Variasi bila perlu]
+    I --> J[Pilih Hashtag]
+    J --> K[Share ke X]
 ```
 
 ### 7.4 Flow Posting ke X
@@ -115,13 +112,10 @@ flowchart TD
     B --> C[Copy Caption ke Clipboard]
     C --> D[Buka Tab Twitter Intent]
     D --> E[Caption Terisi Otomatis]
-    E --> F{Extension Aktif?}
-    F -->|Ya| G[Auto-paste Caption]
-    F -->|Tidak| H[User Paste Manual]
-    G --> I[User Upload Media Manual]
-    H --> I
-    I --> J[User Klik Post]
-    J --> K[Catat Riwayat Posting]
+    E --> F[User Paste Manual bila diperlukan]
+    F --> G[User Upload Media Manual]
+    G --> H[User Klik Post]
+    H --> I[Catat Riwayat Posting]
 ```
 
 ### 7.5 Flow AI Helper
@@ -129,12 +123,10 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[Produk Tersimpan] --> B{Panggil AI?}
-    B -->|Bulk Reformat max 20| C[AI Rapikan Data]
-    B -->|Revisi Caption| D[AI Revisi 1 Produk]
-    B -->|Tidak| E[Generate dari Template]
-    C --> E
-    D --> F[Tampilkan Hasil]
-    E --> F
+    B -->|Bulk Reformat max 20| C[AI Rapikan dan Simpan Data]
+    B -->|Tidak| D[Generate dari Template]
+    C --> D
+    D --> E[Tampilkan Hasil]
 ```
 
 ## 8. Status Produk
@@ -143,8 +135,7 @@ flowchart TD
 |---|---|
 | raw | Baru dicopas dari Shopee, belum direformat |
 | reformatted | Sudah AI reformat, bisa diedit |
-| ready | Data lengkap, siap generate caption |
-| posted | Sudah pernah diposting (bisa repost dengan variasi lain) |
+| ready | Data sudah siap digunakan untuk membuat caption |
 
 ## 9. Fitur MVP
 
@@ -153,14 +144,16 @@ flowchart TD
 - Tambah produk via paste data mentah dari Shopee
 - Simpan link affiliate dan image URL
 - Edit dan hapus produk
-- Status workflow: raw → reformatted → ready → posted
+- Status workflow: raw → reformatted → ready
+- Riwayat posting disimpan di `post_logs`; posting ulang tidak mengubah status produk
+- Produk baru selalu berstatus `raw`; AI mengubah `raw` menjadi `reformatted`; penyimpanan manual setelah data lengkap dapat mengubahnya menjadi `ready`
 
 ### 9.2 AI Reformat
 
 - Pilih produk dengan checkbox, maksimal 20 per bulk
 - AI merapikan data mentah jadi field lengkap
-- Preview hasil sebelum disimpan
-- Edit manual jika perlu
+- Hasil AI langsung disimpan ke produk
+- Edit manual tetap tersedia setelah reformat
 
 ### 9.3 Caption Generator
 
@@ -176,7 +169,7 @@ flowchart TD
 ### 9.4 Variasi Caption
 
 - Satu produk bisa punya beberapa variasi caption
-- Variasi digunakan untuk beda akun/platform
+- Variasi digunakan untuk posting ulang atau angle berbeda
 - Variasi dibuat dari template, bisa edit manual
 
 ### 9.5 Hashtag Selector
@@ -185,24 +178,17 @@ flowchart TD
 - Pilih 1–3 hashtag relevan
 - Bisa custom hashtag
 
-### 9.6 Share ke Platform
+### 9.6 Share ke X
 
 - Tombol "Share ke X" menggunakan Twitter Web Intent
 - Caption terisi otomatis di tab baru
 - Caption juga disalin ke clipboard
-- Chrome extension membantu auto-paste caption
 - Media di-upload manual oleh user
 
 ### 9.7 Riwayat Posting Sederhana
 
-- Tandai produk sudah diposting di akun mana
-- Catatan tanggal posting
-- Satu produk bisa punya banyak post_logs untuk akun berbeda
-
-### 9.8 Manajemen Akun
-
-- Tambah daftar akun affiliate
-- Platform dan tipe akun: capture, cheap, branded
+- Catat caption, hashtag, platform, dan tanggal setiap posting
+- Satu produk bisa memiliki banyak `post_logs`, termasuk posting berulang
 
 ## 10. User Flow MVP
 
@@ -212,16 +198,14 @@ flowchart TD
 3. User paste link affiliate dan image URL
 4. User klik "Simpan Produk", status = raw
 5. User pilih beberapa produk (max 20) dan klik "Bulk Reformat AI"
-6. AI merapikan data, user preview dan edit
-7. User save, status = reformatted/ready
+6. AI merapikan data dan langsung menyimpan hasil, status = reformatted
+7. User edit manual jika perlu, status = ready
 8. User pilih produk, pilih template, generate caption
 9. User pilih variasi dan hashtag
-10. User pilih akun target
-11. User klik "Share ke X"
-12. Caption tersalin ke clipboard, tab X terbuka
-13. Chrome extension (jika aktif) auto-paste caption
-14. User upload media manual dan klik Post
-15. User kembali ke web app, tandai sudah diposting
+10. User klik "Share ke X"
+11. Caption tersalin ke clipboard, tab X terbuka
+12. User upload media manual dan klik Post
+13. User kembali ke web app dan mencatat posting
 ```
 
 ## 11. Data Produk
@@ -242,7 +226,10 @@ flowchart TD
 | sold_count | string | Jumlah terjual |
 | review_count | string | Jumlah penilaian |
 | cluster | string | Kategori/cluster |
-| model | enum | cheap / branded |
+| keyword | string | Keyword utama untuk hook |
+| problem | string | Problem yang ingin diangkat |
+| content_model | enum | capture / cheap / branded |
+| capture_angle | enum | search / reply / trend / problem |
 | benefit_1 | string | Benefit utama |
 | benefit_2 | string | Benefit kedua |
 | benefit_3 | string | Benefit ketiga |
@@ -250,7 +237,7 @@ flowchart TD
 | caption_template | string | Template default |
 | hashtag_pool | string[] | Pilihan hashtag |
 | notes | text | Catatan tambahan |
-| status | enum | raw / reformatted / ready / posted |
+| status | enum | raw / reformatted / ready |
 | created_at | datetime | Waktu dibuat |
 | updated_at | datetime | Waktu diupdate |
 
@@ -258,9 +245,9 @@ flowchart TD
 
 | Model | Channel | Karakteristik |
 |---|---|---|
-| 4 Capture Models | X Akun 1 | Search, Reply, Trend, Problem Capture |
-| Curated Cheap/Value | X Akun 2 | Produk murah, berguna, deal |
-| Curated Branded | Threads | Brand dikenal, diskon, voucher, promo |
+| 4 Capture Models | X | Search, Reply, Trend, Problem Capture |
+| Curated Cheap/Value | X | Produk murah, berguna, deal |
+| Curated Branded | Roadmap | Brand dikenal, diskon, voucher, promo |
 
 ## 13. Aturan Caption
 
@@ -276,11 +263,12 @@ flowchart TD
 
 - Tidak ada auto-posting penuh
 - Media di-upload manual oleh user
-- Chrome extension hanya membantu paste caption, bukan klik Post otomatis
 - Tidak ada scraping Shopee otomatis
 - Input produk dari copy-paste user
-- AI dipakai terbatas untuk reformat dan revisi, bukan generate semua caption
+- AI dipakai terbatas untuk reformat data, bukan generate semua caption
 - Bulk reformat AI maksimal 20 produk per request
+- Tidak ada manajemen akun atau pencatatan akun pada MVP
+- Threads, Chrome extension, dan media storage backend bukan bagian MVP
 
 ## 15. Acceptance Criteria
 
@@ -290,7 +278,7 @@ Diberikan user di halaman tambah produk, ketika paste data mentah dari Shopee, l
 
 ### AC-2: Bulk Reformat AI
 
-Diberikan user memilih maksimal 20 produk dengan status raw, ketika klik "Bulk Reformat", maka AI merapikan data dan menampilkan preview yang bisa diedit.
+Diberikan user memilih maksimal 20 produk dengan status raw, ketika klik "Bulk Reformat", maka AI merapikan data dan langsung menyimpan hasilnya dengan status reformatted.
 
 ### AC-3: Generate Caption
 
@@ -302,18 +290,18 @@ Diberikan caption sudah jadi, ketika user klik "Share ke X", maka caption tersal
 
 ### AC-5: Riwayat Posting
 
-Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Tandai Sudah Diposting", maka post_log tercatat dengan akun dan tanggal.
+Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Catat Posting", maka post_log tercatat dengan caption, hashtag, platform, dan tanggal tanpa account_id.
 
 ### AC-6: Variasi Caption
 
-Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi caption berbeda yang bisa dipilih untuk akun berbeda.
+Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi caption berbeda yang bisa dipakai untuk posting ulang.
 
 ## 16. Success Metrics
 
 - Waktu dari input produk sampai caption jadi berkurang
 - Jumlah produk yang tersimpan dan terkurasi meningkat
-- User bisa posting ke beberapa akun tanpa membuat caption dari nol
-- Tidak ada akun yang kena suspend karena automation
+- User bisa posting ulang tanpa membuat caption dari nol
+- Tidak ada risiko suspend akibat auto-posting karena posting terakhir tetap dilakukan user
 
 ## 17. Risiko dan Asumsi
 
@@ -322,7 +310,7 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 | X mengubah Twitter Intent | Siapkan fallback manual copy-paste |
 | AI reformat tidak sempurna | Selalu ada mode edit manual |
 | AI boros token | Bulk reformat max 20, tidak otomatis |
-| Extension tidak bisa diinstall | Tetap bisa pakai share intent dan clipboard |
+| Share intent atau clipboard gagal | User dapat menyalin caption secara manual dari halaman detail |
 
 ## 18. Future Roadmap
 
@@ -331,9 +319,12 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Dashboard analytics
 - Scheduling post
 - Integrasi lebih dalam dengan X API
+- Chrome Extension untuk membantu paste caption
+- Manajemen akun dan status posting per akun
+- Integrasi Threads
 - Opsi dijual sebagai SaaS
 - Support platform lain: TikTok, Instagram, Facebook
 
 ## 19. Catatan
 
-Dokumen ini adalah PRD untuk fase pribadi/MVP. TRD menyusul dengan detail teknis stack dan arsitektur.
+Dokumen ini adalah sumber kebenaran produk untuk fase pribadi/MVP. Detail teknis mengikuti `TRD.md`.

@@ -1,12 +1,12 @@
 ---
 type: trd
 project: AffiliatorShopee
-status: draft
+status: aligned-with-prd
 ---
 
-# Technical Requirements Document — AffiliatorShopee
+# Technical Requirements Document - AffiliatorShopee
 
-## 1. Stack
+## 1. Keputusan Teknis
 
 | Layer | Teknologi |
 |---|---|
@@ -16,78 +16,122 @@ status: draft
 | HTTP Client | Fetch API |
 | Routing | Vue Router |
 | State | Pinia |
-| Chrome Extension | Manifest V3 |
-| Storage | Local filesystem (abstraction untuk CDN/S3 di masa depan) |
+| AI | OpenRouter |
 | Deployment | Docker Compose di Orbstack |
+
+MVP hanya mencakup web app pribadi dan alur posting manual ke X. Tidak ada autentikasi, manajemen akun sosial, media storage backend, Threads, atau Chrome Extension pada MVP.
 
 ## 2. Arsitektur Sistem
 
 ```text
-┌─────────────────────────────────────────┐
-│           Browser (Chrome)              │
-│  ┌─────────────┐  ┌─────────────────┐  │
-│  │  Vue 3 App  │  │ Chrome Extension │  │
-│  │  (Vite)     │  │  (Manifest V3)  │  │
-│  └──────┬──────┘  └─────────────────┘  │
-└─────────┼───────────────────────────────┘
-          │ HTTP/JSON
-┌─────────▼───────────────────────────────┐
-│         Go Backend API                  │
-│  ┌─────────┐ ┌─────────┐ ┌──────────┐  │
-│  │ Handler │ │ Service │ │ Repository│  │
-│  └────┬────┘ └────┬────┘ └────┬─────┘  │
-│       └───────────┴───────────┘         │
-│              │ SQL                       │
-│       ┌──────▼──────┐                   │
-│       │ PostgreSQL  │                   │
-│       │   (Docker)  │                   │
-│       └─────────────┘                   │
-│                                         │
-│  ┌─────────────────────────────────┐    │
-│  │  Local Filesystem Storage       │    │
-│  │  /data/uploads/products/{id}/   │    │
-│  │  (bisa diganti CDN/S3 nanti)    │    │
-│  └─────────────────────────────────┘    │
-└─────────────────────────────────────────┘
+Browser (Vue 3 App)
+        |
+        | HTTP/JSON
+        v
+Go Backend API
+   |             |
+   | SQL         | HTTPS API
+   v             v
+PostgreSQL    OpenRouter
 ```
 
-## 3. Storage Abstraction
+User tetap meng-upload gambar/video langsung di X dan menekan tombol Post secara manual. Backend hanya menyimpan data produk, caption, dan catatan posting.
 
-Interface storage sejak awal agar mudah ganti ke S3/CDN:
+## 3. Struktur Folder
 
-```go
-type Storage interface {
-    Save(productID string, filename string, data []byte) (string, error)
-    GetURL(productID string, filename string) string
-    Delete(productID string, filename string) error
-    List(productID string) ([]string, error)
-}
+```text
+AffiliatorShopee/
+├── cmd/
+│   └── api/
+│       └── main.go
+├── internal/
+│   ├── config/
+│   │   └── config.go
+│   ├── db/
+│   │   ├── connection.go
+│   │   └── migrations/
+│   │       ├── 001_create_products.sql
+│   │       ├── 002_create_post_logs.sql
+│   │       └── 003_create_caption_variations.sql
+│   ├── handler/
+│   │   ├── product_handler.go
+│   │   ├── ai_handler.go
+│   │   ├── caption_handler.go
+│   │   └── post_log_handler.go
+│   ├── model/
+│   │   ├── product.go
+│   │   ├── post_log.go
+│   │   └── caption_variation.go
+│   ├── repository/
+│   │   ├── product_repo.go
+│   │   ├── post_log_repo.go
+│   │   └── caption_variation_repo.go
+│   └── service/
+│       ├── product_service.go
+│       ├── ai_service.go
+│       ├── caption_service.go
+│       ├── share_service.go
+│       └── post_log_service.go
+├── web/
+│   ├── index.html
+│   ├── package.json
+│   └── src/
+│       ├── main.js
+│       ├── App.vue
+│       ├── router/index.js
+│       ├── stores/productStore.js
+│       ├── stores/captionStore.js
+│       ├── components/
+│       │   ├── ProductList.vue
+│       │   ├── ProductForm.vue
+│       │   ├── ProductParser.vue
+│       │   ├── BulkReformat.vue
+│       │   ├── CaptionGenerator.vue
+│       │   ├── HashtagSelector.vue
+│       │   ├── ShareButton.vue
+│       │   └── PostLogForm.vue
+│       └── views/
+│           ├── HomeView.vue
+│           ├── ProductDetailView.vue
+│           └── PostLogsView.vue
+├── docker-compose.yml
+├── Dockerfile
+├── go.mod
+├── go.sum
+├── .env.example
+├── README.md
+├── PRD.md
+├── TRD.md
+└── TODO.md
 ```
-
-Implementasi awal: `LocalStorage`.
-Implementasi masa depan: `S3Storage`.
 
 ## 4. Database Schema
 
 ### 4.1 Tabel products
 
 ```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    raw_text TEXT,
+    raw_text TEXT NOT NULL,
     product_name VARCHAR(255),
-    shopee_link TEXT,
+    shopee_link TEXT NOT NULL,
     image_url TEXT,
     image_urls TEXT[],
     video_url TEXT,
-    normal_price INTEGER,
-    sale_price INTEGER,
-    discount_percent INTEGER,
-    rating NUMERIC(2,1),
+    normal_price INTEGER CHECK (normal_price IS NULL OR normal_price >= 0),
+    sale_price INTEGER CHECK (sale_price IS NULL OR sale_price >= 0),
+    discount_percent INTEGER CHECK (discount_percent IS NULL OR discount_percent BETWEEN 0 AND 100),
+    rating NUMERIC(2,1) CHECK (rating IS NULL OR rating BETWEEN 0 AND 5),
     sold_count VARCHAR(50),
     review_count VARCHAR(50),
+    keyword VARCHAR(255),
+    problem VARCHAR(255),
     cluster VARCHAR(100),
-    model VARCHAR(20) CHECK (model IN ('cheap', 'branded')),
+    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap', 'branded')),
+    capture_angle VARCHAR(20) CHECK (capture_angle IN ('search', 'reply', 'trend', 'problem')),
+    CHECK (capture_angle IS NULL OR content_model = 'capture'),
     benefit_1 VARCHAR(255),
     benefit_2 VARCHAR(255),
     benefit_3 VARCHAR(255),
@@ -95,52 +139,69 @@ CREATE TABLE products (
     caption_template VARCHAR(50) DEFAULT 'direct_product',
     hashtag_pool TEXT[],
     notes TEXT,
-    status VARCHAR(20) DEFAULT 'raw' CHECK (status IN ('raw', 'reformatted', 'ready', 'posted')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status VARCHAR(20) NOT NULL DEFAULT 'raw'
+        CHECK (status IN ('raw', 'reformatted', 'ready')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_products_status ON products(status);
+CREATE INDEX idx_products_cluster ON products(cluster);
+CREATE INDEX idx_products_content_model ON products(content_model);
+CREATE INDEX idx_products_created_at ON products(created_at DESC);
 ```
 
-### 4.2 Tabel accounts
+`raw_text` selalu dipertahankan sebagai sumber asli. Hasil AI mengisi atau memperbarui field terstruktur, tetapi tidak boleh menghapus data mentah.
 
-```sql
-CREATE TABLE accounts (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    platform VARCHAR(50) NOT NULL,
-    account_name VARCHAR(100) NOT NULL,
-    account_type VARCHAR(50) CHECK (account_type IN ('capture', 'cheap', 'branded')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+`content_model` menggantikan field `model` lama agar dapat mewakili tiga pendekatan konten: `capture`, `cheap`, dan `branded`. `capture_angle` hanya digunakan bila modelnya `capture`.
 
-### 4.3 Tabel post_logs
+Status `posted` tidak disimpan pada produk. Satu produk boleh dicatat dan diposting berulang kali; riwayatnya disimpan di `post_logs`.
+
+Transisi status:
+
+- Product baru: `raw`.
+- AI reformat: `raw` menjadi `reformatted`.
+- Edit manual dengan data lengkap: `reformatted` menjadi `ready`.
+- Posting tidak mengubah status product.
+
+### 4.2 Tabel post_logs
 
 ```sql
 CREATE TABLE post_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES products(id),
-    account_id UUID NOT NULL REFERENCES accounts(id),
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    platform VARCHAR(30) NOT NULL DEFAULT 'x' CHECK (platform = 'x'),
     caption TEXT NOT NULL,
     hashtags TEXT[],
-    posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    notes TEXT,
+    posted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_post_logs_product_id ON post_logs(product_id);
+CREATE INDEX idx_post_logs_posted_at ON post_logs(posted_at DESC);
 ```
 
-### 4.4 Tabel caption_variations
+Tidak ada `account_id`. Riwayat dapat berisi beberapa posting untuk produk dan platform yang sama.
+
+### 4.3 Tabel caption_variations
 
 ```sql
 CREATE TABLE caption_variations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES products(id),
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     label VARCHAR(50) NOT NULL,
+    template VARCHAR(50) NOT NULL,
     caption TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    hashtags TEXT[],
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_caption_variations_product_id ON caption_variations(product_id);
 ```
 
-## 5. API Specification
+## 5. API Contract
 
-### 5.1 Response Format
+### 5.1 Format Response
 
 Success:
 
@@ -158,86 +219,102 @@ Error:
 {
   "success": false,
   "data": null,
-  "error": "error message"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request tidak valid",
+    "fields": {
+      "shopee_link": "wajib diisi"
+    }
+  }
 }
 ```
 
+Gunakan HTTP status code yang sesuai: `200` untuk sukses, `201` untuk create, `204` untuk delete tanpa body, `400` untuk input invalid, `404` untuk data tidak ditemukan, `409` untuk conflict, dan `500` untuk error internal.
+
 ### 5.2 Products API
 
-#### List Products
-
 ```http
-GET /api/products?cluster=&model=&status=&search=
+GET /api/products?cluster=&content_model=&status=&search=&page=1&limit=20
 ```
 
-#### Create Product
+List response harus berisi `items`, `page`, `limit`, dan `total`.
 
 ```http
 POST /api/products
 Content-Type: application/json
+```
 
+Request minimum:
+
+```json
 {
-  "raw_text": "...",
-  "shopee_link": "...",
-  "image_url": "..."
+  "raw_text": "data copas Shopee yang masih berantakan",
+  "shopee_link": "https://shopee.co.id/...",
+  "image_url": "https://...",
+  "notes": ""
 }
 ```
 
-#### Get Product
+Produk baru selalu disimpan dengan status `raw`.
 
 ```http
 GET /api/products/{id}
-```
-
-#### Update Product
-
-```http
-PUT /api/products/{id}
-Content-Type: application/json
-```
-
-#### Delete Product
-
-```http
+PATCH /api/products/{id}
 DELETE /api/products/{id}
 ```
 
-### 5.3 AI Reformat API
+`PATCH` menerima field produk yang ingin diedit. Perubahan manual tidak boleh menghapus `raw_text` tanpa request eksplisit.
 
-#### Bulk Reformat
+### 5.3 AI Reformat API
 
 ```http
 POST /api/ai/reformat
 Content-Type: application/json
+```
 
+Request:
+
+```json
 {
   "product_ids": ["uuid1", "uuid2"]
 }
 ```
 
-Maksimal 20 product_ids per request.
+Aturan:
+
+- `product_ids` wajib berisi 1-20 ID.
+- Produk yang diproses harus berstatus `raw`.
+- Hasil AI langsung divalidasi dan disimpan ke database.
+- Status yang berhasil diproses berubah menjadi `reformatted`.
+- `raw_text` tidak pernah ditimpa.
+- Jika sebagian produk gagal, response harus melaporkan hasil per produk.
+- Tidak ada preview atau approval step di antara AI dan penyimpanan.
 
 Response:
 
 ```json
 {
   "success": true,
-  "data": [
-    { "product_id": "uuid1", "fields": { ... } },
-    { "product_id": "uuid2", "fields": { ... } }
-  ],
+  "data": {
+    "processed": [
+      { "product_id": "uuid1", "status": "reformatted" }
+    ],
+    "failed": []
+  },
   "error": null
 }
 ```
 
 ### 5.4 Caption API
 
-#### Generate Caption
-
 ```http
 POST /api/captions/generate
 Content-Type: application/json
+```
 
+Request:
+
+```json
 {
   "product_id": "uuid",
   "template": "direct_product",
@@ -245,304 +322,143 @@ Content-Type: application/json
 }
 ```
 
-#### Generate Variations
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "caption": "...",
+    "character_count": 240,
+    "over_limit": false,
+    "template": "direct_product"
+  },
+  "error": null
+}
+```
+
+Caption dapat dibuat untuk produk berstatus `reformatted` atau `ready`. Hashtag harus berjumlah 0-3 item setelah normalisasi.
 
 ```http
 POST /api/captions/variations
 Content-Type: application/json
+```
 
+Request:
+
+```json
 {
   "product_id": "uuid",
-  "count": 3
+  "template": "direct_product",
+  "count": 3,
+  "hashtags": ["#BajuAnak"]
 }
 ```
 
-### 5.5 Share API
+`count` dibatasi 2-3. Variasi dibuat oleh template service, disimpan di `caption_variations`, dan tidak terikat ke akun.
 
-#### Share to X
+```http
+GET /api/products/{id}/caption-variations
+```
+
+### 5.5 Share API
 
 ```http
 GET /api/share/x?caption={encoded_caption}
 ```
 
-Redirect ke Twitter Web Intent.
+Endpoint melakukan redirect ke:
+
+```text
+https://twitter.com/intent/tweet?text={url_encoded_caption}
+```
+
+Frontend juga menyalin caption ke clipboard sebagai fallback. Caption harus di-encode dengan URL query encoder, bukan konkatenasi string mentah.
 
 ### 5.6 Post Logs API
-
-#### Create Post Log
 
 ```http
 POST /api/post-logs
 Content-Type: application/json
-
-{
-  "product_id": "uuid",
-  "account_id": "uuid",
-  "caption": "...",
-  "hashtags": ["#BajuAnak"]
-}
 ```
 
-### 5.7 Accounts API
-
-#### List Accounts
-
-```http
-GET /api/accounts
-```
-
-#### Create Account
-
-```http
-POST /api/accounts
-Content-Type: application/json
-
-{
-  "platform": "x",
-  "account_name": "akun_cheap_1",
-  "account_type": "cheap"
-}
-```
-
-### 5.8 Media API
-
-#### Upload Media
-
-```http
-POST /api/products/{id}/media
-Content-Type: multipart/form-data
-
-file: <binary>
-```
-
-#### List Media
-
-```http
-GET /api/products/{id}/media
-```
-
-#### Download All Media as ZIP
-
-```http
-GET /api/products/{id}/media/download
-```
-
-## 6. Backend Folder Structure
-
-```text
-AffiliatorShopee/
-├── cmd/
-│   └── api/
-│       └── main.go
-├── internal/
-│   ├── config/
-│   │   └── config.go
-│   ├── db/
-│   │   ├── connection.go
-│   │   └── migrations/
-│   │       ├── 001_create_products.sql
-│   │       ├── 002_create_accounts.sql
-│   │       ├── 003_create_post_logs.sql
-│   │       └── 004_create_caption_variations.sql
-│   ├── handler/
-│   │   ├── product_handler.go
-│   │   ├── parser_handler.go
-│   │   ├── caption_handler.go
-│   │   ├── account_handler.go
-│   │   ├── post_log_handler.go
-│   │   └── media_handler.go
-│   ├── model/
-│   │   ├── product.go
-│   │   ├── account.go
-│   │   └── post_log.go
-│   ├── repository/
-│   │   ├── product_repo.go
-│   │   ├── account_repo.go
-│   │   └── post_log_repo.go
-│   ├── service/
-│   │   ├── product_service.go
-│   │   ├── ai_service.go
-│   │   ├── caption_service.go
-│   │   ├── share_service.go
-│   │   └── media_service.go
-│   └── storage/
-│       ├── storage.go
-│       └── local_storage.go
-├── web/
-│   ├── index.html
-│   ├── src/
-│   │   ├── main.js
-│   │   ├── App.vue
-│   │   ├── router/
-│   │   │   └── index.js
-│   │   ├── stores/
-│   │   │   └── productStore.js
-│   │   ├── components/
-│   │   │   ├── ProductList.vue
-│   │   │   ├── ProductForm.vue
-│   │   │   ├── ProductParser.vue
-│   │   │   ├── CaptionGenerator.vue
-│   │   │   ├── MediaUploader.vue
-│   │   │   └── ShareButton.vue
-│   │   └── views/
-│   │       ├── HomeView.vue
-│   │       ├── ProductDetailView.vue
-│   │       └── AccountsView.vue
-│   └── package.json
-├── extension/
-│   ├── manifest.json
-│   ├── background.js
-│   ├── content.js
-│   └── popup.html
-├── docker-compose.yml
-├── Dockerfile
-├── go.mod
-├── go.sum
-├── .env.example
-└── README.md
-```
-
-## 7. Caption Template Engine
-
-### 7.1 Placeholders
-
-| Placeholder | Sumber Data |
-|---|---|
-| `{product_name}` | product_name |
-| `{benefit_1}` | benefit_1 |
-| `{benefit_2}` | benefit_2 |
-| `{benefit_3}` | benefit_3 |
-| `{rating}` | rating |
-| `{sold_count}` | sold_count |
-| `{review_count}` | review_count |
-| `{normal_price}` | normal_price |
-| `{sale_price}` | sale_price |
-| `{discount_percent}` | discount_percent |
-| `{urgency}` | urgency |
-| `{shopee_link}` | shopee_link |
-| `{hashtags}` | hashtag_pool dipilih |
-
-### 7.2 Helper Functions
-
-| Fungsi | Contoh |
-|---|---|
-| `format_price` | 39999 → Rp39.999 |
-| `format_number` | 1000000 → 1.000.000 |
-| `join_hashtags` | array → string |
-
-### 7.3 Template Examples
-
-**Direct Product:**
-
-```text
-Cari {product_name}?
-
-✅ {benefit_1}
-✅ {benefit_2}
-✅ {benefit_3}
-✅ {rating}⭐️
-✅ {sold_count} terjual
-🔥 {urgency}
-
-Cek di sini 👇
-{shopee_link}
-
-{hashtags}
-```
-
-**Keyword + Recommendation:**
-
-```text
-Lagi cari {product_name}?
-
-Ini salah satu yang gue shortlist.
-
-Kenapa masuk shortlist:
-✅ {benefit_1}
-✅ {benefit_2}
-✅ {benefit_3}
-✅ {rating}⭐️ | {sold_count} terjual
-
-Harganya juga masih masuk akal.
-
-Cek:
-{shopee_link}
-
-{hashtags}
-```
-
-**Cheap / Value:**
-
-```text
-Cari {product_name} murah tapi nggak murahan?
-
-Yang ini menarik 👀
-
-✅ {benefit_1}
-✅ {benefit_2}
-✅ {rating}⭐️
-✅ {sold_count} terjual
-✅ {sale_price}
-
-Kalau budget lo sekitar {sale_price}, ini worth checking.
-
-👇
-{shopee_link}
-
-{hashtags}
-```
-
-## 8. AI Reformat Service
-
-### 8.1 Input
-
-POST body:
+Request:
 
 ```json
 {
-  "product_ids": ["uuid1", "uuid2"]
+  "product_id": "uuid",
+  "platform": "x",
+  "caption": "...",
+  "hashtags": ["#BajuAnak"],
+  "notes": ""
 }
 ```
 
-### 8.2 Prompt ke AI via OpenRouter
-
-Endpoint: `https://openrouter.ai/api/v1/chat/completions`
-
-Model default: `google/gemini-flash-1.5`
-
-Alternatif: `openai/gpt-4o-mini`
-
-Headers:
-
-```text
-Authorization: Bearer {OPENROUTER_API_KEY}
-HTTP-Referer: http://localhost:8080
-X-Title: AffiliatorShopee
+```http
+GET /api/post-logs?product_id={uuid}&page=1&limit=20
 ```
 
-Prompt:
+Membuat post log tidak mengubah status produk. Endpoint ini hanya mencatat konfirmasi manual user.
 
-```text
-Kamu adalah asisten kurasi produk affiliate.
-Saya akan memberikan data mentah dari Shopee.
-Tugas kamu:
-1. Rapikan nama produk
-2. Ekstrak harga normal, harga diskon, diskon %
-3. Ekstrak rating dan jumlah terjual
-4. Tentukan cluster/kategori
-5. Pilih 3 benefit utama
-6. Tentukan urgency (stok, voucher, PO, flash sale, dll)
-7. Tentukan model: cheap atau branded
-8. Pilih 1-3 hashtag relevan
+## 6. Caption Template Engine
 
-Output hanya JSON array, tanpa penjelasan.
-Jika data tidak ditemukan, isi dengan null.
-Jangan mengarang data yang tidak ada di input.
+### 6.1 Template Registry
 
-Format output:
+Template MVP yang wajib tersedia:
+
+- `direct_product`
+- `keyword_recommendation`
+- `problem_specific`
+- `cheap_value`
+
+Setiap template memiliki daftar placeholder wajib dan opsional. Placeholder dengan nilai kosong harus dihilangkan bersama label atau barisnya, bukan menghasilkan teks `null` atau placeholder mentah.
+
+### 6.2 Placeholder
+
+| Placeholder | Sumber |
+|---|---|
+| `{product_name}` | `product_name` |
+| `{keyword}` | `keyword`, fallback ke `product_name` |
+| `{problem}` | `problem` |
+| `{benefit_1}` | `benefit_1` |
+| `{benefit_2}` | `benefit_2` |
+| `{benefit_3}` | `benefit_3` |
+| `{rating}` | `rating` |
+| `{sold_count}` | `sold_count` |
+| `{review_count}` | `review_count` |
+| `{normal_price}` | `normal_price`, format Rupiah |
+| `{sale_price}` | `sale_price`, format Rupiah |
+| `{discount_percent}` | `discount_percent` |
+| `{urgency}` | `urgency`, hanya jika ada bukti |
+| `{shopee_link}` | `shopee_link` |
+| `{hashtags}` | hashtag pilihan user |
+
+Tidak ada placeholder `proof` terpisah. Proof dibentuk hanya dari rating, jumlah terjual, dan jumlah review yang tersedia.
+
+### 6.3 Helper
+
+- `format_price(39999)` menghasilkan `Rp39.999`.
+- `format_number(1000000)` menghasilkan `1.000.000`.
+- `join_hashtags(array)` menghasilkan string hashtag dengan spasi.
+- Character count menggunakan jumlah rune/karakter Unicode, bukan jumlah byte.
+
+## 7. AI Reformat Service
+
+### 7.1 Provider
+
+- Endpoint: `https://openrouter.ai/api/v1/chat/completions`
+- Model diambil dari `OPENROUTER_MODEL`.
+- API key hanya dibaca backend dari `AI_API_KEY`.
+- HTTP client memiliki timeout dan tidak mengirim API key ke frontend.
+
+### 7.2 Output AI
+
+AI diminta mengembalikan JSON array dengan field:
+
+```json
 [
   {
-    "product_id": "...",
+    "product_id": "uuid",
     "product_name": "...",
     "normal_price": 0,
     "sale_price": 0,
@@ -550,8 +466,11 @@ Format output:
     "rating": 0.0,
     "sold_count": "...",
     "review_count": "...",
+    "keyword": "...",
+    "problem": "...",
     "cluster": "...",
-    "model": "cheap",
+    "content_model": "cheap",
+    "capture_angle": null,
     "benefit_1": "...",
     "benefit_2": "...",
     "benefit_3": "...",
@@ -561,197 +480,188 @@ Format output:
 ]
 ```
 
-### 8.3 Batasan
+Prompt wajib menginstruksikan AI untuk:
 
-- Maksimal 20 produk per request
-- AI key di backend
-- Validasi hasil AI sebelum disimpan
-- Status produk berubah dari `raw` ke `reformatted`
+- Tidak mengarang harga, rating, jumlah terjual, review, urgency, atau benefit yang tidak didukung data.
+- Mengisi `null` jika data tidak tersedia.
+- Memilih `content_model` dari `capture`, `cheap`, atau `branded`.
+- Mengisi `capture_angle` hanya untuk model `capture`.
+- Menghasilkan JSON valid tanpa markdown atau penjelasan tambahan.
 
-## 9. Chrome Extension
+### 7.3 Validasi Sebelum Save
 
-### 9.1 Manifest V3
+- JSON harus dapat diparse.
+- Semua `product_id` response harus cocok dengan request.
+- Tidak boleh ada ID duplikat atau ID di luar request.
+- Harga tidak boleh negatif.
+- `discount_percent` harus 0-100.
+- `rating` harus 0-5.
+- `content_model` dan `capture_angle` harus sesuai enum.
+- Hashtag maksimal 3 dan harus dinormalisasi.
+- Produk hanya di-update setelah response lolos validasi.
 
-```json
-{
-  "manifest_version": 3,
-  "name": "AffiliatorShopee Helper",
-  "version": "1.0.0",
-  "permissions": ["activeTab", "storage", "scripting", "clipboardWrite"],
-  "host_permissions": ["https://twitter.com/*", "https://x.com/*", "https://threads.net/*"],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://twitter.com/*", "https://x.com/*", "https://threads.net/*"],
-      "js": ["content.js"]
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html"
-  }
-}
-```
+## 8. Frontend
 
-### 9.2 Flow
+### 8.1 Routes
 
-```text
-1. User di web app klik "Share ke X"
-2. Web app copy caption ke clipboard
-3. Web app buka tab baru ke twitter.com/intent/tweet?text=...
-4. Content script di tab X aktif
-5. Content script paste caption dari clipboard ke textarea
-6. User upload gambar/video manual
-7. User klik Post
-```
-
-### 9.3 content.js
-
-Tugas:
-
-- Deteksi textarea composer X/Threads
-- Paste caption dari clipboard
-- Tampilkan notifikasi sukses/gagal
-
-## 10. Frontend
-
-### 10.1 Stack Detail
-
-- Vue 3 Composition API
-- Vite build tool
-- Tailwind CSS
-- Vue Router
-- Pinia state management
-- Fetch API
-
-### 10.2 Halaman
-
-| Halaman | Fungsi |
+| Route | Fungsi |
 |---|---|
-| / | Dashboard produk |
-| /products/new | Tambah produk via form/parser |
-| /products/:id | Detail, edit, generate caption |
-| /accounts | Kelola akun |
-| /post-logs | Riwayat posting |
+| `/` | Dashboard produk dan filter |
+| `/products/new` | Paste dan simpan produk raw |
+| `/products/:id` | Detail, edit, reformat, caption, share |
+| `/post-logs` | Riwayat posting sederhana |
 
-### 10.3 Komponen Utama
+### 8.2 Komponen
 
-| Komponen | Fungsi |
-|---|---|
-| ProductList.vue | Daftar produk dengan filter |
-| ProductForm.vue | Form tambah/edit produk |
-| ProductParser.vue | Textarea paste ngawur |
-| BulkReformat.vue | Checkbox produk + tombol reformat |
-| CaptionGenerator.vue | Generate caption dan variasi |
-| HashtagSelector.vue | Pilih hashtag |
-| MediaUploader.vue | Upload/list media |
-| ShareButton.vue | Share ke platform |
+- `ProductList.vue` - daftar produk dengan filter.
+- `ProductForm.vue` - edit field produk.
+- `ProductParser.vue` - textarea data Shopee mentah.
+- `BulkReformat.vue` - pilih maksimal 20 produk dan panggil AI.
+- `CaptionGenerator.vue` - pilih template dan generate caption.
+- `HashtagSelector.vue` - pilih 0-3 hashtag.
+- `ShareButton.vue` - copy clipboard dan buka X.
+- `PostLogForm.vue` - catat posting setelah user selesai posting di X.
 
-### 10.4 State Management (Pinia)
+Tidak ada `AccountsView`, `accountStore`, `MediaUploader`, atau flow pemilihan akun pada MVP.
 
-Stores:
+### 8.3 State
 
-- `productStore` — daftar produk, filter, status
-- `accountStore` — daftar akun
-- `captionStore` — caption dan variasi
+- `productStore` - list, filter, CRUD, dan AI reformat.
+- `captionStore` - caption aktif dan variasi.
 
-## 11. Docker Compose
+## 9. Docker Compose
+
+Compose MVP harus menyediakan PostgreSQL dan app Go. Port hanya di-bind ke localhost karena MVP tidak memiliki autentikasi.
 
 ```yaml
-version: '3.8'
-
 services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: affiliator
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: affiliator
+      POSTGRES_USER: ${POSTGRES_USER:-affiliator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-affiliator}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-affiliator} -d ${POSTGRES_DB:-affiliator}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build: .
     environment:
-      DATABASE_URL: postgres://affiliator:secret@db:5432/affiliator?sslmode=disable
+      DATABASE_URL: ${DATABASE_URL}
       PORT: 8080
-      STORAGE_PATH: /app/data/uploads
       AI_API_KEY: ${AI_API_KEY}
-    volumes:
-      - ./data/uploads:/app/data/uploads
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL}
+      ENV: ${ENV:-development}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
 ```
 
-## 12. Environment Variables
+## 10. Environment Variables
 
 ```bash
 PORT=8080
-DATABASE_URL=postgres://affiliator:secret@db:5432/affiliator?sslmode=disable
-STORAGE_PATH=/app/data/uploads
+DATABASE_URL=postgres://affiliator:change-me@db:5432/affiliator?sslmode=disable
+POSTGRES_USER=affiliator
+POSTGRES_PASSWORD=change-me
+POSTGRES_DB=affiliator
 AI_API_KEY=sk-or-v1-...
 OPENROUTER_MODEL=google/gemini-flash-1.5
 ENV=development
 ```
 
-## 13. Security
+Jangan commit file `.env` atau API key ke repository.
 
-- Tidak ada auth di MVP
-- Jangan expose port ke internet tanpa autentikasi
-- AI API key hanya di backend
-- Validasi input di backend
-- Sanitasi caption sebelum URL encode
-- Batasi upload file size
-- Hanya terima file gambar/video yang umum
+## 11. Security dan Reliability
 
-## 14. Error Handling
+- MVP hanya untuk local/private use dan tidak memiliki auth.
+- Bind port API dan database ke `127.0.0.1`.
+- Jangan expose service ke internet sebelum auth dan authorization tersedia.
+- API key hanya berada di backend.
+- Validasi ukuran body, panjang string, URL, enum, angka, dan jumlah hashtag.
+- Gunakan timeout, error handling, dan logging terstruktur untuk OpenRouter.
+- Jangan menyimpan raw product text di log aplikasi secara default.
+- Semua query database menggunakan parameter binding.
+- Caption di-encode dengan aman sebelum dipakai pada URL intent.
 
-### Backend
+## 12. Error Handling
 
-- Semua error di-wrap dalam response format standar
-- Log error di server
-- Jangan expose detail error internal ke client
+Backend harus:
 
-### Frontend
+- Mengembalikan format error standar.
+- Tidak membocorkan detail error internal atau secret.
+- Membedakan validation error, not found, provider error, dan database error.
+- Mengembalikan hasil per produk untuk bulk AI agar kegagalan sebagian terlihat.
 
-- Tampilkan pesan error dari API
-- Disable tombol saat loading
-- Validasi form sebelum submit
+Frontend harus:
 
-## 15. Testing Strategy
+- Menampilkan error yang actionable.
+- Disable tombol selama request berjalan.
+- Menampilkan status proses AI per produk.
+- Menyediakan fallback copy-paste manual bila share intent gagal.
+
+## 13. Testing Strategy
 
 | Jenis | Scope | Tool |
 |---|---|---|
-| Unit test | Service dan parser | Go testing |
-| Integration test | API endpoint | Postman / curl |
-| Manual test | End-to-end flow | Browser |
+| Unit | Template, validator, service, URL builder | Go testing |
+| Repository integration | Migration dan query PostgreSQL | Go testing + test database |
+| API integration | Semua endpoint dan status code | Go testing / httptest |
+| AI contract | JSON valid/invalid, timeout, partial failure | Mock HTTP server |
+| Frontend | Form, loading/error state, caption flow | Vitest |
+| End-to-end | Input sampai share dan post log | Browser test/manual |
 
-## 16. Migration Files
+Test minimum:
+
+- CRUD product dan validasi field.
+- Status `raw` ke `reformatted` ke `ready`.
+- AI bulk 1-20 produk dan menolak lebih dari 20.
+- Raw text tetap utuh setelah reformat.
+- AI malformed response, timeout, dan partial failure.
+- Template dengan field kosong.
+- Character count Unicode dan caption di atas batas.
+- Hashtag 0-3 dan penolakan hashtag ke-4.
+- URL encoding untuk spasi, emoji, newline, dan karakter khusus.
+- Posting berulang pada produk yang sama.
+- Migration dan database readiness Docker.
+
+## 14. Migration Files
 
 - `001_create_products.sql`
-- `002_create_accounts.sql`
-- `003_create_post_logs.sql`
-- `004_create_caption_variations.sql`
+- `002_create_post_logs.sql`
+- `003_create_caption_variations.sql`
 
-Gunakan library migrasi `golang-migrate/migrate` atau `pressly/goose`.
+Gunakan satu migration tool yang dipilih saat setup, misalnya `golang-migrate/migrate` atau `pressly/goose`. Migration harus idempotent sesuai kemampuan tool dan dijalankan sebelum app menerima traffic.
 
-## 17. Roadmap Teknis
+## 15. Roadmap Setelah MVP
 
-| Fase | Fitur |
-|---|---|
-| MVP | CRUD produk, AI reformat, caption generator, share intent, extension paste, local storage |
-| V2 | Scheduling post, bulk share, analytics sederhana |
-| V3 | Auth, multi-user, admin panel |
-| V4 | SaaS-ready, S3/CDN, managed DB |
+- Chrome Extension untuk membantu paste caption.
+- Integrasi Threads.
+- Media storage di backend atau S3/CDN.
+- Manajemen banyak akun dan status posting per akun.
+- Scheduling dan analytics.
+- Auth, multi-user, dan admin panel.
 
-## 18. Catatan
+## 16. Definition of Done MVP
 
-TRD ini akan diupdate saat implementasi berjalan, terutama di bagian Chrome Extension dan AI integration setelah pengujian pertama.
+MVP dianggap selesai bila user dapat:
+
+1. Menyimpan data Shopee mentah.
+2. Memilih maksimal 20 produk dan menjalankan AI reformat.
+3. Melihat hasil reformat yang sudah tersimpan dan mengeditnya.
+4. Membuat caption dan variasi dengan hashtag.
+5. Membuka X dengan caption terisi atau menyalinnya manual.
+6. Mencatat posting berulang untuk produk yang sama.
+7. Menjalankan seluruh stack melalui Docker Compose di localhost.

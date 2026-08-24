@@ -22,7 +22,7 @@ Web app pribadi untuk menyimpan produk-produk curated affiliate Shopee, lalu mem
 |---|---|---|
 | 4 Capture Models | Search, Reply, Trend, Problem Capture |
 | Curated Cheap/Value | Produk murah, berguna, deal |
-| Curated Branded | Brand dikenal, diskon, voucher, promo |
+| Curated Branded | Roadmap: brand dikenal, diskon, voucher, promo |
 
 ## Keputusan Penting: Tidak Auto-Posting Penuh
 
@@ -48,7 +48,7 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 ### 1. Manajemen Produk Curated
 
 - Tambah produk dari data mentah dan link affiliate
-- Upload atau paste link gambar
+- Paste link gambar eksternal
 - Kategorikan cluster
 - Riwayat posting sederhana per produk
 - Produk boleh diposting berulang kali
@@ -88,10 +88,13 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 
 | Field | Keterangan |
 |---|---|
-| product_id | ID unik internal |
+| id | ID unik internal |
+| raw_text | Data copas Shopee asli |
 | product_name | Nama produk |
 | shopee_link | Link affiliate |
-| image_url | Gambar produk |
+| image_url | URL gambar utama |
+| image_urls | URL gambar tambahan |
+| video_url | URL video |
 | normal_price | Harga normal |
 | sale_price | Harga diskon |
 | discount_percent | Persentase diskon |
@@ -101,7 +104,7 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 | cluster | Kategori/cluster |
 | keyword | Keyword utama untuk hook |
 | problem | Problem yang ingin diangkat |
-| content_model | capture / cheap / branded |
+| content_model | capture / cheap |
 | capture_angle | search / reply / trend / problem |
 | benefit_1 | Benefit utama |
 | benefit_2 | Benefit kedua |
@@ -111,6 +114,8 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 | hashtag_pool | Pilihan hashtag |
 | status | raw / reformatted / ready |
 | notes | Catatan tambahan |
+| created_at | Waktu dibuat |
+| updated_at | Waktu terakhir diubah |
 
 ## Prinsip Caption
 

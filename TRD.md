@@ -129,31 +129,48 @@ CREATE TABLE products (
     keyword VARCHAR(255),
     problem VARCHAR(255),
     cluster VARCHAR(100),
-    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap', 'branded')),
+    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap')),
     capture_angle VARCHAR(20) CHECK (capture_angle IN ('search', 'reply', 'trend', 'problem')),
     CHECK (capture_angle IS NULL OR content_model = 'capture'),
     benefit_1 VARCHAR(255),
     benefit_2 VARCHAR(255),
     benefit_3 VARCHAR(255),
     urgency VARCHAR(255),
-    caption_template VARCHAR(50) DEFAULT 'direct_product',
+    caption_template VARCHAR(50) NOT NULL DEFAULT 'direct_product'
+        CHECK (caption_template IN ('direct_product', 'keyword_recommendation', 'problem_specific', 'cheap_value')),
     hashtag_pool TEXT[],
     notes TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'raw'
         CHECK (status IN ('raw', 'reformatted', 'ready')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (sale_price IS NULL OR normal_price IS NULL OR sale_price <= normal_price),
+    CHECK (hashtag_pool IS NULL OR cardinality(hashtag_pool) <= 3)
 );
 
 CREATE INDEX idx_products_status ON products(status);
 CREATE INDEX idx_products_cluster ON products(cluster);
 CREATE INDEX idx_products_content_model ON products(content_model);
 CREATE INDEX idx_products_created_at ON products(created_at DESC);
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER products_set_updated_at
+BEFORE UPDATE ON products
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 `raw_text` selalu dipertahankan sebagai sumber asli. Hasil AI mengisi atau memperbarui field terstruktur, tetapi tidak boleh menghapus data mentah.
 
-`content_model` menggantikan field `model` lama agar dapat mewakili tiga pendekatan konten: `capture`, `cheap`, dan `branded`. `capture_angle` hanya digunakan bila modelnya `capture`.
+`image_url`, `image_urls`, dan `video_url` pada MVP hanya menyimpan URL eksternal yang diberikan user. Backend tidak mengunduh, mem-proxy, atau menyimpan file media tersebut.
+
+`content_model` menggantikan field `model` lama agar dapat mewakili dua pendekatan konten MVP: `capture` dan `cheap`. `capture_angle` hanya digunakan bila modelnya `capture`. Model `branded` ditunda ke roadmap.
 
 Status `posted` tidak disimpan pada produk. Satu produk boleh dicatat dan diposting berulang kali; riwayatnya disimpan di `post_logs`.
 
@@ -161,8 +178,10 @@ Transisi status:
 
 - Product baru: `raw`.
 - AI reformat: `raw` menjadi `reformatted`.
-- Edit manual dengan data lengkap: `reformatted` menjadi `ready`.
+- Edit manual dengan data lengkap: `raw` atau `reformatted` menjadi `ready`.
 - Posting tidak mengubah status product.
+
+Field minimum untuk status `ready` adalah `product_name`, `shopee_link`, `cluster`, `content_model`, dan minimal satu dari `benefit_1`, `benefit_2`, atau `benefit_3`. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi. Caption hanya dapat dibuat untuk status `reformatted` atau `ready`.
 
 ### 4.2 Tabel post_logs
 
@@ -174,7 +193,8 @@ CREATE TABLE post_logs (
     caption TEXT NOT NULL,
     hashtags TEXT[],
     notes TEXT,
-    posted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    posted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (hashtags IS NULL OR cardinality(hashtags) <= 3)
 );
 
 CREATE INDEX idx_post_logs_product_id ON post_logs(product_id);
@@ -193,10 +213,16 @@ CREATE TABLE caption_variations (
     template VARCHAR(50) NOT NULL,
     caption TEXT NOT NULL,
     hashtags TEXT[],
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CHECK (cardinality(hashtags) <= 3)
 );
 
 CREATE INDEX idx_caption_variations_product_id ON caption_variations(product_id);
+
+CREATE TRIGGER caption_variations_set_updated_at
+BEFORE UPDATE ON caption_variations
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 ```
 
 ## 5. API Contract
@@ -237,7 +263,9 @@ Gunakan HTTP status code yang sesuai: `200` untuk sukses, `201` untuk create, `2
 GET /api/products?cluster=&content_model=&status=&search=&page=1&limit=20
 ```
 
-List response harus berisi `items`, `page`, `limit`, dan `total`.
+Default `page` adalah 1 dan default `limit` adalah 20. `limit` minimum 1 dan maksimum 100. `search` melakukan pencarian case-insensitive pada `product_name`, `keyword`, `cluster`, dan `raw_text`.
+
+List response harus berisi `items`, `page`, `limit`, dan `total`. Setiap item juga berisi `post_count` dan `last_posted_at` yang dihitung dari `post_logs`.
 
 ```http
 POST /api/products
@@ -257,13 +285,38 @@ Request minimum:
 
 Produk baru selalu disimpan dengan status `raw`.
 
+Response create dan detail menggunakan object product di dalam `data`. Contoh ringkas:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "raw_text": "data copas Shopee",
+    "shopee_link": "https://shopee.co.id/...",
+    "status": "raw",
+    "post_count": 0,
+    "last_posted_at": null
+  },
+  "error": null
+}
+```
+
 ```http
 GET /api/products/{id}
 PATCH /api/products/{id}
 DELETE /api/products/{id}
 ```
 
-`PATCH` menerima field produk yang ingin diedit. Perubahan manual tidak boleh menghapus `raw_text` tanpa request eksplisit.
+`PATCH` menerima allowlist field produk terstruktur: `product_name`, `shopee_link`, `image_url`, `image_urls`, `video_url`, harga, rating, `sold_count`, `review_count`, `keyword`, `problem`, `cluster`, `content_model`, `capture_angle`, benefit, `urgency`, `caption_template`, `hashtag_pool`, `notes`, dan `status`. Field nullable dapat dihapus dengan nilai JSON `null` kecuali `raw_text`, yang immutable untuk menjaga sumber asli.
+
+Status hanya boleh berubah melalui transisi `raw -> reformatted`, `raw -> ready`, atau `reformatted -> ready`. Request yang mencoba mengubah `ready` kembali ke `raw` atau `reformatted` ditolak kecuali ada endpoint reset khusus di masa depan.
+
+Delete mengembalikan `204` tanpa body. Get, patch, dan create mengembalikan product object dalam format response standar.
+
+`post_count` dan `last_posted_at` adalah field read-only hasil aggregate `post_logs`, bukan kolom pada `products`.
+
+Nilai `null` berarti data memang belum tersedia; nilai `0` hanya boleh dipakai untuk angka yang benar-benar diketahui bernilai nol. Backend wajib memvalidasi panjang string, array, URL `http/https`, enum template/model, hubungan harga, dan field minimum sebelum menerima status `ready`.
 
 ### 5.3 AI Reformat API
 
@@ -290,6 +343,8 @@ Aturan:
 - Jika sebagian produk gagal, response harus melaporkan hasil per produk.
 - Tidak ada preview atau approval step di antara AI dan penyimpanan.
 
+ID duplikat dalam request ditolak dengan `DUPLICATE_PRODUCT_ID`. ID yang tidak ditemukan atau bukan `raw` masuk ke daftar `failed` tanpa mengubah produk tersebut. Setiap product diproses dan disimpan secara atomic; kegagalan satu product tidak membatalkan product lain yang valid.
+
 Response:
 
 ```json
@@ -299,7 +354,13 @@ Response:
     "processed": [
       { "product_id": "uuid1", "status": "reformatted" }
     ],
-    "failed": []
+    "failed": [
+      {
+        "product_id": "uuid2",
+        "code": "AI_INVALID_OUTPUT",
+        "message": "Hasil AI tidak lolos validasi"
+      }
+    ]
   },
   "error": null
 }
@@ -339,6 +400,8 @@ Response:
 
 Caption dapat dibuat untuk produk berstatus `reformatted` atau `ready`. Hashtag harus berjumlah 0-3 item setelah normalisasi.
 
+Field `caption` selalu merupakan final text yang sudah mengandung hashtag. Array `hashtags` tetap dikembalikan terpisah untuk kebutuhan UI dan post log. Character count dihitung dari final text yang sama.
+
 ```http
 POST /api/captions/variations
 Content-Type: application/json
@@ -357,9 +420,17 @@ Request:
 
 `count` dibatasi 2-3. Variasi dibuat oleh template service, disimpan di `caption_variations`, dan tidak terikat ke identitas akun X.
 
+Response variations mengembalikan array variation object. Setiap variation menyimpan caption final yang sudah mengandung hashtag.
+
 ```http
 GET /api/products/{id}/caption-variations
+PATCH /api/caption-variations/{id}
+DELETE /api/caption-variations/{id}
 ```
+
+`PATCH` hanya menerima `label`, `caption`, dan `hashtags`. Update variation mengubah `updated_at`. Delete mengembalikan `204`.
+
+Create, list, dan patch mengembalikan variation object dalam `data`. `product_id` pada patch/delete harus sesuai dengan variation yang dituju; variation dari produk lain tidak boleh dapat diubah.
 
 ### 5.5 Share API
 
@@ -374,6 +445,8 @@ https://twitter.com/intent/tweet?text={url_encoded_caption}
 ```
 
 Frontend juga menyalin caption ke clipboard sebagai fallback. Caption harus di-encode dengan URL query encoder, bukan konkatenasi string mentah.
+
+`ShareButton` harus membuka URL intent melalui `window.open()` atau navigasi langsung di dalam user gesture, bukan memanggil endpoint redirect melalui `fetch`. Gunakan `noopener,noreferrer` dan tetap tampilkan tombol copy manual bila popup atau clipboard ditolak browser.
 
 ### 5.6 Post Logs API
 
@@ -398,7 +471,7 @@ Request:
 GET /api/post-logs?product_id={uuid}&page=1&limit=20
 ```
 
-Membuat post log tidak mengubah status produk. Endpoint ini hanya mencatat konfirmasi manual user.
+Create response mengembalikan post log object di dalam `data`; list response mengembalikan `items`, `page`, `limit`, dan `total`. Membuat post log tidak mengubah status produk. Endpoint ini hanya mencatat konfirmasi manual user.
 
 ## 6. Caption Template Engine
 
@@ -412,6 +485,77 @@ Template MVP yang wajib tersedia:
 - `cheap_value`
 
 Setiap template memiliki daftar placeholder wajib dan opsional. Placeholder dengan nilai kosong harus dihilangkan bersama label atau barisnya, bukan menghasilkan teks `null` atau placeholder mentah.
+
+Format canonical MVP:
+
+```text
+[direct_product]
+Cari {product_name}?
+
+✅ {benefit_1}
+✅ {benefit_2}
+✅ {benefit_3}
+✅ {rating}⭐️
+✅ {sold_count} terjual
+{urgency}
+
+Cek di sini 👇
+{shopee_link}
+
+{hashtags}
+
+[keyword_recommendation]
+Lagi cari {keyword}?
+
+Ini salah satu yang gue shortlist.
+
+Kenapa masuk shortlist:
+✅ {benefit_1}
+✅ {benefit_2}
+✅ {benefit_3}
+✅ {rating}⭐️ | {sold_count} terjual
+
+Harganya masih masuk akal.
+
+Cek:
+{shopee_link}
+
+{hashtags}
+
+[problem_specific]
+Punya masalah {problem}?
+
+{product_name} ini bisa jadi salah satu opsi.
+
+✅ {benefit_1}
+✅ {benefit_2}
+✅ {benefit_3}
+
+Cek detailnya:
+{shopee_link}
+
+{hashtags}
+
+[cheap_value]
+Cari {product_name} murah tapi nggak murahan?
+
+Yang ini menarik 👀
+
+✅ {benefit_1}
+✅ {benefit_2}
+✅ {rating}⭐️
+✅ {sold_count} terjual
+✅ {sale_price}
+
+Kalau budget lo sekitar {sale_price}, ini worth checking.
+
+👇
+{shopee_link}
+
+{hashtags}
+```
+
+`problem_specific` membutuhkan field `problem`. Template lain memakai fallback `keyword -> product_name`. `benefit_2`, `benefit_3`, rating, sold count, urgency, dan harga boleh kosong; renderer menghilangkan baris yang tidak memiliki data.
 
 ### 6.2 Placeholder
 
@@ -447,9 +591,11 @@ Tidak ada placeholder `proof` terpisah. Proof dibentuk hanya dari rating, jumlah
 ### 7.1 Provider
 
 - Endpoint: `https://openrouter.ai/api/v1/chat/completions`
-- Model diambil dari `OPENROUTER_MODEL`.
+- Model wajib diambil dari `OPENROUTER_MODEL`; tidak ada model provider yang di-hardcode oleh backend.
 - API key hanya dibaca backend dari `AI_API_KEY`.
 - HTTP client memiliki timeout dan tidak mengirim API key ke frontend.
+- `raw_text` diperlakukan sebagai untrusted content, dikirim di dalam delimiter prompt, dan tidak ditulis ke log aplikasi.
+- Kirim hanya data yang diperlukan untuk reformat; jangan mengirim secret atau data pribadi ke provider AI.
 
 ### 7.2 Output AI
 
@@ -484,7 +630,7 @@ Prompt wajib menginstruksikan AI untuk:
 
 - Tidak mengarang harga, rating, jumlah terjual, review, urgency, atau benefit yang tidak didukung data.
 - Mengisi `null` jika data tidak tersedia.
-- Memilih `content_model` dari `capture`, `cheap`, atau `branded`.
+- Memilih `content_model` dari `capture` atau `cheap`.
 - Mengisi `capture_angle` hanya untuk model `capture`.
 - Menghasilkan JSON valid tanpa markdown atau penjelasan tambahan.
 
@@ -499,6 +645,8 @@ Prompt wajib menginstruksikan AI untuk:
 - `content_model` dan `capture_angle` harus sesuai enum.
 - Hashtag maksimal 3 dan harus dinormalisasi.
 - Produk hanya di-update setelah response lolos validasi.
+- Request bersamaan tidak boleh menimpa hasil yang lebih baru; update memakai conditional status atau row lock.
+- Provider timeout dan error tidak boleh mengubah data produk.
 
 ## 8. Frontend
 
@@ -578,7 +726,7 @@ POSTGRES_USER=affiliator
 POSTGRES_PASSWORD=change-me
 POSTGRES_DB=affiliator
 AI_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=google/gemini-flash-1.5
+OPENROUTER_MODEL=replace-with-tested-openrouter-model
 ENV=development
 ```
 
@@ -591,6 +739,9 @@ Jangan commit file `.env` atau API key ke repository.
 - Jangan expose service ke internet sebelum auth dan authorization tersedia.
 - API key hanya berada di backend.
 - Validasi ukuran body, panjang string, URL, enum, angka, dan jumlah hashtag.
+- CORS hanya mengizinkan origin development lokal yang ditentukan, misalnya `http://localhost:5173`.
+- Batasi request AI dengan rate limit dan concurrency limit agar biaya terkendali.
+- Validasi environment wajib saat startup dan fail-fast bila `DATABASE_URL` atau `AI_API_KEY` tidak valid.
 - Gunakan timeout, error handling, dan logging terstruktur untuk OpenRouter.
 - Jangan menyimpan raw product text di log aplikasi secara default.
 - Semua query database menggunakan parameter binding.
@@ -643,7 +794,7 @@ Test minimum:
 - `002_create_post_logs.sql`
 - `003_create_caption_variations.sql`
 
-Gunakan satu migration tool yang dipilih saat setup, misalnya `golang-migrate/migrate` atau `pressly/goose`. Migration harus idempotent sesuai kemampuan tool dan dijalankan sebelum app menerima traffic.
+Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration harus memiliki version tracking, dijalankan sebelum app menerima traffic, dan membuat startup gagal bila migration tidak berhasil.
 
 ## 15. Roadmap Setelah MVP
 

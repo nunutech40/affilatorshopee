@@ -64,7 +64,7 @@ flowchart LR
     A[Market] --> B[Demand]
     B --> C[Produk Curated]
     C --> D[Generate Caption]
-    D --> E[Share ke Platform]
+    D --> E[Share ke X]
     E --> F[User Upload Media]
     F --> G[User Posting]
     G --> H[Commission]
@@ -147,6 +147,7 @@ flowchart TD
 - Status workflow: raw → reformatted → ready
 - Riwayat posting disimpan di `post_logs`; posting ulang tidak mengubah status produk
 - Produk baru selalu berstatus `raw`; AI mengubah `raw` menjadi `reformatted`; penyimpanan manual setelah data lengkap dapat mengubahnya menjadi `ready`
+- Produk `raw` juga dapat langsung diubah menjadi `ready` melalui pengisian manual tanpa AI
 
 ### 9.2 AI Reformat
 
@@ -184,6 +185,7 @@ flowchart TD
 - Caption terisi otomatis di tab baru
 - Caption juga disalin ke clipboard
 - Media di-upload manual oleh user
+- Caption final yang dibagikan sudah mencakup hashtag yang dipilih
 
 ### 9.7 Riwayat Posting Sederhana
 
@@ -228,7 +230,7 @@ flowchart TD
 | cluster | string | Kategori/cluster |
 | keyword | string | Keyword utama untuk hook |
 | problem | string | Problem yang ingin diangkat |
-| content_model | enum | capture / cheap / branded |
+| content_model | enum | capture / cheap |
 | capture_angle | enum | search / reply / trend / problem |
 | benefit_1 | string | Benefit utama |
 | benefit_2 | string | Benefit kedua |
@@ -247,7 +249,6 @@ flowchart TD
 |---|---|---|
 | 4 Capture Models | X | Search, Reply, Trend, Problem Capture |
 | Curated Cheap/Value | X | Produk murah, berguna, deal |
-| Curated Branded | Roadmap | Brand dikenal, diskon, voucher, promo |
 
 ## 13. Aturan Caption
 
@@ -275,6 +276,12 @@ flowchart TD
 ### AC-1: Tambah Produk
 
 Diberikan user di halaman tambah produk, ketika paste data mentah dari Shopee, link, dan image URL, maka produk tersimpan dengan status raw.
+
+### AC-1b: Reformat Manual
+
+Diberikan produk berstatus raw, ketika user mengisi field terstruktur yang diperlukan dan menyimpannya, maka produk berubah menjadi status ready tanpa harus memanggil AI.
+
+Field minimum untuk status ready adalah `product_name`, `shopee_link`, `cluster`, `content_model`, dan minimal satu benefit. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi.
 
 ### AC-2: Bulk Reformat AI
 
@@ -319,6 +326,7 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Dashboard analytics
 - Scheduling post
 - Integrasi lebih dalam dengan X API
+- Model konten Curated Branded
 - Chrome Extension untuk membantu paste caption
 - Integrasi Threads
 - Opsi dijual sebagai SaaS

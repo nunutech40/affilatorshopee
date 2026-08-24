@@ -22,3 +22,18 @@ Simpan data Shopee mentah
 ```
 
 MVP tidak melakukan auto-posting, tidak mengelola akun sosial, dan tidak meng-upload media ke platform secara otomatis.
+
+Akun X yang digunakan mengikuti session browser yang sedang login. Web app tidak membaca, memilih, atau menyimpan identitas akun tersebut. Produk yang sama boleh dibagikan dan dicatat berkali-kali.
+
+## Status
+
+Dokumentasi MVP sudah siap untuk implementasi. Source code belum dibuat.
+
+Setelah Phase 1 selesai, jalankan local stack dengan:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Buka `http://localhost:8080` di browser.

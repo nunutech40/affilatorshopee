@@ -1,8 +1,8 @@
 # TODO - AffiliatorShopee
 
-Project: AffiliatorShopee  
+Project: AffiliatorShopee
 Deskripsi: Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan AI, membuat caption, dan membantu posting manual ke X.
-Target: MVP yang bisa dipakai sendiri.  
+Target: MVP yang bisa dipakai sendiri.
 Stack: Go, PostgreSQL, Vue 3 + Vite + Tailwind + Pinia, OpenRouter AI.
 Deployment: Docker Compose di Orbstack.
 
@@ -22,14 +22,14 @@ Dokumen sumber:
 - [x] Tetapkan produk boleh diposting berulang kali
 - [x] Tetapkan post log tidak menyimpan identitas akun X
 - [x] Tetapkan AI reformat langsung menyimpan hasil tanpa preview
-- [ ] Finalisasi API request/response dan HTTP status code
-- [ ] Finalisasi template caption dan placeholder
-- [ ] Pilih satu migration tool
+- [x] Finalisasi API request/response dan HTTP status code
+- [x] Finalisasi template caption dan placeholder
+- [x] Pilih `golang-migrate/migrate` sebagai migration tool
 
 ## Phase 1: Project Setup
 
 - [x] Repository Git tersedia di folder project
-- [ ] Inisialisasi module Go: `go mod init github.com/nununugraha/affiliatorshopee`
+- [ ] Inisialisasi module Go: `go mod init github.com/nunutech40/affilatorshopee`
 - [ ] Buat struktur folder sesuai `TRD.md`
 - [ ] Buat `Dockerfile` untuk Go backend
 - [ ] Buat `docker-compose.yml` dengan service `db` dan `app`
@@ -51,10 +51,15 @@ Dokumen sumber:
 - [ ] Implementasikan `PostLogRepository`: Create, List
 - [ ] Implementasikan `CaptionVariationRepository`: Create, List
 - [ ] Implementasikan validasi input produk
+- [ ] Enforce transisi status `raw -> reformatted`, `raw -> ready`, dan `reformatted -> ready`
+- [ ] Validasi field minimum sebelum status `ready`
+- [ ] Simpan image/video sebagai URL eksternal tanpa download file
 - [ ] Setup router HTTP dan CORS localhost
 - [ ] Implementasikan API products
 - [ ] Implementasikan API post logs
+- [ ] Sertakan `post_count` dan `last_posted_at` pada product list/detail
 - [ ] Verifikasi CRUD product dan post log dengan automated API tests
+- [ ] Test aggregate `post_count` dan `last_posted_at` pada product list/detail
 
 ## Phase 3: AI Reformat
 
@@ -84,17 +89,21 @@ Dokumen sumber:
 - [ ] Implementasikan `POST /api/captions/generate`
 - [ ] Implementasikan `POST /api/captions/variations`
 - [ ] Implementasikan `GET /api/products/{id}/caption-variations`
+- [ ] Implementasikan `PATCH` dan `DELETE` caption variation
 - [ ] Test semua template, field kosong, hashtag, dan batas karakter
+- [ ] Pastikan final caption dan character count sudah mencakup hashtag
 
 ## Phase 5: Share dan Post Log
 
 - [ ] Implementasikan builder Twitter Web Intent URL
 - [ ] Implementasikan `GET /api/share/x?caption=...`
+- [ ] Buka share URL dengan `window.open()` dalam user gesture, bukan `fetch`
 - [ ] Implementasikan copy caption ke clipboard di frontend
 - [ ] Implementasikan form `Catat Posting`
 - [ ] Pastikan post log tidak menyimpan identitas akun X
 - [ ] Test URL encoding untuk spasi, newline, emoji, dan karakter khusus
 - [ ] Test posting berulang pada produk yang sama
+- [ ] Test share saat clipboard ditolak atau popup diblokir browser
 
 ## Phase 6: Frontend Core
 
@@ -124,6 +133,8 @@ Dokumen sumber:
 - [ ] Tambahkan database readiness dan migration failure handling
 - [ ] Jalankan seluruh stack melalui `docker compose up --build`
 - [ ] Test persistence PostgreSQL setelah container restart
+- [ ] Test migration lock, failure handling, dan update timestamp
+- [ ] Test CORS, body limit, rate limit AI, dan validasi environment
 - [ ] Test backup dan restore database lokal
 - [ ] Update `README.md` dengan setup, env, run, dan troubleshooting
 - [ ] Pastikan tidak ada secret di repository

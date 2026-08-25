@@ -49,7 +49,7 @@ func (h *AIHandler) Reformat(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 			return
 		}
-		writeError(w, http.StatusBadGateway, "AI_PROVIDER_ERROR", "Gagal memproses reformat AI")
+		writeError(w, http.StatusBadGateway, "AI_PROVIDER_ERROR", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, summary)

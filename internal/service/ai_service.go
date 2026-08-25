@@ -122,8 +122,12 @@ Field output: product_id, product_name, normal_price, sale_price, discount_perce
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
-		return nil, fmt.Errorf("openrouter returned status %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		snippet := strings.TrimSpace(string(bodyBytes))
+		if snippet == "" {
+			snippet = resp.Status
+		}
+		return nil, fmt.Errorf("provider returned status %d: %s", resp.StatusCode, snippet)
 	}
 
 	var providerResponse openRouterResponse

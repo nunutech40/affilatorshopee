@@ -11,7 +11,15 @@ const selectedModel = ref(localStorage.getItem('ai_model') || 'opencode/muse-spa
 const selected = computed(() => products.items.filter((item) => item.selected).map((item) => item.id))
 const totalPages = computed(() => Math.max(1, Math.ceil((products.total || 0) / (products.limit || 20))))
 function toggle(id) { const item = products.items.find((product) => product.id === id); if (item) item.selected = !item.selected }
-async function reformat() { const ids = selected.value; if (!ids.length || ids.length > 10) return; await products.reformat(ids, selectedModel.value); await products.fetchProducts(); products.items.forEach((item) => { item.selected = false }) }
+async function reformat() {
+  const ids = selected.value
+  if (!ids.length || ids.length > 10) return
+  try {
+    await products.reformat(ids, selectedModel.value)
+    await products.fetchProducts()
+    products.items.forEach((item) => { item.selected = false })
+  } catch (e) { products.error = e.message }
+}
 let timer
 watch(() => [products.filters.status, products.filters.content_model, products.filters.cluster], () => { products.page = 1; products.fetchProducts() })
 watch(() => products.page, () => products.fetchProducts())

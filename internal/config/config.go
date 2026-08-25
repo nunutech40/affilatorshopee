@@ -39,7 +39,7 @@ func Load() (*Config, error) {
 		Env:             getenv("ENV", "development"),
 	}
 
-	origins := getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+	origins := getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8080,http://127.0.0.1:8080,http://127.0.0.1:5173")
 	for _, origin := range strings.Split(origins, ",") {
 		origin = strings.TrimSpace(origin)
 		if origin != "" {
@@ -67,7 +67,13 @@ func tryLoadOpencodeKey() string {
 		candidates = append(candidates, filepath.Join(home, ".local", "share", "opencode", "auth.json"))
 		candidates = append(candidates, filepath.Join(home, "Library", "Application Support", "ai.opencode.desktop", "opencode.db"))
 	}
-	candidates = append(candidates, "/root/.local/share/opencode/auth.json", "./opencode-auth.json")
+	candidates = append(candidates,
+		"/root/.local/share/opencode/auth.json",
+		"/home/app/.local/share/opencode/auth.json",
+		"/app/.local/share/opencode/auth.json",
+		"./opencode-auth.json",
+		"/tmp/opencode-auth.json",
+	)
 	for _, path := range candidates {
 		data, err := os.ReadFile(path)
 		if err != nil {

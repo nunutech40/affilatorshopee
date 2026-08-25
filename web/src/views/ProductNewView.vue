@@ -8,6 +8,7 @@ const router = useRouter()
 const products = useProductStore()
 const error = ref('')
 async function save(payload) { error.value = ''; try { await products.createProduct(payload); router.push('/') } catch (e) { error.value = e.message } }
+async function onImported() { router.push('/') }
 </script>
 
-<template><RouterLink to="/" class="back-link">← Kembali ke library</RouterLink><div v-if="error" class="error-box">{{ error }}</div><ProductParser @save="save" /></template>
+<template><RouterLink to="/" class="back-link">← Kembali ke library</RouterLink><div v-if="error" class="error-box">{{ error }}</div><ProductParser @save="save" @imported="onImported" /></template>

@@ -6,6 +6,7 @@ const rawText = ref('')
 const shopeeLink = ref('')
 const imageURLs = ref([''])
 const videoURL = ref('')
+const contentModel = ref('')
 const notes = ref('')
 
 function addImageURL() { imageURLs.value.push('') }
@@ -18,6 +19,7 @@ function submit() {
     image_url: images[0] || null,
     image_urls: images,
     video_url: videoURL.value.trim() || null,
+    content_model: contentModel.value || null,
     notes: notes.value || null,
   })
 }
@@ -33,6 +35,7 @@ function submit() {
     </div>
     <div class="form-grid"><div class="field"><label>Link affiliate Shopee</label><input v-model="shopeeLink" class="input" placeholder="https://shopee.co.id/..." /></div><div class="field"><label>Video URL (optional)</label><input v-model="videoURL" class="input" placeholder="https://.../video.mp4" /></div></div>
     <div class="field"><label>URL gambar eksternal</label><div v-for="(imageURL, index) in imageURLs" :key="index" class="url-row"><input v-model="imageURLs[index]" class="input" placeholder="https://.../image.jpg" /><button v-if="imageURLs.length > 1" class="button button-danger" type="button" @click="removeImageURL(index)">×</button></div><button class="button add-url" type="button" @click="addImageURL">+ Add image URL</button></div>
+    <div class="field"><label>Content model awal</label><select v-model="contentModel" class="select"><option value="">Belum ditentukan (bisa diisi AI)</option><option value="capture">Captured</option><option value="cheap">Cheap</option><option value="trending">Trending</option></select></div>
     <div class="field"><label>Catatan</label><input v-model="notes" class="input" placeholder="Opsional" /></div>
     <button class="button-primary" :disabled="!rawText.trim() || !shopeeLink.trim()" @click="submit">Simpan produk raw</button>
   </section>

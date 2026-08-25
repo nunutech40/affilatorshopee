@@ -21,12 +21,13 @@ func NewProductHandler(products *service.ProductService, media *service.MediaSer
 }
 
 type createProductRequest struct {
-	RawText    string   `json:"raw_text"`
-	ShopeeLink string   `json:"shopee_link"`
-	ImageURL   *string  `json:"image_url"`
-	ImageURLs  []string `json:"image_urls"`
-	VideoURL   *string  `json:"video_url"`
-	Notes      *string  `json:"notes"`
+	RawText      string   `json:"raw_text"`
+	ShopeeLink   string   `json:"shopee_link"`
+	ImageURL     *string  `json:"image_url"`
+	ImageURLs    []string `json:"image_urls"`
+	VideoURL     *string  `json:"video_url"`
+	ContentModel *string  `json:"content_model"`
+	Notes        *string  `json:"notes"`
 }
 
 type productPatch struct {
@@ -82,7 +83,7 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	product := &model.Product{
 		RawText: request.RawText, ShopeeLink: request.ShopeeLink, ImageURL: request.ImageURL,
-		ImageURLs: request.ImageURLs, VideoURL: request.VideoURL, Notes: request.Notes,
+		ImageURLs: request.ImageURLs, VideoURL: request.VideoURL, ContentModel: request.ContentModel, Notes: request.Notes,
 	}
 	if len(product.ImageURLs) == 0 && product.ImageURL != nil && *product.ImageURL != "" {
 		product.ImageURLs = []string{*product.ImageURL}

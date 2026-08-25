@@ -83,7 +83,7 @@ func (s *AIService) Reformat(ctx context.Context, products []model.Product) ([]A
 Aturan:
 1. Jangan mengarang harga, rating, jumlah terjual, review, urgency, atau benefit.
 2. Isi null bila data tidak tersedia.
-3. Pilih content_model hanya capture atau cheap.
+3. Pilih content_model hanya capture, cheap, atau trending.
 4. Isi capture_angle hanya untuk content_model capture.
 5. Kembalikan JSON array saja, tanpa markdown atau penjelasan.
 
@@ -169,8 +169,15 @@ func validateAIResults(products []model.Product, results []AIReformatResult) err
 		if result.Rating != nil && (*result.Rating < 0 || *result.Rating > 5) {
 			return fmt.Errorf("%w: rating tidak valid", ErrValidation)
 		}
-		if result.ContentModel != nil && *result.ContentModel != "capture" && *result.ContentModel != "cheap" {
-			return fmt.Errorf("%w: content_model tidak valid", ErrValidation)
+		if result.ContentModel != nil {
+			normalized := strings.ToLower(strings.TrimSpace(*result.ContentModel))
+			if normalized == "captured" {
+				normalized = "capture"
+				*result.ContentModel = normalized
+			}
+			if normalized != "capture" && normalized != "cheap" && normalized != "trending" {
+				return fmt.Errorf("%w: content_model tidak valid", ErrValidation)
+			}
 		}
 		if result.CaptureAngle != nil {
 			valid := map[string]bool{"search": true, "reply": true, "trend": true, "problem": true}

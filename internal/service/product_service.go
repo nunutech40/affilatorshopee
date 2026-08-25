@@ -136,10 +136,11 @@ func validateReady(product *model.Product) error {
 	if product.ContentModel == nil || strings.TrimSpace(*product.ContentModel) == "" {
 		return fmt.Errorf("%w: content_model wajib diisi untuk ready", ErrValidation)
 	}
+	normalized := normalizeContentModel(*product.ContentModel)
 	if !hasText(product.Benefit1) && !hasText(product.Benefit2) && !hasText(product.Benefit3) {
 		return fmt.Errorf("%w: minimal satu benefit wajib diisi untuk ready", ErrValidation)
 	}
-	if *product.ContentModel == "capture" && (product.CaptureAngle == nil || strings.TrimSpace(*product.CaptureAngle) == "") {
+	if normalized == "capture" && (product.CaptureAngle == nil || strings.TrimSpace(*product.CaptureAngle) == "") {
 		return fmt.Errorf("%w: capture_angle wajib diisi untuk content_model capture", ErrValidation)
 	}
 	return nil
@@ -149,19 +150,31 @@ func hasText(value *string) bool {
 	return value != nil && strings.TrimSpace(*value) != ""
 }
 
+func normalizeContentModel(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "captured" {
+		return "capture"
+	}
+	return normalized
+}
+
 func validateProductFields(product *model.Product) error {
+	if product.ContentModel != nil {
+		normalized := normalizeContentModel(*product.ContentModel)
+		*product.ContentModel = normalized
+	}
 	if product.Status != "raw" && product.Status != "reformatted" && product.Status != "ready" {
 		return fmt.Errorf("%w: status tidak valid", ErrValidation)
 	}
 	if product.CaptionTemplate != "direct_product" && product.CaptionTemplate != "keyword_recommendation" && product.CaptionTemplate != "problem_specific" && product.CaptionTemplate != "cheap_value" {
 		return fmt.Errorf("%w: caption_template tidak valid", ErrValidation)
 	}
-	if product.ContentModel != nil && *product.ContentModel != "capture" && *product.ContentModel != "cheap" {
+	if product.ContentModel != nil && *product.ContentModel != "capture" && *product.ContentModel != "cheap" && *product.ContentModel != "trending" {
 		return fmt.Errorf("%w: content_model tidak valid", ErrValidation)
 	}
 	if product.CaptureAngle != nil {
 		valid := map[string]bool{"search": true, "reply": true, "trend": true, "problem": true}
-		if !valid[*product.CaptureAngle] || product.ContentModel == nil || *product.ContentModel != "capture" {
+		if !valid[*product.CaptureAngle] || product.ContentModel == nil || normalizeContentModel(*product.ContentModel) != "capture" {
 			return fmt.Errorf("%w: capture_angle tidak valid", ErrValidation)
 		}
 	}

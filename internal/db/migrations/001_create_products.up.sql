@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
     keyword VARCHAR(255),
     problem VARCHAR(255),
     cluster VARCHAR(100),
-    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap')),
+    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap', 'trending')),
     capture_angle VARCHAR(20) CHECK (capture_angle IN ('search', 'reply', 'trend', 'problem')),
     CHECK (capture_angle IS NULL OR content_model = 'capture'),
     benefit_1 VARCHAR(255),

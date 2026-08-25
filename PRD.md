@@ -242,7 +242,7 @@ flowchart TD
 | cluster | string | Kategori/cluster |
 | keyword | string | Keyword utama untuk hook |
 | problem | string | Problem yang ingin diangkat |
-| content_model | enum | capture / cheap |
+| content_model | enum | capture / cheap / trending |
 | capture_angle | enum | search / reply / trend / problem |
 | benefit_1 | string | Benefit utama |
 | benefit_2 | string | Benefit kedua |

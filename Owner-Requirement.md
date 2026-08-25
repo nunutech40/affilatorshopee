@@ -107,7 +107,7 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 | cluster | Kategori/cluster |
 | keyword | Keyword utama untuk hook |
 | problem | Problem yang ingin diangkat |
-| content_model | capture / cheap |
+| content_model | capture / cheap / trending |
 | capture_angle | search / reply / trend / problem |
 | benefit_1 | Benefit utama |
 | benefit_2 | Benefit kedua |

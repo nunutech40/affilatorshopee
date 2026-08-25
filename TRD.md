@@ -140,7 +140,7 @@ CREATE TABLE products (
     keyword VARCHAR(255),
     problem VARCHAR(255),
     cluster VARCHAR(100),
-    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap')),
+    content_model VARCHAR(20) CHECK (content_model IN ('capture', 'cheap', 'trending')),
     capture_angle VARCHAR(20) CHECK (capture_angle IN ('search', 'reply', 'trend', 'problem')),
     CHECK (capture_angle IS NULL OR content_model = 'capture'),
     benefit_1 VARCHAR(255),
@@ -181,7 +181,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 `image_url`, `image_urls`, dan `video_url` menyimpan URL eksternal yang diberikan user. Saat produk dibuat, backend mencoba men-download setiap URL ke local storage (`STORAGE_PATH/products/{product_id}/`) dan menyimpan metadata di tabel `product_media`. Form input mendukung banyak image URL via tombol `+ Add image URL` dan satu video URL (termasuk `.mp4`). Download yang gagal tidak membatalkan pembuatan produk; kegagalan dilaporkan pada response create.
 
-`content_model` menggantikan field `model` lama agar dapat mewakili dua pendekatan konten MVP: `capture` dan `cheap`. `capture_angle` hanya digunakan bila modelnya `capture`. Model `branded` ditunda ke roadmap.
+`content_model` menggantikan field `model` lama agar dapat mewakili tiga pendekatan konten MVP: `capture` (ditampilkan sebagai Captured), `cheap`, dan `trending`. `capture_angle` hanya digunakan bila modelnya `capture`. Model `branded` ditunda ke roadmap.
 
 Status `posted` tidak disimpan pada produk. Satu produk boleh dicatat dan diposting berulang kali; riwayatnya disimpan di `post_logs`.
 
@@ -192,7 +192,7 @@ Transisi status:
 - Edit manual dengan data lengkap: `raw` atau `reformatted` menjadi `ready`.
 - Posting tidak mengubah status product.
 
-Field minimum untuk status `ready` adalah `product_name`, `shopee_link`, `cluster`, `content_model`, dan minimal satu dari `benefit_1`, `benefit_2`, atau `benefit_3`. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi. Caption hanya dapat dibuat untuk status `reformatted` atau `ready`.
+Field minimum untuk status `ready` adalah `product_name`, `shopee_link`, `cluster`, `content_model` (`capture`/`cheap`/`trending`), dan minimal satu dari `benefit_1`, `benefit_2`, atau `benefit_3`. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi. Caption hanya dapat dibuat untuk status `reformatted` atau `ready`.
 
 ### 4.2 Tabel post_logs
 

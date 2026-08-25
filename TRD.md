@@ -50,9 +50,12 @@ AffiliatorShopee/
 │   ├── db/
 │   │   ├── connection.go
 │   │   └── migrations/
-│   │       ├── 001_create_products.sql
-│   │       ├── 002_create_post_logs.sql
-│   │       └── 003_create_caption_variations.sql
+│   │       ├── 001_create_products.up.sql
+│   │       ├── 001_create_products.down.sql
+│   │       ├── 002_create_post_logs.up.sql
+│   │       ├── 002_create_post_logs.down.sql
+│   │       ├── 003_create_caption_variations.up.sql
+│   │       └── 003_create_caption_variations.down.sql
 │   ├── handler/
 │   │   ├── product_handler.go
 │   │   ├── ai_handler.go
@@ -790,9 +793,9 @@ Test minimum:
 
 ## 14. Migration Files
 
-- `001_create_products.sql`
-- `002_create_post_logs.sql`
-- `003_create_caption_variations.sql`
+- `001_create_products.up.sql` / `001_create_products.down.sql`
+- `002_create_post_logs.up.sql` / `002_create_post_logs.down.sql`
+- `003_create_caption_variations.up.sql` / `003_create_caption_variations.down.sql`
 
 Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration harus memiliki version tracking, dijalankan sebelum app menerima traffic, dan membuat startup gagal bila migration tidak berhasil.
 

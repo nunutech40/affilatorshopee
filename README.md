@@ -8,7 +8,7 @@ Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan A
 - [TRD](TRD.md) - arsitektur teknis dan kontrak API
 - [TODO](TODO.md) - tahapan implementasi
 - [Owner Requirement](Owner-Requirement.md) - konteks dan keputusan produk
-- [AI Coder Guide](AI-CODER-GUIDE.md) - workflow DeepSeek Flash dan review Luna
+- [AI Coder Guide](AI-CODER-GUIDE.md) - workflow coding assistant dan review Luna
 
 ## Alur MVP
 
@@ -28,13 +28,4 @@ Akun X yang digunakan mengikuti session browser yang sedang login. Web app tidak
 
 ## Status
 
-Dokumentasi MVP sudah siap untuk implementasi. Source code belum dibuat.
-
-Setelah Phase 1 selesai, jalankan local stack dengan:
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-Buka `http://localhost:8080` di browser.
+Core MVP sudah diimplementasikan. Test provider AI dan browser E2E tetap perlu dijalankan saat API key dan browser target tersedia. Ikuti `TODO.md` untuk progress implementasi.

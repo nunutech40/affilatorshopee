@@ -23,57 +23,28 @@ const jsonError = ref('')
 const editText = ref('')
 const hasCaption = computed(() => captions.current?.caption || '')
 
-function formatReformat(p) {
+function getPromo(p) {
   if (!p) return ''
-  const obj = {
-    product_name: p.product_name || '',
-    shopee_link: p.shopee_link || '',
-    image_url: p.image_url || '',
-    image_urls: p.image_urls || [],
-    video_url: p.video_url || '',
-    keyword: p.keyword || '',
-    problem: p.problem || '',
-    cluster: p.cluster || '',
-    content_model: p.content_model || '',
-    capture_angle: p.capture_angle || '',
-    benefit_1: p.benefit_1 || '',
-    benefit_2: p.benefit_2 || '',
-    benefit_3: p.benefit_3 || '',
-    urgency: p.urgency || '',
-    caption_template: p.caption_template || 'direct_product',
-    hashtag_pool: p.hashtag_pool || [],
-    normal_price: p.normal_price,
-    sale_price: p.sale_price,
-    discount_percent: p.discount_percent,
-    rating: p.rating,
-    sold_count: p.sold_count || '',
-    review_count: p.review_count || '',
-    notes: p.notes || ''
-  }
-  return JSON.stringify(obj, null, 2)
+  return p.reformatted_text || ''
 }
 
-watch(product, (p) => { if (p) editText.value = formatReformat(p) })
+watch(product, (p) => { if (p) editText.value = getPromo(p) })
 
 async function load() { loading.value = true; error.value = ''; try { product.value = await products.getProduct(route.params.id); const logData = await apiRequest(`/api/post-logs?product_id=${route.params.id}`); logs.value = logData.items; media.value = await apiRequest(`/api/products/${route.params.id}/media`); await captions.fetchVariations(route.params.id) } catch (e) { error.value = e.message } finally { loading.value = false } }
 
 async function saveReformat() {
   jsonError.value = ''
-  let parsed
-  try { parsed = JSON.parse(editText.value) } catch (e) { jsonError.value = 'JSON tidak valid: ' + e.message; return }
-  // kosong -> null agar bisa dihapus
-  Object.keys(parsed).forEach(k => { if (parsed[k] === '') parsed[k] = null })
   saving.value = true
-  try { product.value = await products.updateProduct(route.params.id, parsed); editText.value = formatReformat(product.value) } catch (e) { jsonError.value = e.message } finally { saving.value = false }
+  try { product.value = await products.updateProduct(route.params.id, { reformatted_text: editText.value }); editText.value = getPromo(product.value) } catch (e) { jsonError.value = e.message } finally { saving.value = false }
 }
 
-async function reformat() { working.value = true; error.value = ''; try { const result = await products.reformat([route.params.id], selectedModel.value); if (result.processed?.length) { product.value = result.processed[0]; editText.value = formatReformat(product.value) } if (result.failed?.length) error.value = result.failed[0].code + ': ' + result.failed[0].message } catch (e) { error.value = e.message } finally { working.value = false } }
+async function reformat() { working.value = true; error.value = ''; try { const result = await products.reformat([route.params.id], selectedModel.value); if (result.processed?.length) { product.value = result.processed[0]; editText.value = getPromo(product.value) } if (result.failed?.length) error.value = result.failed[0].code + ': ' + result.failed[0].message } catch (e) { error.value = e.message } finally { working.value = false } }
 async function markReady() { try { const updated = await products.updateProduct(route.params.id, { status: 'ready' }); product.value = updated } catch (e) { error.value = e.message } }
 async function remove() {
   if (!confirm('Hapus produk ini permanen?')) return
   try { await products.deleteProduct(route.params.id); router.push('/') } catch (e) { error.value = e.message }
 }
-async function refreshLogs() { const logData = await apiRequest(`/api/post-logs?product_id=${route.params.id}`); logs.value = logData.items; product.value = await products.getProduct(route.params.id); editText.value = formatReformat(product.value) }
+async function refreshLogs() { const logData = await apiRequest(`/api/post-logs?product_id=${route.params.id}`); logs.value = logData.items; product.value = await products.getProduct(route.params.id); editText.value = getPromo(product.value) }
 onMounted(load)
 </script>
 
@@ -88,9 +59,9 @@ onMounted(load)
       <div>
         <section class="panel"><h2>Raw text (asli, read-only)</h2><pre class="raw-pre">{{ product.raw_text }}</pre></section>
         <section class="panel reformat-panel">
-          <div class="section-heading"><h2>Reformat (editable, 1 textarea)</h2><span class="counter">{{ product.status }}</span></div>
-          <p class="muted">Edit JSON di bawah lalu Save. Semua field terstruktur ada di satu tempat — tidak perlu form terpisah.</p>
-          <textarea v-model="editText" class="textarea mono" rows="22" spellcheck="false"></textarea>
+          <div class="section-heading"><h2>Format promo (editable)</h2><span class="counter">{{ product.status }}</span></div>
+          <p class="muted">Raw di kiri jadi patokan. Klik <b>Reformat AI</b> untuk generate format promo dari raw — kalau sudah ada, AI ubah tipis-tipis saja. Edit langsung di textarea lalu Save.</p>
+          <textarea v-model="editText" class="textarea mono" rows="18" spellcheck="false" placeholder="Belum ada format promo — klik Reformat AI di atas"></textarea>
           <div v-if="jsonError" class="error-box" style="margin-top:10px">{{ jsonError }}</div>
           <div style="display:flex; gap:8px; margin-top:12px"><button class="button-primary" :disabled="saving" @click="saveReformat">{{ saving ? 'Menyimpan...' : 'Save reformat' }}</button><button class="button" @click="editText = formatReformat(product)">Reset</button></div>
         </section>

@@ -27,6 +27,7 @@ type Product struct {
 	Urgency         *string    `json:"urgency"`
 	CaptionTemplate string     `json:"caption_template"`
 	HashtagPool     []string   `json:"hashtag_pool"`
+	ReformattedText *string    `json:"reformatted_text"`
 	Notes           *string    `json:"notes"`
 	Status          string     `json:"status"`
 	PostCount       int        `json:"post_count"`

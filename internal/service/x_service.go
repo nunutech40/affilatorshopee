@@ -151,8 +151,10 @@ func (s *XService) ImportFromX(ctx context.Context, xURL string, contentModel *s
 		productName = "Postingan X " + id
 	}
 
+	promo := tweetText
 	product := &model.Product{
 		RawText:         tweetText,
+		ReformattedText: &promo,
 		ProductName:     &productName,
 		ShopeeLink:      shopeeLink,
 		ContentModel:    cm,

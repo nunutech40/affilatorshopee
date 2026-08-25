@@ -11,12 +11,10 @@ import (
 )
 
 func TestValidateAIResultsRejectsInvalidModelAndPrice(t *testing.T) {
-	name := "Produk"
-	products := []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ProductName: &name, ShopeeLink: "https://shopee.co.id/x", Status: "raw"}}
-	normal, sale := 10, 20
-	results := []AIReformatResult{{ProductID: products[0].ID, NormalPrice: &normal, SalePrice: &sale, ContentModel: stringPtr("branded")}}
+	products := []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ShopeeLink: "https://shopee.co.id/x", Status: "raw"}}
+	results := []AIReformatResult{{ProductID: products[0].ID, PromoText: ""}}
 	if err := validateAIResults(products, results); err == nil {
-		t.Fatal("expected invalid AI result")
+		t.Fatal("expected invalid AI result for empty promo_text")
 	}
 }
 
@@ -26,7 +24,7 @@ func TestAIServiceReformatParsesProviderResponse(t *testing.T) {
 			t.Errorf("missing authorization")
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"[{\"product_id\":\"12345678-1234-1234-1234-123456789012\",\"content_model\":\"cheap\",\"hashtag_pool\":[\"#deal\"]}]"}}]}`))
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"[{\"product_id\":\"12345678-1234-1234-1234-123456789012\",\"promo_text\":\"Cari produk ini?\\n\\nCek https://shopee.co.id/x\"}]"}}]}`))
 	}))
 	defer server.Close()
 
@@ -37,7 +35,7 @@ func TestAIServiceReformatParsesProviderResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(results) != 1 || results[0].ContentModel == nil || *results[0].ContentModel != "cheap" {
+	if len(results) != 1 || results[0].PromoText == "" {
 		t.Fatalf("unexpected results: %+v", results)
 	}
 }

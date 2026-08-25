@@ -31,6 +31,7 @@ type createProductRequest struct {
 }
 
 type productPatch struct {
+	ReformattedText *string   `json:"reformatted_text"`
 	ProductName     *string   `json:"product_name"`
 	ShopeeLink      *string   `json:"shopee_link"`
 	ImageURL        **string  `json:"image_url"`
@@ -170,6 +171,9 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func applyProductPatch(product *model.Product, patch productPatch) {
+	if patch.ReformattedText != nil {
+		product.ReformattedText = patch.ReformattedText
+	}
 	if patch.ProductName != nil {
 		product.ProductName = patch.ProductName
 	}

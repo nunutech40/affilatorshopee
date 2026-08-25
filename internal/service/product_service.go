@@ -274,23 +274,62 @@ func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIServi
 }
 
 func applyAIResult(product *model.Product, result AIReformatResult) {
-	product.ProductName = result.ProductName
-	product.NormalPrice = result.NormalPrice
-	product.SalePrice = result.SalePrice
-	product.DiscountPercent = result.DiscountPercent
-	product.Rating = result.Rating
-	product.SoldCount = result.SoldCount
-	product.ReviewCount = result.ReviewCount
-	product.Keyword = result.Keyword
-	product.Problem = result.Problem
-	product.Cluster = result.Cluster
-	product.ContentModel = result.ContentModel
-	product.CaptureAngle = result.CaptureAngle
-	product.Benefit1 = result.Benefit1
-	product.Benefit2 = result.Benefit2
-	product.Benefit3 = result.Benefit3
-	product.Urgency = result.Urgency
-	product.HashtagPool = result.HashtagPool
+	if strings.TrimSpace(result.PromoText) != "" {
+		txt := strings.TrimSpace(result.PromoText)
+		product.ReformattedText = &txt
+	}
+	// legacy compat: jika AI masih kirim field terstruktur, tetap simpan
+	if result.ProductName != nil {
+		product.ProductName = result.ProductName
+	}
+	if result.NormalPrice != nil {
+		product.NormalPrice = result.NormalPrice
+	}
+	if result.SalePrice != nil {
+		product.SalePrice = result.SalePrice
+	}
+	if result.DiscountPercent != nil {
+		product.DiscountPercent = result.DiscountPercent
+	}
+	if result.Rating != nil {
+		product.Rating = result.Rating
+	}
+	if result.SoldCount != nil {
+		product.SoldCount = result.SoldCount
+	}
+	if result.ReviewCount != nil {
+		product.ReviewCount = result.ReviewCount
+	}
+	if result.Keyword != nil {
+		product.Keyword = result.Keyword
+	}
+	if result.Problem != nil {
+		product.Problem = result.Problem
+	}
+	if result.Cluster != nil {
+		product.Cluster = result.Cluster
+	}
+	if result.ContentModel != nil {
+		product.ContentModel = result.ContentModel
+	}
+	if result.CaptureAngle != nil {
+		product.CaptureAngle = result.CaptureAngle
+	}
+	if result.Benefit1 != nil {
+		product.Benefit1 = result.Benefit1
+	}
+	if result.Benefit2 != nil {
+		product.Benefit2 = result.Benefit2
+	}
+	if result.Benefit3 != nil {
+		product.Benefit3 = result.Benefit3
+	}
+	if result.Urgency != nil {
+		product.Urgency = result.Urgency
+	}
+	if len(result.HashtagPool) > 0 {
+		product.HashtagPool = result.HashtagPool
+	}
 }
 
 func RuneLen(value string) int {

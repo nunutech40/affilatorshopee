@@ -66,12 +66,16 @@ type openRouterResponse struct {
 	} `json:"choices"`
 }
 
-func (s *AIService) Reformat(ctx context.Context, products []model.Product) ([]AIReformatResult, error) {
-	if len(products) == 0 || len(products) > 20 {
-		return nil, fmt.Errorf("%w: jumlah produk AI harus 1-20", ErrValidation)
+func (s *AIService) Reformat(ctx context.Context, products []model.Product, modelOverride string) ([]AIReformatResult, error) {
+	if len(products) == 0 || len(products) > 10 {
+		return nil, fmt.Errorf("%w: jumlah produk AI harus 1-10", ErrValidation)
 	}
-	if strings.TrimSpace(s.apiKey) == "" || strings.TrimSpace(s.model) == "" {
-		return nil, fmt.Errorf("AI_API_KEY dan OPENROUTER_MODEL wajib dikonfigurasi untuk fitur AI")
+	model := strings.TrimSpace(modelOverride)
+	if model == "" {
+		model = strings.TrimSpace(s.model)
+	}
+	if strings.TrimSpace(s.apiKey) == "" || model == "" {
+		return nil, fmt.Errorf("AI_API_KEY dan model wajib dikonfigurasi untuk fitur AI (pilih model di dropdown)")
 	}
 
 	input := make([]string, 0, len(products))
@@ -91,14 +95,19 @@ Field output: product_id, product_name, normal_price, sale_price, discount_perce
 
 ` + strings.Join(input, "\n\n")
 
+	cleanModel := strings.TrimPrefix(model, "opencode/")
+	endpoint := s.endpoint
+	if strings.HasPrefix(model, "opencode/") {
+		endpoint = "https://opencode.ai/zen/v1/chat/completions"
+	}
 	body, err := json.Marshal(openRouterRequest{
-		Model:    s.model,
+		Model:    cleanModel,
 		Messages: []openRouterMessage{{Role: "user", Content: prompt}},
 	})
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

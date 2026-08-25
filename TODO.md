@@ -73,7 +73,7 @@ Dokumen sumber:
 - [x] Validasi ID, enum, angka, hashtag, dan field hasil AI
 - [x] Pastikan `raw_text` tidak pernah tertimpa
 - [x] Implementasikan `POST /api/ai/reformat`
-- [x] Tolak request dengan lebih dari 20 `product_ids`
+- [x] Tolak request dengan lebih dari 10 `product_ids`
 - [x] Simpan hasil AI langsung dan ubah status menjadi `reformatted`
 - [x] Laporkan partial failure per produk
 - [ ] Test response valid, invalid, timeout, dan partial failure dengan mock server
@@ -117,7 +117,7 @@ Dokumen sumber:
 - [x] Buat `ProductList.vue`
 - [x] Buat `ProductParser.vue` untuk paste raw text
 - [x] Buat `ProductForm.vue` untuk edit produk
-- [x] Buat `BulkReformat.vue` dengan batas maksimal 20 produk
+- [x] Buat `BulkReformat.vue` dengan batas maksimal 10 produk
 - [x] Buat `ProductDetailView.vue`
 - [x] Buat `CaptionGenerator.vue`
 - [x] Buat `HashtagSelector.vue`

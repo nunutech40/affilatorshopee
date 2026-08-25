@@ -33,7 +33,7 @@ func TestAIServiceReformatParsesProviderResponse(t *testing.T) {
 	service := NewAIService("test-key", "test-model")
 	service.endpoint = server.URL
 	service.client = server.Client()
-	results, err := service.Reformat(context.Background(), []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ShopeeLink: "https://shopee.co.id/x"}})
+	results, err := service.Reformat(context.Background(), []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ShopeeLink: "https://shopee.co.id/x"}}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestAIServiceTimeout(t *testing.T) {
 	service := NewAIService("test-key", "test-model")
 	service.endpoint = server.URL
 	service.client = &http.Client{Timeout: 1 * time.Millisecond}
-	_, err := service.Reformat(context.Background(), []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ShopeeLink: "https://shopee.co.id/x"}})
+	_, err := service.Reformat(context.Background(), []model.Product{{ID: "12345678-1234-1234-1234-123456789012", RawText: "raw", ShopeeLink: "https://shopee.co.id/x"}}, "")
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}

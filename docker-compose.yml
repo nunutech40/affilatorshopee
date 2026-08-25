@@ -29,6 +29,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./data/uploads:/app/data/uploads
+      - ${HOME:-/Users/nununugraha}/.local/share/opencode/auth.json:/root/.local/share/opencode/auth.json:ro
     depends_on:
       db:
         condition: service_healthy

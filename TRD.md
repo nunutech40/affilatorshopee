@@ -350,21 +350,26 @@ Nilai `null` berarti data memang belum tersedia; nilai `0` hanya boleh dipakai u
 ### 5.3 AI Reformat API
 
 ```http
+GET /api/ai/models
 POST /api/ai/reformat
 Content-Type: application/json
 ```
 
-Request:
+`GET /api/ai/models` mengembalikan daftar model OpenCode Zen yang tersedia (termasuk `muse-spark-1.2-contributor-free` gratis sebagai default, terhubung ke auth session opencode ini via `AI_API_KEY`/`~/.local/share/opencode/auth.json` jika env kosong).
+
+Request reformat:
 
 ```json
 {
-  "product_ids": ["uuid1", "uuid2"]
+  "product_ids": ["uuid1", "uuid2"],
+  "model": "opencode/muse-spark-1.2-contributor-free"
 }
 ```
 
 Aturan:
 
-- `product_ids` wajib berisi 1-20 ID.
+- `product_ids` wajib berisi 1-10 ID (batas 10 untuk hemat token, UI disable >10).
+- `model` opsional; jika kosong memakai `OPENROUTER_MODEL` (default `opencode/muse-spark-1.2-contributor-free` dari auth session).
 - Produk yang diproses harus berstatus `raw`.
 - Hasil AI langsung divalidasi dan disimpan ke database.
 - Status yang berhasil diproses berubah menjadi `reformatted`.
@@ -702,7 +707,7 @@ Prompt wajib menginstruksikan AI untuk:
 - `ProductList.vue` - daftar produk dengan filter.
 - `ProductForm.vue` - edit field produk.
 - `ProductParser.vue` - textarea data Shopee mentah.
-- `BulkReformat.vue` - pilih maksimal 20 produk dan panggil AI.
+- `BulkReformat.vue` - pilih maksimal 10 produk dan panggil AI.
 - `CaptionGenerator.vue` - pilih template dan generate caption.
 - `HashtagSelector.vue` - pilih 0-3 hashtag.
 - `ShareButton.vue` - copy clipboard dan buka X.
@@ -821,7 +826,7 @@ Test minimum:
 
 - CRUD product dan validasi field.
 - Status `raw` ke `reformatted` ke `ready`.
-- AI bulk 1-20 produk dan menolak lebih dari 20.
+- AI bulk 1-10 produk dan menolak lebih dari 10.
 - Raw text tetap utuh setelah reformat.
 - AI malformed response, timeout, dan partial failure.
 - Template dengan field kosong.
@@ -853,7 +858,7 @@ Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration haru
 MVP dianggap selesai bila user dapat:
 
 1. Menyimpan data Shopee mentah.
-2. Memilih maksimal 20 produk dan menjalankan AI reformat.
+2. Memilih maksimal 10 produk dan menjalankan AI reformat.
 3. Melihat hasil reformat yang sudah tersimpan dan mengeditnya.
 4. Membuat caption dan variasi dengan hashtag.
 5. Membuka X dengan caption terisi atau menyalinnya manual.

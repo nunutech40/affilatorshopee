@@ -54,8 +54,11 @@ export const useProductStore = defineStore('products', {
     async updateProduct(id, payload) {
       return request(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
     },
-    async reformat(ids) {
-      return request('/api/ai/reformat', { method: 'POST', body: JSON.stringify({ product_ids: ids }) })
+    async reformat(ids, model) {
+      return request('/api/ai/reformat', { method: 'POST', body: JSON.stringify({ product_ids: ids, model }) })
+    },
+    async fetchModels() {
+      return request('/api/ai/models')
     },
     async deleteProduct(id) {
       return request(`/api/products/${id}`, { method: 'DELETE' })

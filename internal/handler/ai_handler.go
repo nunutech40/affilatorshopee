@@ -19,6 +19,11 @@ func NewAIHandler(products *service.ProductService, ai *service.AIService) *AIHa
 
 type reformatRequest struct {
 	ProductIDs []string `json:"product_ids"`
+	Model      *string  `json:"model"`
+}
+
+func (h *AIHandler) Models(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, service.ListModels())
 }
 
 func (h *AIHandler) Reformat(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +39,11 @@ func (h *AIHandler) Reformat(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Body JSON tidak valid")
 		return
 	}
-	summary, err := h.products.Reformat(r.Context(), request.ProductIDs, h.ai)
+	model := ""
+	if request.Model != nil {
+		model = *request.Model
+	}
+	summary, err := h.products.Reformat(r.Context(), request.ProductIDs, h.ai, model)
 	if err != nil {
 		if errors.Is(err, service.ErrValidation) {
 			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())

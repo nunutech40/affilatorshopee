@@ -215,9 +215,9 @@ type ReformatSummary struct {
 	Failed    []ReformatFailure `json:"failed"`
 }
 
-func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIService) (ReformatSummary, error) {
-	if len(ids) < 1 || len(ids) > 20 {
-		return ReformatSummary{}, fmt.Errorf("%w: product_ids harus berisi 1-20 ID", ErrValidation)
+func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIService, modelOverride string) (ReformatSummary, error) {
+	if len(ids) < 1 || len(ids) > 10 {
+		return ReformatSummary{}, fmt.Errorf("%w: product_ids harus berisi 1-10 ID (maksimal 10 untuk hemat token)", ErrValidation)
 	}
 	seen := make(map[string]struct{}, len(ids))
 	products := make([]model.Product, 0, len(ids))
@@ -245,7 +245,7 @@ func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIServi
 		return summary, nil
 	}
 
-	results, err := ai.Reformat(ctx, products)
+	results, err := ai.Reformat(ctx, products, modelOverride)
 	if err != nil {
 		return ReformatSummary{}, err
 	}

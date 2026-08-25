@@ -80,7 +80,7 @@ flowchart TD
     B --> C[Simpan raw_text + link + image_url]
     C --> D[Status: raw]
     D --> E{Panggil AI Reformat?}
-    E -->|Ya| F[Bulk Reformat max 20]
+    E -->|Ya| F[Bulk Reformat max 10]
     F --> G[Simpan hasil AI, Status: reformatted]
     G --> H[Edit manual bila perlu]
     H --> I[Save, Status: ready]
@@ -123,7 +123,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[Produk Tersimpan] --> B{Panggil AI?}
-    B -->|Bulk Reformat max 20| C[AI Rapikan dan Simpan Data]
+    B -->|Bulk Reformat max 10| C[AI Rapikan dan Simpan Data]
     B -->|Tidak| D[Generate dari Template]
     C --> D
     D --> E[Tampilkan Hasil]
@@ -151,7 +151,7 @@ flowchart TD
 
 ### 9.2 AI Reformat
 
-- Pilih produk dengan checkbox, maksimal 20 per bulk
+- Pilih produk dengan checkbox, maksimal 10 per bulk
 - AI merapikan data mentah jadi field lengkap
 - Hasil AI langsung disimpan ke produk
 - Edit manual tetap tersedia setelah reformat
@@ -211,7 +211,7 @@ flowchart TD
 3. User paste link affiliate, beberapa image URL, dan video URL jika ada
 4. User klik "Simpan Produk", status = raw
 5. Sistem mencoba men-download media ke local storage
-6. User pilih beberapa produk (max 20) dan klik "Bulk Reformat AI"
+6. User pilih beberapa produk (max 10) dan klik "Bulk Reformat AI"
 7. AI merapikan data dan langsung menyimpan hasil, status = reformatted
 8. User edit manual jika perlu, status = ready
 9. User pilih produk, pilih template, generate caption
@@ -279,7 +279,7 @@ flowchart TD
 - Tidak ada scraping Shopee otomatis
 - Input produk dari copy-paste user
 - AI dipakai terbatas untuk reformat data, bukan generate semua caption
-- Bulk reformat AI maksimal 20 produk per request
+- Bulk reformat AI maksimal 10 produk per request
 - Web app tidak login, memilih, atau menyimpan identitas akun X
 - Threads dan Chrome extension bukan bagian MVP
 
@@ -301,7 +301,7 @@ Diberikan user mengisi beberapa image URL atau video URL, ketika produk disimpan
 
 ### AC-2: Bulk Reformat AI
 
-Diberikan user memilih maksimal 20 produk dengan status raw, ketika klik "Bulk Reformat", maka AI merapikan data dan langsung menyimpan hasilnya dengan status reformatted.
+Diberikan user memilih maksimal 10 produk dengan status raw dan memilih model dari dropdown (default `muse-spark-1.2-contributor-free` gratis dari auth session opencode), ketika klik "Bulk Reformat", maka AI merapikan data dengan model tersebut dan langsung menyimpan hasilnya dengan status reformatted.
 
 ### AC-3: Generate Caption
 
@@ -332,7 +332,7 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 |---|---|
 | X mengubah Twitter Intent | Siapkan fallback manual copy-paste |
 | AI reformat tidak sempurna | Selalu ada mode edit manual |
-| AI boros token | Bulk reformat max 20, tidak otomatis |
+| AI boros token | Bulk reformat max 10, tidak otomatis |
 | Share intent atau clipboard gagal | User dapat menyalin caption secara manual dari halaman detail |
 
 ## 18. Future Roadmap

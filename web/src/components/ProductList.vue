@@ -1,6 +1,6 @@
 <script setup>
 defineProps({ items: { type: Array, default: () => [] }, selected: { type: Array, default: () => [] } })
-const emit = defineEmits(['toggle'])
+const emit = defineEmits(['toggle', 'delete'])
 const money = (value) => value == null ? '' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
 </script>
 
@@ -25,15 +25,15 @@ const money = (value) => value == null ? '' : new Intl.NumberFormat('id-ID', { s
       <span class="status" :class="product.status">{{ product.status }}</span>
       <span class="row-price">{{ product.sale_price ? money(product.sale_price) : '-' }}</span>
       <span class="row-post">{{ product.post_count || 0 }}</span>
-      <RouterLink :to="`/products/${product.id}`" class="row-link">Detail →</RouterLink>
+      <div class="row-actions"><RouterLink :to="`/products/${product.id}`" class="row-link">Detail →</RouterLink><button class="icon-delete" title="Hapus produk" @click.stop="emit('delete', product.id)">🗑</button></div>
     </article>
   </div>
 </template>
 
 <style scoped>
 .product-list{display:grid; gap:8px}
-.list-header{display:none; grid-template-columns:32px 1fr 90px 110px 110px 60px 80px; gap:12px; padding:0 16px 6px; font:600 10px 'DM Mono'; letter-spacing:.08em; text-transform:uppercase; color:#8a978d}
-.product-row{display:grid; grid-template-columns:32px 1fr 90px 110px 110px 60px 80px; gap:12px; align-items:center; padding:14px 16px; background:rgba(255,255,255,.62); border:1px solid #d9ded6; border-radius:10px; transition:background .15s}
+.list-header{display:none; grid-template-columns:32px 1fr 90px 110px 110px 60px 110px; gap:12px; padding:0 16px 6px; font:600 10px 'DM Mono'; letter-spacing:.08em; text-transform:uppercase; color:#8a978d}
+.product-row{display:grid; grid-template-columns:32px 1fr 90px 110px 110px 60px 110px; gap:12px; align-items:center; padding:14px 16px; background:rgba(255,255,255,.62); border:1px solid #d9ded6; border-radius:10px; transition:background .15s}
 .product-row:hover{background:#fff}
 .check{ display:flex; align-items:center; justify-content:center} .check input{ accent-color:#1f6b4f; width:16px; height:16px}
 .row-main{min-width:0}
@@ -42,7 +42,10 @@ const money = (value) => value == null ? '' : new Intl.NumberFormat('id-ID', { s
 .badge.model{ justify-self:start; font:600 11px 'DM Mono'; text-transform:capitalize; color:#5a6b5e; background:#e7eee6; padding:5px 8px; border-radius:999px}
 .row-price{ font:600 13px 'Space Grotesk'; color:#1f6b4f}
 .row-post{ font:12px 'DM Mono'; color:#6b7a6e; text-align:center}
-.row-link{ justify-self:end; font:700 13px sans-serif; color:#1f6b4f; white-space:nowrap}
+.row-link{ font:700 13px sans-serif; color:#1f6b4f; white-space:nowrap}
+.row-actions{ display:flex; align-items:center; gap:8px; justify-self:end}
+.icon-delete{ border:1px solid #e1c4be; background:#fff1ee; color:#a24c41; border-radius:7px; padding:6px 8px; font-size:13px; line-height:1}
+.icon-delete:hover{ background:#f8ddd6}
 @media(max-width:900px){ .list-header{display:none} .product-row{grid-template-columns:32px 1fr auto} .badge.model,.row-price,.row-post{ display:none} }
 @media(min-width:901px){ .list-header{display:grid} }
 </style>

@@ -20,6 +20,10 @@ async function reformat() {
     products.items.forEach((item) => { item.selected = false })
   } catch (e) { products.error = e.message }
 }
+async function remove(id) {
+  if (!confirm('Hapus produk ini? Tindakan tidak bisa di-undo.')) return
+  try { await products.deleteProduct(id); await products.fetchProducts() } catch (e) { products.error = e.message }
+}
 let timer
 watch(() => [products.filters.status, products.filters.content_model, products.filters.cluster], () => { products.page = 1; products.fetchProducts() })
 watch(() => products.page, () => products.fetchProducts())
@@ -36,7 +40,7 @@ onMounted(() => products.fetchProducts())
   <div v-if="products.error" class="error-box">{{ products.error }}</div>
   <div v-else-if="products.loading && !products.items.length" class="loading">Memuat product library...</div>
   <template v-else-if="products.items.length">
-    <ProductList :items="products.items" :selected="selected" @toggle="toggle" />
+    <ProductList :items="products.items" :selected="selected" @toggle="toggle" @delete="remove" />
     <div class="pagination">
       <button class="button" :disabled="products.page <= 1" @click="prev">‹ Prev</button>
       <span class="page-info">Hal {{ products.page }} dari {{ totalPages }} · {{ products.total }} produk</span>

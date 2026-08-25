@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { apiRequest, useProductStore } from '@/stores/productStore'
 import { useCaptionStore } from '@/stores/captionStore'
 import CaptionGenerator from '@/components/CaptionGenerator.vue'
@@ -8,6 +8,7 @@ import PostLogForm from '@/components/PostLogForm.vue'
 import ModelSelector from '@/components/ModelSelector.vue'
 
 const route = useRoute()
+const router = useRouter()
 const products = useProductStore()
 const captions = useCaptionStore()
 const product = ref(null)
@@ -68,6 +69,10 @@ async function saveReformat() {
 
 async function reformat() { working.value = true; error.value = ''; try { const result = await products.reformat([route.params.id], selectedModel.value); if (result.processed?.length) { product.value = result.processed[0]; editText.value = formatReformat(product.value) } if (result.failed?.length) error.value = result.failed[0].code + ': ' + result.failed[0].message } catch (e) { error.value = e.message } finally { working.value = false } }
 async function markReady() { try { const updated = await products.updateProduct(route.params.id, { status: 'ready' }); product.value = updated } catch (e) { error.value = e.message } }
+async function remove() {
+  if (!confirm('Hapus produk ini permanen?')) return
+  try { await products.deleteProduct(route.params.id); router.push('/') } catch (e) { error.value = e.message }
+}
 async function refreshLogs() { const logData = await apiRequest(`/api/post-logs?product_id=${route.params.id}`); logs.value = logData.items; product.value = await products.getProduct(route.params.id); editText.value = formatReformat(product.value) }
 onMounted(load)
 </script>
@@ -77,7 +82,7 @@ onMounted(load)
   <div v-else-if="error && !product" class="error-box">{{ error }}</div>
   <template v-else-if="product">
     <RouterLink to="/" class="back-link">← Kembali ke library</RouterLink>
-    <header class="detail-header"><div class="detail-title"><span class="status" :class="product.status">{{ product.status }}</span><h1>{{ product.product_name || 'Raw product' }}</h1><p class="cluster">{{ product.cluster || 'uncategorized' }} · {{ product.post_count || 0 }} posting</p></div><div class="detail-actions" style="flex-direction:column; align-items:end"><ModelSelector v-model="selectedModel" /><div style="display:flex; gap:8px"><button class="button" :disabled="working || product.status !== 'raw'" @click="reformat">{{ working ? 'AI...' : 'Reformat AI' }}</button><button v-if="product.status !== 'ready'" class="button-primary" @click="markReady">Tandai ready</button></div></div></header>
+    <header class="detail-header"><div class="detail-title"><span class="status" :class="product.status">{{ product.status }}</span><h1>{{ product.product_name || 'Raw product' }}</h1><p class="cluster">{{ product.cluster || 'uncategorized' }} · {{ product.post_count || 0 }} posting</p></div><div class="detail-actions" style="flex-direction:column; align-items:end"><ModelSelector v-model="selectedModel" /><div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:end"><button class="button" :disabled="working || product.status !== 'raw'" @click="reformat">{{ working ? 'AI...' : 'Reformat AI' }}</button><button v-if="product.status !== 'ready'" class="button-primary" @click="markReady">Tandai ready</button><button class="button button-danger" @click="remove">Hapus</button></div></div></header>
     <div v-if="error" class="error-box">{{ error }}</div>
     <div class="form-layout">
       <div>

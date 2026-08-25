@@ -13,10 +13,11 @@ import (
 
 type ProductHandler struct {
 	products *service.ProductService
+	media    *service.MediaService
 }
 
-func NewProductHandler(products *service.ProductService) *ProductHandler {
-	return &ProductHandler{products: products}
+func NewProductHandler(products *service.ProductService, media *service.MediaService) *ProductHandler {
+	return &ProductHandler{products: products, media: media}
 }
 
 type createProductRequest struct {
@@ -83,6 +84,12 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RawText: request.RawText, ShopeeLink: request.ShopeeLink, ImageURL: request.ImageURL,
 		ImageURLs: request.ImageURLs, VideoURL: request.VideoURL, Notes: request.Notes,
 	}
+	if len(product.ImageURLs) == 0 && product.ImageURL != nil && *product.ImageURL != "" {
+		product.ImageURLs = []string{*product.ImageURL}
+	}
+	if len(product.ImageURLs) > 0 {
+		product.ImageURL = &product.ImageURLs[0]
+	}
 	if err := h.products.Create(r.Context(), product); err != nil {
 		if errors.Is(err, service.ErrValidation) {
 			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
@@ -91,7 +98,11 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal menyimpan produk")
 		return
 	}
-	writeJSON(w, http.StatusCreated, product)
+	mediaResult := service.MediaDownloadSummary{Downloaded: []model.MediaFile{}, Failed: []service.MediaDownloadFailure{}}
+	if h.media != nil {
+		mediaResult = h.media.DownloadProductMedia(r.Context(), product.ID, product.ImageURLs, product.VideoURL)
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"product": product, "media": mediaResult})
 }
 
 func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {

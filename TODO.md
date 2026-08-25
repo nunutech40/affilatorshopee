@@ -19,7 +19,7 @@ Dokumen sumber:
 
 - [x] Tetapkan stack final: Go, PostgreSQL, Vue 3, Vite, Tailwind, Pinia
 - [x] Tetapkan scope MVP: produk, AI reformat, caption, hashtag, share X, post log
-- [x] Keluarkan manajemen identitas akun X, Threads, Chrome Extension, dan media storage dari MVP
+- [x] Keluarkan manajemen identitas akun X, Threads, dan Chrome Extension dari MVP; media lokal (download URL ke `STORAGE_PATH`) tetap bagian MVP
 - [x] Tetapkan produk boleh diposting berulang kali
 - [x] Tetapkan post log tidak menyimpan identitas akun X
 - [x] Tetapkan AI reformat langsung menyimpan hasil tanpa preview
@@ -45,16 +45,19 @@ Dokumen sumber:
 - [x] Buat migration `001_create_products.up.sql` dan `001_create_products.down.sql`
 - [x] Buat migration `002_create_post_logs.up.sql` dan `002_create_post_logs.down.sql`
 - [x] Buat migration `003_create_caption_variations.up.sql` dan `003_create_caption_variations.down.sql`
+- [x] Buat migration `004_create_product_media.up.sql` dan `004_create_product_media.down.sql`
 - [x] Buat koneksi PostgreSQL dan menjalankan migration saat startup
-- [x] Buat model `Product`, `PostLog`, dan `CaptionVariation`
-- [x] Buat config loader untuk `PORT`, `DATABASE_URL`, `AI_API_KEY`, `OPENROUTER_MODEL`, dan `ENV`
+- [x] Buat model `Product`, `PostLog`, `CaptionVariation`, dan `MediaFile`
+- [x] Buat config loader untuk `PORT`, `DATABASE_URL`, `STORAGE_PATH`, `AI_API_KEY`, `OPENROUTER_MODEL`, dan `ENV`
 - [x] Implementasikan `ProductRepository`: Create, GetByID, List, Update, Delete
 - [x] Implementasikan `PostLogRepository`: Create, List
 - [x] Implementasikan `CaptionVariationRepository`: Create, List
 - [x] Implementasikan validasi input produk
 - [x] Enforce transisi status `raw -> reformatted`, `raw -> ready`, dan `reformatted -> ready`
 - [x] Validasi field minimum sebelum status `ready`
-- [x] Simpan image/video sebagai URL eksternal tanpa download file
+- [x] Simpan image/video URL dan download file ke local storage (`STORAGE_PATH`) saat create produk
+- [x] Implementasikan `MediaRepository` dan `MediaService` dengan validasi private IP dan batas ukuran
+- [x] Implementasikan endpoint `GET /api/products/{id}/media` dan `GET /api/products/{id}/media/download` (ZIP)
 - [x] Setup router HTTP dan CORS localhost
 - [x] Implementasikan API products
 - [x] Implementasikan API post logs
@@ -145,7 +148,7 @@ Dokumen sumber:
 
 - [ ] Chrome Extension untuk membantu paste caption
 - [ ] Integrasi Threads
-- [ ] Media storage backend atau S3/CDN
+- [ ] S3/CDN untuk media (pengganti local storage)
 - [ ] Scheduling dan analytics
 - [ ] Auth dan multi-user
 
@@ -154,7 +157,7 @@ Dokumen sumber:
 ## Catatan untuk AI Coder
 
 - Gunakan `PRD.md` sebagai source of truth produk dan `TRD.md` sebagai source of truth teknis.
-- Jangan membuat fitur Threads, extension, atau media storage sebelum Phase 8.
+- Jangan membuat fitur Threads atau extension sebelum Phase 8; media lokal sudah bagian dari MVP.
 - Data mentah harus selalu dipertahankan.
 - AI boleh memperbaiki data, tetapi tidak boleh mengarang proof, harga, rating, atau urgency.
 - Produk tidak berubah menjadi status `posted`; posting dicatat sebagai `post_logs` dan boleh berulang.

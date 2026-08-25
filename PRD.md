@@ -52,7 +52,7 @@ Web app dengan fitur:
 4. Pilih hashtag berdasarkan cluster
 5. Buat variasi caption untuk posting ulang
 6. Tombol share ke X yang membuka tab dengan caption terisi
-7. Gambar/video tetap di-upload manual oleh user di X
+7. Download beberapa URL gambar dan URL video ke local storage agar mudah di-upload manual ke X
 8. Catat riwayat posting tanpa menyimpan identitas akun X
 
 ## 7. Flowchart Bisnis
@@ -184,7 +184,8 @@ flowchart TD
 - Tombol "Share ke X" menggunakan Twitter Web Intent
 - Caption terisi otomatis di tab baru
 - Caption juga disalin ke clipboard
-- Media di-upload manual oleh user
+- Media di-upload manual oleh user setelah tersedia di local storage
+- URL gambar/video di-download ke local storage saat produk disimpan
 - Caption final yang dibagikan sudah mencakup hashtag yang dipilih
 
 ### 9.7 Riwayat Posting Sederhana
@@ -192,22 +193,33 @@ flowchart TD
 - Catat caption, hashtag, platform, dan tanggal setiap posting
 - Satu produk bisa memiliki banyak `post_logs`, termasuk posting berulang
 
+### 9.8 Media Local
+
+- Satu produk dapat memiliki nol atau banyak image URL.
+- Satu produk dapat memiliki satu video URL.
+- Tersedia tombol `+ Add image URL` pada form input.
+- Saat produk disimpan, backend mencoba men-download setiap URL ke local storage.
+- URL `.mp4` diperlakukan sebagai video dan disimpan sebagai file lokal.
+- Download yang gagal tidak membatalkan penyimpanan produk; error ditampilkan pada response.
+- User dapat melihat metadata media dan men-download semua media sebagai ZIP.
+
 ## 10. User Flow MVP
 
 ```text
 1. User buka web app
 2. User paste data mentah dari Shopee
-3. User paste link affiliate dan image URL
+3. User paste link affiliate, beberapa image URL, dan video URL jika ada
 4. User klik "Simpan Produk", status = raw
-5. User pilih beberapa produk (max 20) dan klik "Bulk Reformat AI"
-6. AI merapikan data dan langsung menyimpan hasil, status = reformatted
-7. User edit manual jika perlu, status = ready
-8. User pilih produk, pilih template, generate caption
-9. User pilih variasi dan hashtag
-10. User klik "Share ke X"
-11. Caption tersalin ke clipboard, tab X terbuka
-12. User upload media manual dan klik Post
-13. User kembali ke web app dan mencatat posting
+5. Sistem mencoba men-download media ke local storage
+6. User pilih beberapa produk (max 20) dan klik "Bulk Reformat AI"
+7. AI merapikan data dan langsung menyimpan hasil, status = reformatted
+8. User edit manual jika perlu, status = ready
+9. User pilih produk, pilih template, generate caption
+10. User pilih variasi dan hashtag
+11. User klik "Share ke X"
+12. Caption tersalin ke clipboard, tab X terbuka
+13. User upload media lokal dan klik Post
+14. User kembali ke web app dan mencatat posting
 ```
 
 ## 11. Data Produk
@@ -263,13 +275,13 @@ flowchart TD
 ## 14. Batasan dan Keputusan Desain
 
 - Tidak ada auto-posting penuh
-- Media di-upload manual oleh user
+- Media di-download ke local storage oleh app, lalu di-upload manual oleh user ke X
 - Tidak ada scraping Shopee otomatis
 - Input produk dari copy-paste user
 - AI dipakai terbatas untuk reformat data, bukan generate semua caption
 - Bulk reformat AI maksimal 20 produk per request
 - Web app tidak login, memilih, atau menyimpan identitas akun X
-- Threads, Chrome extension, dan media storage backend bukan bagian MVP
+- Threads dan Chrome extension bukan bagian MVP
 
 ## 15. Acceptance Criteria
 
@@ -282,6 +294,10 @@ Diberikan user di halaman tambah produk, ketika paste data mentah dari Shopee, l
 Diberikan produk berstatus raw, ketika user mengisi field terstruktur yang diperlukan dan menyimpannya, maka produk berubah menjadi status ready tanpa harus memanggil AI.
 
 Field minimum untuk status ready adalah `product_name`, `shopee_link`, `cluster`, `content_model`, dan minimal satu benefit. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi.
+
+### AC-1c: Download Media
+
+Diberikan user mengisi beberapa image URL atau video URL, ketika produk disimpan, maka sistem mencoba men-download file yang valid ke local storage, menyimpan metadata media yang berhasil, dan melaporkan URL yang gagal tanpa membatalkan produk.
 
 ### AC-2: Bulk Reformat AI
 

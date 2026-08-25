@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Port               string
 	DatabaseURL        string
+	StoragePath        string
 	AIAPIKey           string
 	OpenRouterModel    string
 	Env                string
@@ -19,6 +20,7 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Port:            getenv("PORT", "8080"),
 		DatabaseURL:     strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		StoragePath:     getenv("STORAGE_PATH", "./data/uploads"),
 		AIAPIKey:        strings.TrimSpace(os.Getenv("AI_API_KEY")),
 		OpenRouterModel: strings.TrimSpace(os.Getenv("OPENROUTER_MODEL")),
 		Env:             getenv("ENV", "development"),

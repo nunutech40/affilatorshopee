@@ -39,12 +39,12 @@ func (s *ProductService) Create(ctx context.Context, product *model.Product) err
 	if err := validateURL(product.ShopeeLink); err != nil {
 		return err
 	}
-	if err := validateProductFields(product); err != nil {
-		return err
-	}
 	product.Status = "raw"
 	if product.CaptionTemplate == "" {
 		product.CaptionTemplate = "direct_product"
+	}
+	if err := validateProductFields(product); err != nil {
+		return err
 	}
 	return s.repo.Create(ctx, product)
 }

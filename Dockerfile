@@ -21,6 +21,7 @@ RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /app/api /app/api
 COPY --from=builder /app/internal/db/migrations /app/internal/db/migrations
 COPY --from=builder /app/web/dist /app/web/dist
+RUN mkdir -p /app/data/uploads && chown -R app:app /app
 EXPOSE 8080
 USER app
 CMD ["/app/api"]

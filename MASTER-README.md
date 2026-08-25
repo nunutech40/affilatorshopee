@@ -17,8 +17,9 @@ Simpan data produk mentah
 → AI reformat dan simpan hasil
 → Generate caption
 → Pilih hashtag
+→ Download gambar/video ke local storage
 → Share ke X via Web Intent
-→ User upload gambar dan klik Post
+→ User upload media lokal dan klik Post
 → Catat riwayat posting
 ```
 
@@ -30,10 +31,12 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - AI reformat maksimal 20 produk per request
 - Caption template dan variasi
 - Hashtag selector
-- Share ke X via Web Intent dan clipboard
-- Riwayat posting sederhana tanpa menyimpan identitas akun X
+ - Share ke X via Web Intent dan clipboard
+ - Download image/video URL ke local storage (banyak URL + tombol `+ Add image URL`, termasuk `.mp4`)
+ - Riwayat posting sederhana tanpa menyimpan identitas akun X
+ - Lihat metadata media dan download ZIP
 
-Threads, Chrome Extension, dan media storage adalah roadmap lanjutan.
+Threads dan Chrome Extension adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa depan.
 
 ## Tech Stack
 

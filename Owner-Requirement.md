@@ -36,7 +36,8 @@ Simpan produk mentah di web app
 → Pilih caption + hashtag
 → Klik "Share ke X"
 → Tab X terbuka, caption terisi
-→ User upload gambar manual
+→ Media di-download ke local storage
+→ User upload media lokal manual
 → Klik Post
 → User catat posting jika berhasil
 ```
@@ -48,7 +49,8 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 ### 1. Manajemen Produk Curated
 
 - Tambah produk dari data mentah dan link affiliate
-- Paste link gambar eksternal
+- Paste satu atau beberapa link gambar eksternal
+- Paste link video eksternal jika ada, termasuk `.mp4`
 - Kategorikan cluster
 - Riwayat posting sederhana per produk
 - Produk boleh diposting berulang kali
@@ -76,6 +78,7 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 - Caption sudah terisi otomatis
 - User tinggal upload gambar dan klik Post
 - Riwayat posting berisi caption, hashtag, platform, dan waktu
+- Media yang berhasil di-download tersedia di local storage dan dapat di-download sebagai ZIP
 - Bukan automation penuh, hanya helper
 
 ### 5. Dashboard Sederhana
@@ -133,7 +136,7 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 - Backend: Go
 - Database: PostgreSQL
 - Share: Twitter Web Intent
-- Gambar: user upload manual di tab X
+- Media: URL di-download ke local storage, lalu user upload manual di tab X
 
 ## Path Project
 

@@ -19,7 +19,7 @@ status: aligned-with-prd
 | AI | OpenRouter |
 | Deployment | Docker Compose di Orbstack |
 
-MVP hanya mencakup web app pribadi dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Tidak ada autentikasi operator, media storage backend, Threads, atau Chrome Extension pada MVP.
+MVP hanya mencakup web app pribadi dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator, Threads, atau Chrome Extension pada MVP.
 
 ## 2. Arsitektur Sistem
 
@@ -35,7 +35,7 @@ Go Backend API
 PostgreSQL    OpenRouter
 ```
 
-User tetap meng-upload gambar/video langsung di X dan menekan tombol Post secara manual. Backend hanya menyimpan data produk, caption, dan catatan posting.
+User tetap meng-upload gambar/video langsung di X dan menekan tombol Post secara manual. Backend menyimpan data produk, caption, catatan posting, serta file media yang di-download dari URL eksternal ke local storage.
 
 ## 3. Struktur Folder
 
@@ -55,26 +55,34 @@ AffiliatorShopee/
 │   │       ├── 002_create_post_logs.up.sql
 │   │       ├── 002_create_post_logs.down.sql
 │   │       ├── 003_create_caption_variations.up.sql
-│   │       └── 003_create_caption_variations.down.sql
+│   │       ├── 003_create_caption_variations.down.sql
+│   │       ├── 004_create_product_media.up.sql
+│   │       └── 004_create_product_media.down.sql
 │   ├── handler/
 │   │   ├── product_handler.go
 │   │   ├── ai_handler.go
 │   │   ├── caption_handler.go
-│   │   └── post_log_handler.go
+│   │   ├── post_log_handler.go
+│   │   └── media_handler.go
 │   ├── model/
 │   │   ├── product.go
 │   │   ├── post_log.go
-│   │   └── caption_variation.go
+│   │   ├── caption_variation.go
+│   │   └── media_file.go
 │   ├── repository/
 │   │   ├── product_repo.go
 │   │   ├── post_log_repo.go
-│   │   └── caption_variation_repo.go
+│   │   ├── caption_variation_repo.go
+│   │   └── media_repo.go
+│   ├── storage/
+│   │   └── storage.go
 │   └── service/
 │       ├── product_service.go
 │       ├── ai_service.go
 │       ├── caption_service.go
 │       ├── share_service.go
-│       └── post_log_service.go
+│       ├── post_log_service.go
+│       └── media_service.go
 ├── web/
 │   ├── index.html
 │   ├── package.json
@@ -171,7 +179,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 `raw_text` selalu dipertahankan sebagai sumber asli. Hasil AI mengisi atau memperbarui field terstruktur, tetapi tidak boleh menghapus data mentah.
 
-`image_url`, `image_urls`, dan `video_url` pada MVP hanya menyimpan URL eksternal yang diberikan user. Backend tidak mengunduh, mem-proxy, atau menyimpan file media tersebut.
+`image_url`, `image_urls`, dan `video_url` menyimpan URL eksternal yang diberikan user. Saat produk dibuat, backend mencoba men-download setiap URL ke local storage (`STORAGE_PATH/products/{product_id}/`) dan menyimpan metadata di tabel `product_media`. Form input mendukung banyak image URL via tombol `+ Add image URL` dan satu video URL (termasuk `.mp4`). Download yang gagal tidak membatalkan pembuatan produk; kegagalan dilaporkan pada response create.
 
 `content_model` menggantikan field `model` lama agar dapat mewakili dua pendekatan konten MVP: `capture` dan `cheap`. `capture_angle` hanya digunakan bila modelnya `capture`. Model `branded` ditunda ke roadmap.
 
@@ -282,13 +290,31 @@ Request minimum:
   "raw_text": "data copas Shopee yang masih berantakan",
   "shopee_link": "https://shopee.co.id/...",
   "image_url": "https://...",
+  "image_urls": ["https://...", "https://..."],
+  "video_url": "https://.../video.mp4",
   "notes": ""
 }
 ```
 
-Produk baru selalu disimpan dengan status `raw`.
+Produk baru selalu disimpan dengan status `raw`. Semua URL gambar/video yang valid akan dicoba di-download ke local storage; kegagalan per URL dilaporkan tanpa membatalkan produk.
 
-Response create dan detail menggunakan object product di dalam `data`. Contoh ringkas:
+Response create mengembalikan object gabungan:
+
+```json
+{
+  "success": true,
+  "data": {
+    "product": { "id": "uuid", "status": "raw" },
+    "media": {
+      "downloaded": [{ "filename": "image-01.jpg", "media_type": "image" }],
+      "failed": [{ "source_url": "https://...", "code": "MEDIA_DOWNLOAD_FAILED" }]
+    }
+  },
+  "error": null
+}
+```
+
+Response detail menggunakan object product di dalam `data`. Contoh ringkas:
 
 ```json
 {
@@ -475,6 +501,15 @@ GET /api/post-logs?product_id={uuid}&page=1&limit=20
 ```
 
 Create response mengembalikan post log object di dalam `data`; list response mengembalikan `items`, `page`, `limit`, dan `total`. Membuat post log tidak mengubah status produk. Endpoint ini hanya mencatat konfirmasi manual user.
+
+### 5.7 Media API
+
+```http
+GET /api/products/{id}/media
+GET /api/products/{id}/media/download
+```
+
+`GET /api/products/{id}/media` mengembalikan daftar metadata file lokal untuk produk tersebut. `GET /api/products/{id}/media/download` mengembalikan ZIP berisi semua file media yang berhasil di-download. Batasan: image maksimal 20 MB, video maksimal 200 MB, timeout download 2 menit, dan URL private/local ditolak.
 
 ## 6. Caption Template Engine
 
@@ -707,11 +742,14 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PORT: 8080
+      STORAGE_PATH: ${STORAGE_PATH:-/app/data/uploads}
       AI_API_KEY: ${AI_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL}
       ENV: ${ENV:-development}
     ports:
       - "127.0.0.1:8080:8080"
+    volumes:
+      - ./data/uploads:/app/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -728,6 +766,7 @@ DATABASE_URL=postgres://affiliator:change-me@db:5432/affiliator?sslmode=disable
 POSTGRES_USER=affiliator
 POSTGRES_PASSWORD=change-me
 POSTGRES_DB=affiliator
+STORAGE_PATH=/app/data/uploads
 AI_API_KEY=sk-or-v1-...
 OPENROUTER_MODEL=replace-with-tested-openrouter-model
 ENV=development
@@ -741,8 +780,9 @@ Jangan commit file `.env` atau API key ke repository.
 - Bind port API dan database ke `127.0.0.1`.
 - Jangan expose service ke internet sebelum auth dan authorization tersedia.
 - API key hanya berada di backend.
-- Validasi ukuran body, panjang string, URL, enum, angka, dan jumlah hashtag.
-- CORS hanya mengizinkan origin development lokal yang ditentukan, misalnya `http://localhost:5173`.
+ - Validasi ukuran body, panjang string, URL, enum, angka, dan jumlah hashtag.
+ - Validasi media URL hanya `http/https` tanpa private IP dan batas ukuran 20 MB image / 200 MB video.
+ - CORS hanya mengizinkan origin development lokal yang ditentukan, misalnya `http://localhost:5173`.
 - Batasi request AI dengan rate limit dan concurrency limit agar biaya terkendali.
 - Validasi environment wajib saat startup dan fail-fast bila `DATABASE_URL` atau `AI_API_KEY` tidak valid.
 - Gunakan timeout, error handling, dan logging terstruktur untuk OpenRouter.
@@ -796,6 +836,7 @@ Test minimum:
 - `001_create_products.up.sql` / `001_create_products.down.sql`
 - `002_create_post_logs.up.sql` / `002_create_post_logs.down.sql`
 - `003_create_caption_variations.up.sql` / `003_create_caption_variations.down.sql`
+- `004_create_product_media.up.sql` / `004_create_product_media.down.sql`
 
 Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration harus memiliki version tracking, dijalankan sebelum app menerima traffic, dan membuat startup gagal bila migration tidak berhasil.
 
@@ -803,7 +844,7 @@ Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration haru
 
 - Chrome Extension untuk membantu paste caption.
 - Integrasi Threads.
-- Media storage di backend atau S3/CDN.
+- S3/CDN untuk media (menggantikan local storage).
 - Scheduling dan analytics.
 - Auth, multi-user, dan admin panel.
 

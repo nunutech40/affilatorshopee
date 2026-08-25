@@ -19,7 +19,7 @@ status: aligned-with-prd
 | AI | OpenRouter |
 | Deployment | Docker Compose di Orbstack |
 
-MVP hanya mencakup web app pribadi dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator, Threads, atau Chrome Extension pada MVP.
+MVP mencakup web app pribadi + Chrome Extension helper sebagai satu kesatuan dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator atau Threads pada MVP.
 
 ## 2. Arsitektur Sistem
 
@@ -720,7 +720,17 @@ MVP tidak memiliki flow pemilihan akun; akun X yang digunakan mengikuti session 
 - `productStore` - list, filter, CRUD, dan AI reformat.
 - `captionStore` - caption aktif dan variasi.
 
-## 9. Docker Compose
+## 9. Chrome Extension (Manifest V3) — Satu Kesatuan dengan Web App
+
+- `extension/manifest.json` — `activeTab`, `storage`, `scripting`, `clipboardWrite`, `clipboardRead`, host `x.com`, `twitter.com`, `threads.net`
+- `extension/background.js` — simpan `lastCaption` via `chrome.storage`, message `AFFILIATOR_SET_CAPTION`
+- `extension/content.js` — di `x.com/intent/tweet` parse `?text=` + fallback `chrome.storage`/`clipboardRead`, deteksi composer (`[data-testid="tweetTextarea_0"]`, `div[contenteditable]`, `DraftEditor`), `insertText` + `InputEvent`, `MutationObserver` + polling 12x, notifikasi toast
+- `extension/popup.html` / `popup.js` — tombol `Paste caption sekarang` (fallback manual), instruksi load unpacked
+- `web/src/components/ShareButton.vue` — saat `Share ke X` juga `chrome.storage.local.set` + `chrome.runtime.sendMessage` agar extension auto-paste tanpa user `Cmd+V`
+
+Cara load: `chrome://extensions` → Developer mode → Load unpacked → folder `extension`
+
+## 10. Docker Compose
 
 Compose MVP harus menyediakan PostgreSQL dan app Go. Port hanya di-bind ke localhost karena MVP tidak memiliki autentikasi.
 
@@ -763,7 +773,7 @@ volumes:
   postgres_data:
 ```
 
-## 10. Environment Variables
+## 11. Environment Variables
 
 ```bash
 PORT=8080
@@ -779,7 +789,7 @@ ENV=development
 
 Jangan commit file `.env` atau API key ke repository.
 
-## 11. Security dan Reliability
+## 12. Security dan Reliability
 
 - MVP hanya untuk local/private use dan tidak memiliki auth.
 - Bind port API dan database ke `127.0.0.1`.
@@ -795,7 +805,7 @@ Jangan commit file `.env` atau API key ke repository.
 - Semua query database menggunakan parameter binding.
 - Caption di-encode dengan aman sebelum dipakai pada URL intent.
 
-## 12. Error Handling
+## 13. Error Handling
 
 Backend harus:
 
@@ -811,7 +821,7 @@ Frontend harus:
 - Menampilkan status proses AI per produk.
 - Menyediakan fallback copy-paste manual bila share intent gagal.
 
-## 13. Testing Strategy
+## 14. Testing Strategy
 
 | Jenis | Scope | Tool |
 |---|---|---|
@@ -836,7 +846,7 @@ Test minimum:
 - Posting berulang pada produk yang sama.
 - Migration dan database readiness Docker.
 
-## 14. Migration Files
+## 15. Migration Files
 
 - `001_create_products.up.sql` / `001_create_products.down.sql`
 - `002_create_post_logs.up.sql` / `002_create_post_logs.down.sql`
@@ -845,15 +855,14 @@ Test minimum:
 
 Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration harus memiliki version tracking, dijalankan sebelum app menerima traffic, dan membuat startup gagal bila migration tidak berhasil.
 
-## 15. Roadmap Setelah MVP
+## 16. Roadmap Setelah MVP
 
-- Chrome Extension untuk membantu paste caption.
 - Integrasi Threads.
 - S3/CDN untuk media (menggantikan local storage).
 - Scheduling dan analytics.
 - Auth, multi-user, dan admin panel.
 
-## 16. Definition of Done MVP
+## 17. Definition of Done MVP
 
 MVP dianggap selesai bila user dapat:
 

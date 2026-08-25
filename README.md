@@ -23,7 +23,7 @@ Simpan data Shopee mentah
 → Catat riwayat posting
 ```
 
-MVP tidak melakukan auto-posting dan tidak mengelola akun sosial. Media hanya di-download ke local storage agar mudah di-upload manual ke X.
+MVP tidak melakukan auto-posting dan tidak mengelola akun sosial. Media hanya di-download ke local storage agar mudah di-upload manual ke X. Chrome Extension helper auto-paste adalah satu kesatuan (load unpacked `extension/`).
 
 Akun X yang digunakan mengikuti session browser yang sedang login. Web app tidak membaca, memilih, atau menyimpan identitas akun tersebut. Produk yang sama boleh dibagikan dan dicatat berkali-kali.
 

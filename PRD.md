@@ -281,7 +281,8 @@ flowchart TD
 - AI dipakai terbatas untuk reformat data, bukan generate semua caption
 - Bulk reformat AI maksimal 10 produk per request
 - Web app tidak login, memilih, atau menyimpan identitas akun X
-- Threads dan Chrome extension bukan bagian MVP
+- Chrome Extension Manifest V3 (helper auto-paste ke composer X/Threads) adalah satu kesatuan dengan web app
+- Threads bukan bagian MVP awal
 
 ## 15. Acceptance Criteria
 
@@ -309,7 +310,7 @@ Diberikan produk dengan status reformatted/ready, ketika user pilih template dan
 
 ### AC-4: Share ke X
 
-Diberikan caption sudah jadi, ketika user klik "Share ke X", maka caption tersalin ke clipboard dan tab baru terbuka ke Twitter intent dengan caption ter-encode.
+Diberikan caption sudah jadi, ketika user klik "Share ke X", maka caption tersalin ke clipboard, disimpan untuk extension, dan tab baru terbuka ke Twitter intent dengan caption ter-encode. Jika extension terinstall, composer X/Threads akan auto-paste caption.
 
 ### AC-5: Riwayat Posting
 
@@ -343,7 +344,6 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Scheduling post
 - Integrasi lebih dalam dengan X API
 - Model konten Curated Branded
-- Chrome Extension untuk membantu paste caption
 - Integrasi Threads
 - Opsi dijual sebagai SaaS
 - Support platform lain: TikTok, Instagram, Facebook

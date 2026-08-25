@@ -28,15 +28,15 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 ## Scope MVP
 
 - CRUD produk curated
-- AI reformat maksimal 20 produk per request
+- AI reformat maksimal 10 produk per request (pilih model OpenCode, default `muse-spark-1.2-contributor-free` gratis)
 - Caption template dan variasi
 - Hashtag selector
- - Share ke X via Web Intent dan clipboard
- - Download image/video URL ke local storage (banyak URL + tombol `+ Add image URL`, termasuk `.mp4`)
- - Riwayat posting sederhana tanpa menyimpan identitas akun X
- - Lihat metadata media dan download ZIP
+- Share ke X via Web Intent dan clipboard + Chrome Extension helper auto-paste (Manifest V3, satu kesatuan)
+- Download image/video URL ke local storage (banyak URL + tombol `+ Add image URL`, termasuk `.mp4`)
+- Riwayat posting sederhana tanpa menyimpan identitas akun X
+- Lihat metadata media dan download ZIP
 
-Threads dan Chrome Extension adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa depan.
+Threads adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa depan.
 
 ## Tech Stack
 

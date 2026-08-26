@@ -7,6 +7,7 @@ type Product struct {
 	RawText         string     `json:"raw_text"`
 	ProductName     *string    `json:"product_name"`
 	ShopeeLink      string     `json:"shopee_link"`
+	TrackingTag     string     `json:"tracking_tag"`
 	SourceCategory  string     `json:"source_category"`
 	ImageURL        *string    `json:"image_url"`
 	ImageURLs       []string   `json:"image_urls"`

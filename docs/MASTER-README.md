@@ -19,7 +19,7 @@ Simpan data produk mentah
 → AI reformat dan simpan hasil
 → Reformat AI sesuai content model
 → Buat varian caption bila perlu
-→ Download gambar/video ke local storage
+→ Download gambar/video ke local storage atau tambah dari detail
 → Share caption + media ke X via Extension helper
 → User klik Post manual
 → Catat riwayat posting
@@ -35,6 +35,8 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Reformat utama dan varian caption terpisah
 - Share ke X via Web Intent dan clipboard + Chrome Extension helper auto-paste (Manifest V3, satu kesatuan)
 - Download image/video URL ke local storage (banyak URL + tombol `+ Add image URL`, termasuk `.mp4`)
+- Edit link affiliate Shopee dari product detail
+- Tambah dan hapus media lokal dari product detail
 - Riwayat posting sederhana tanpa menyimpan identitas akun X
 - Lihat metadata media dan download ZIP
 

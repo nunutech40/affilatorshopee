@@ -17,6 +17,7 @@ Setiap produk dikirim dalam blok berikut:
 ```text
 PRODUCT_ID: <uuid>
 CONTENT_MODEL: <trending|branded|cheap>
+SHOPEE_LINK: <link affiliate yang tersimpan pada produk>
 RAW_START
 <raw text produk>
 RAW_END
@@ -179,6 +180,7 @@ Value line singkat jika masih muat
 - Link Shopee dan hashtag harus berada di bagian akhir.
 - Hashtag maksimal 3 dan dipisahkan spasi.
 - Jangan mengarang rating, terjual, harga, diskon, voucher, brand, benefit, momen, atau fakta lain.
+- Gunakan `SHOPEE_LINK` persis sebagai URL CTA. Jangan membuat URL dari `PRODUCT_ID` dan jangan mengganti link affiliate dengan URL lain.
 - Jika caption terlalu panjang, pangkas dengan urutan: benefit tambahan → value line → kalimat pengantar.
 - Jangan memangkas rating, terjual, harga, diskon, voucher, link, atau hashtag jika datanya ada.
 ```
@@ -241,17 +243,18 @@ Setelah JSON diterima, backend tetap melakukan normalisasi deterministik:
 
 1. Mengubah markdown link `[url](url)` menjadi URL biasa.
 2. Menghapus escape `\\#` menjadi `#`.
-3. Menghapus separator seperti `----`.
-4. Mengubah bullet mentah menjadi `✅`.
-5. Mengubah baris diskon menjadi `⚡ Diskon ...`.
-6. Mengubah data terjual menjadi `🔥`.
-7. Mengubah data rating menjadi `⭐️`.
-8. Mengambil harga paling rendah dari raw text dan menambahkan `💸 Mulai ...`.
-9. Menambahkan rating/terjual dari raw jika AI lupa menampilkannya.
-10. Menambahkan benefit raw jika AI tidak menghasilkan benefit `✅`.
-11. Menghapus COD, retur, garansi, pengiriman, toleransi ukuran, produksi massal, dan catatan logistik.
-12. Mengganti hook pertama hanya jika kosong, URL, hashtag, atau berisi token data mentah. Hook AI yang valid dipertahankan.
-13. Tidak menggunakan mock caption saat provider AI gagal; error provider dikembalikan eksplisit ke UI.
+3. Mengganti setiap URL Shopee hasil model dengan `shopee_link` produk yang tersimpan.
+4. Menghapus separator seperti `----`.
+5. Mengubah bullet mentah menjadi `✅`.
+6. Mengubah baris diskon menjadi `⚡ Diskon ...`.
+7. Mengubah data terjual menjadi `🔥`.
+8. Mengubah data rating menjadi `⭐️`.
+9. Mengambil harga paling rendah dari raw text dan menambahkan `💸 Mulai ...`.
+10. Menambahkan rating/terjual dari raw jika AI lupa menampilkannya.
+11. Menambahkan benefit raw jika AI tidak menghasilkan benefit `✅`.
+12. Menghapus COD, retur, garansi, pengiriman, toleransi ukuran, produksi massal, dan catatan logistik.
+13. Mengganti hook pertama hanya jika kosong, URL, hashtag, atau berisi token data mentah. Hook AI yang valid dipertahankan.
+14. Tidak menggunakan mock caption saat provider AI gagal; error provider dikembalikan eksplisit ke UI.
 
 Fallback value tidak membaca baris pertama raw (judul/brand), menyaring token ALL-CAPS, dan benefit ber-prefix bullet yang menyerupai fragmen judul tidak dipakai.
 

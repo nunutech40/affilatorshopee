@@ -29,16 +29,16 @@ type ProductListFilter struct {
 
 func (r *ProductRepository) Create(ctx context.Context, product *model.Product) error {
 	query := `INSERT INTO products (
-		raw_text, reformatted_text, product_name, shopee_link, image_url, image_urls, video_url,
+		raw_text, reformatted_text, product_name, shopee_link, tracking_tag, image_url, image_urls, video_url,
 		normal_price, sale_price, discount_percent, rating, sold_count, review_count,
 		keyword, problem, cluster, content_model, capture_angle,
 		benefit_1, benefit_2, benefit_3, urgency, caption_template, hashtag_pool,
 		notes, source_category, status
-	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
 	RETURNING id, created_at, updated_at`
 
 	return r.db.QueryRowContext(ctx, query,
-		product.RawText, product.ReformattedText, product.ProductName, product.ShopeeLink, product.ImageURL,
+		product.RawText, product.ReformattedText, product.ProductName, product.ShopeeLink, product.TrackingTag, product.ImageURL,
 		pq.Array(product.ImageURLs), product.VideoURL, product.NormalPrice,
 		product.SalePrice, product.DiscountPercent, product.Rating, product.SoldCount,
 		product.ReviewCount, product.Keyword, product.Problem, product.Cluster,
@@ -50,7 +50,7 @@ func (r *ProductRepository) Create(ctx context.Context, product *model.Product) 
 
 func (r *ProductRepository) GetByID(ctx context.Context, id string) (*model.Product, error) {
 	query := `SELECT
-		p.id, p.raw_text, p.reformatted_text, p.product_name, p.shopee_link, p.image_url, p.image_urls,
+		p.id, p.raw_text, p.reformatted_text, p.product_name, p.shopee_link, p.tracking_tag, p.image_url, p.image_urls,
 		p.video_url, p.normal_price, p.sale_price, p.discount_percent, p.rating,
 		p.sold_count, p.review_count, p.keyword, p.problem, p.cluster,
 		p.content_model, p.capture_angle, p.benefit_1, p.benefit_2, p.benefit_3,
@@ -97,7 +97,7 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 	}
 
 	query := fmt.Sprintf(`SELECT
-		p.id, p.raw_text, p.reformatted_text, p.product_name, p.shopee_link, p.image_url, p.image_urls,
+		p.id, p.raw_text, p.reformatted_text, p.product_name, p.shopee_link, p.tracking_tag, p.image_url, p.image_urls,
 		p.video_url, p.normal_price, p.sale_price, p.discount_percent, p.rating,
 		p.sold_count, p.review_count, p.keyword, p.problem, p.cluster,
 		p.content_model, p.capture_angle, p.benefit_1, p.benefit_2, p.benefit_3,
@@ -135,14 +135,14 @@ func (r *ProductRepository) UpdateReformatted(ctx context.Context, product *mode
 
 func (r *ProductRepository) update(ctx context.Context, product *model.Product, requiredStatus string) error {
 	query := `UPDATE products SET
-		reformatted_text=$2, product_name=$3, shopee_link=$4, image_url=$5, image_urls=$6, video_url=$7,
+		reformatted_text=$2, product_name=$3, shopee_link=$4, tracking_tag=$5, image_url=$6, image_urls=$7, video_url=$8,
 		normal_price=$8, sale_price=$9, discount_percent=$10, rating=$11,
 		sold_count=$12, review_count=$13, keyword=$14, problem=$15, cluster=$16,
 		content_model=$17, capture_angle=$18, benefit_1=$19, benefit_2=$20, benefit_3=$21,
 		urgency=$22, caption_template=$23, hashtag_pool=$24, notes=$25, source_category=$26, status=$27
 	WHERE id=$1`
 	args := []interface{}{
-		product.ID, product.ReformattedText, product.ProductName, product.ShopeeLink, product.ImageURL,
+		product.ID, product.ReformattedText, product.ProductName, product.ShopeeLink, product.TrackingTag, product.ImageURL,
 		pq.Array(product.ImageURLs), product.VideoURL, product.NormalPrice,
 		product.SalePrice, product.DiscountPercent, product.Rating, product.SoldCount,
 		product.ReviewCount, product.Keyword, product.Problem, product.Cluster,
@@ -151,7 +151,7 @@ func (r *ProductRepository) update(ctx context.Context, product *model.Product, 
 		pq.Array(product.HashtagPool), product.Notes, product.SourceCategory, product.Status,
 	}
 	if requiredStatus != "" {
-		query = query + " AND status=$27"
+		query = query + " AND status=$28"
 		args = append(args, requiredStatus)
 	}
 	result, err := r.db.ExecContext(ctx, query, args...)
@@ -185,7 +185,7 @@ func (r *ProductRepository) scanProduct(row interface {
 }) (*model.Product, error) {
 	var p model.Product
 	err := row.Scan(
-		&p.ID, &p.RawText, &p.ReformattedText, &p.ProductName, &p.ShopeeLink, &p.ImageURL,
+		&p.ID, &p.RawText, &p.ReformattedText, &p.ProductName, &p.ShopeeLink, &p.TrackingTag, &p.ImageURL,
 		pq.Array(&p.ImageURLs), &p.VideoURL, &p.NormalPrice, &p.SalePrice,
 		&p.DiscountPercent, &p.Rating, &p.SoldCount, &p.ReviewCount,
 		&p.Keyword, &p.Problem, &p.Cluster, &p.ContentModel, &p.CaptureAngle,

@@ -10,7 +10,7 @@ Dokumen ini adalah titik mulai untuk AI/developer berikutnya. Jika ada konflik d
 - Health check: `GET /healthz`.
 - Posting ke X tetap manual melalui browser dan Chrome Extension helper.
 - Tidak ada login atau penyimpanan identitas akun X.
-- Media produk di-download ke local storage dan dikirim ke extension sebagai URL media lokal.
+- Media produk di-download ke local storage dan dikirim ke extension sebagai URL media lokal. Dari detail, user juga bisa menambah image/video URL baru dan menghapus media lokal yang sudah ada.
 
 ## Deploy lokal
 
@@ -54,8 +54,12 @@ Config backend mendukung tiga provider terpisah: model `openrouter/*` dikirim ke
 - Produk manual dengan raw text memanggil Reformat AI otomatis setelah save.
 - Detail hanya memiliki `Reformat varian caption`; ini berlaku untuk produk raw maupun import X.
 - Source category ditampilkan sebagai `Raw text` atau `Import X`.
+- Setiap produk memiliki `tracking_tag` unik yang dibuat saat save; produk lama di-backfill saat migration 009.
+- Tracking tag ditampilkan di dashboard/detail dan bisa dicopy untuk dipakai saat membuat link affiliate Shopee.
 - Loading spinner dan tombol terkunci selama AI bekerja.
-- Media lokal, download ZIP, share ke X, dan riwayat posting.
+- Link affiliate Shopee bisa diedit dari detail.
+- Media lokal bisa ditambah dari URL image/video, dihapus, atau diunduh sebagai ZIP.
+- Share ke X mengirim promo text dan media lokal.
 
 ### Chrome Extension
 
@@ -107,10 +111,12 @@ Timeout HTTP AI saat ini 3 menit karena Ox Alpha dapat lebih lambat daripada req
 ## File penting
 
 - `../backend/internal/service/ai_service.go` — prompt, request provider, parse response, normalisasi caption.
+- `../backend/internal/service/media_service.go` — download, penamaan berurutan, deduplikasi, dan penghapusan media lokal.
 - `../backend/internal/service/model_registry.go` — fallback model registry.
 - `../backend/internal/config/config.go` — environment provider AI.
 - `../backend/internal/service/product_service.go` — validasi status dan penyimpanan hasil AI.
 - `../backend/internal/db/migrations/008_add_source_category.up.sql` — source category `raw_text` atau `import_x`.
+- `../backend/internal/db/migrations/009_add_tracking_tag.up.sql` — tracking tag unik per produk.
 - `../frontend/src/views/HomeView.vue` — dashboard.
 - `../frontend/src/views/ProductDetailView.vue` — detail, model selector, reformat, share.
 - `../frontend/src/components/ModelSelector.vue` — dropdown AI bersama.
@@ -123,7 +129,7 @@ Timeout HTTP AI saat ini 3 menit karena Ox Alpha dapat lebih lambat daripada req
 
 ```bash
 env GOCACHE=/private/tmp/affiliator-go-cache go build ./...
-cd web && npm run build
+cd frontend && npm run build
 cd ..
 docker compose --env-file .env up -d --build
 curl -i http://localhost:8080/healthz
@@ -137,6 +143,8 @@ Jangan menjalankan reformat AI live hanya untuk test tanpa persetujuan, karena r
 - Model Ox Alpha dapat terkena rate limit/upstream timeout. Jangan menurunkan timeout kembali ke 45 detik tanpa pengujian.
 - Backend saat ini menunggu response JSON lengkap; belum memakai streaming token.
 - Auto-reformat saat create dilakukan oleh `ProductNewView.vue` setelah API create berhasil; jika AI gagal, produk tetap tersimpan dan error ditampilkan.
+- `shopee_link` dikirim eksplisit sebagai fakta AI dan normalizer mengganti URL Shopee hasil model dengan link affiliate produk yang tersimpan. Ini mencegah UUID produk atau URL hasil halusinasi masuk ke caption.
+- Media detail memakai endpoint `POST /api/products/{id}/media` untuk download URL baru dan `DELETE /api/products/{id}/media/{mediaID}` untuk menghapus file + metadata.
 - Normalizer dapat mengubah hasil AI secara agresif. Jika output Hermes berbeda, review `normalizePromoLayout` selain prompt.
 - Model registry saat ini sengaja hanya menampilkan `stealth/ox-alpha` agar model provider lama tidak terkirim ke OpenRouter.
 - `.env` harus tetap untracked dan tidak boleh dibagikan.

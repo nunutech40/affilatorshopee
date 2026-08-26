@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -46,10 +48,38 @@ func (s *ProductService) Create(ctx context.Context, product *model.Product) err
 	if product.CaptionTemplate == "" {
 		product.CaptionTemplate = "direct_product"
 	}
+	if strings.TrimSpace(product.TrackingTag) == "" {
+		product.TrackingTag = generateTrackingTag(product.RawText)
+	}
 	if err := validateProductFields(product); err != nil {
 		return err
 	}
 	return s.repo.Create(ctx, product)
+}
+
+func generateTrackingTag(raw string) string {
+	base := strings.TrimSpace(strings.Split(raw, "\n")[0])
+	base = strings.ToLower(base)
+	var slug strings.Builder
+	for _, r := range base {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			slug.WriteRune(r)
+		} else if slug.Len() > 0 && !strings.HasSuffix(slug.String(), "-") {
+			slug.WriteByte('-')
+		}
+		if slug.Len() >= 24 {
+			break
+		}
+	}
+	value := strings.Trim(slug.String(), "-")
+	if value == "" {
+		value = "produk"
+	}
+	random := make([]byte, 4)
+	if _, err := rand.Read(random); err != nil {
+		return value + "-tag"
+	}
+	return value + "-" + hex.EncodeToString(random)
 }
 
 func (s *ProductService) GetByID(ctx context.Context, id string) (*model.Product, error) {

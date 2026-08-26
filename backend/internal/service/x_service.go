@@ -172,6 +172,7 @@ func (s *XService) ImportFromX(ctx context.Context, xURL string, contentModel *s
 	if videoURL != nil {
 		product.VideoURL = videoURL
 	}
+	product.TrackingTag = generateTrackingTag(product.RawText)
 
 	if err := validateProductFields(product); err != nil {
 		return nil, nil, err

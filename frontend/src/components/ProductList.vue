@@ -17,7 +17,7 @@ const money = (value) => value == null ? '' : new Intl.NumberFormat('id-ID', { s
     <article v-for="product in items" :key="product.id" class="product-row">
       <div class="row-main">
         <RouterLink :to="`/products/${product.id}`" class="row-title">{{ product.product_name || 'Raw product belum direformat' }}</RouterLink>
-        <div class="row-sub">{{ product.source_category === 'import_x' ? 'Import X' : 'Raw text' }} · {{ product.cluster || 'uncategorized' }} · {{ (product.keyword || '').slice(0,32) }}</div>
+        <div class="row-sub">{{ product.source_category === 'import_x' ? 'Import X' : 'Raw text' }} · {{ product.cluster || 'uncategorized' }} · tag: {{ product.tracking_tag || '-' }}</div>
       </div>
       <select class="model-select" :value="product.content_model || ''" @change="emit('update-model', product.id, $event.target.value)"><option value="">Pilih angle</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option v-if="product.content_model === 'capture'" value="capture">Captured (legacy)</option></select>
       <span class="status" :class="product.status">{{ product.status }}</span>

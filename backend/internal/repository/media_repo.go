@@ -45,3 +45,8 @@ func (r *MediaRepository) GetByID(ctx context.Context, productID, mediaID string
 	}
 	return &media, nil
 }
+
+func (r *MediaRepository) Delete(ctx context.Context, productID, mediaID string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM product_media WHERE id=$1 AND product_id=$2`, mediaID, productID)
+	return err
+}

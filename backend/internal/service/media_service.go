@@ -55,6 +55,18 @@ func (s *MediaService) DownloadProductMedia(ctx context.Context, productID strin
 	result := MediaDownloadSummary{Downloaded: []model.MediaFile{}, Failed: []MediaDownloadFailure{}}
 	seen := map[string]bool{}
 	imageIndex := 0
+	videoIndex := 0
+	if existing, err := s.repo.ListByProduct(ctx, productID); err == nil {
+		for _, media := range existing {
+			seen[strings.TrimSpace(media.SourceURL)] = true
+			if media.MediaType == "image" {
+				imageIndex++
+			}
+			if media.MediaType == "video" {
+				videoIndex++
+			}
+		}
+	}
 	for _, sourceURL := range imageURLs {
 		sourceURL = strings.TrimSpace(sourceURL)
 		if sourceURL == "" || seen[sourceURL] {
@@ -73,7 +85,8 @@ func (s *MediaService) DownloadProductMedia(ctx context.Context, productID strin
 		sourceURL := strings.TrimSpace(*videoURL)
 		if sourceURL != "" && !seen[sourceURL] {
 			seen[sourceURL] = true
-			media, err := s.download(ctx, productID, sourceURL, "video", 1)
+			videoIndex++
+			media, err := s.download(ctx, productID, sourceURL, "video", videoIndex)
 			if err != nil {
 				result.Failed = append(result.Failed, MediaDownloadFailure{SourceURL: sourceURL, Code: "MEDIA_DOWNLOAD_FAILED", Message: err.Error()})
 			} else {
@@ -98,6 +111,20 @@ func (s *MediaService) Open(ctx context.Context, productID, mediaID string) (*mo
 		return nil, nil, err
 	}
 	return item, file, nil
+}
+
+func (s *MediaService) Remove(ctx context.Context, productID, mediaID string) error {
+	item, err := s.repo.GetByID(ctx, productID, mediaID)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.Delete(ctx, productID, mediaID); err != nil {
+		return err
+	}
+	if err := s.storage.Delete(item.LocalPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func (s *MediaService) Zip(ctx context.Context, productID string) (*bytes.Buffer, error) {

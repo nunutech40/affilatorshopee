@@ -57,7 +57,7 @@ Dokumen sumber:
 - [x] Validasi field minimum sebelum status `ready`
 - [x] Simpan image/video URL dan download file ke local storage (`STORAGE_PATH`) saat create produk
 - [x] Implementasikan `MediaRepository` dan `MediaService` dengan validasi private IP dan batas ukuran
-- [x] Implementasikan endpoint `GET /api/products/{id}/media` dan `GET /api/products/{id}/media/download` (ZIP)
+- [x] Implementasikan endpoint `GET /api/products/{id}/media`, `POST /api/products/{id}/media`, `DELETE /api/products/{id}/media/{mediaID}`, dan `GET /api/products/{id}/media/download` (ZIP)
 - [x] Setup router HTTP dan CORS localhost
 - [x] Implementasikan API products
 - [x] Implementasikan API post logs
@@ -119,6 +119,7 @@ Dokumen sumber:
 - [x] Buat `ProductForm.vue` untuk edit produk
 - [x] Buat `BulkReformat.vue` dengan batas maksimal 10 produk
 - [x] Buat `ProductDetailView.vue`
+- [x] Tambahkan edit link affiliate serta tambah/hapus media dari product detail
 - [x] Buat `CaptionGenerator.vue`
 - [x] Buat `HashtagSelector.vue`
 - [x] Buat `ShareButton.vue`

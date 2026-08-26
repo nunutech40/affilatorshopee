@@ -128,6 +128,7 @@ CREATE TABLE products (
     raw_text TEXT NOT NULL,
     product_name VARCHAR(255),
     shopee_link TEXT NOT NULL,
+    tracking_tag VARCHAR(64) NOT NULL UNIQUE,
     image_url TEXT,
     image_urls TEXT[],
     video_url TEXT,
@@ -511,10 +512,23 @@ Create response mengembalikan post log object di dalam `data`; list response men
 
 ```http
 GET /api/products/{id}/media
+POST /api/products/{id}/media
 GET /api/products/{id}/media/download
+DELETE /api/products/{id}/media/{mediaID}
 ```
 
-`GET /api/products/{id}/media` mengembalikan daftar metadata file lokal untuk produk tersebut. `GET /api/products/{id}/media/download` mengembalikan ZIP berisi semua file media yang berhasil di-download. Batasan: image maksimal 20 MB, video maksimal 200 MB, timeout download 2 menit, dan URL private/local ditolak.
+`GET /api/products/{id}/media` mengembalikan daftar metadata file lokal untuk produk tersebut. `POST /api/products/{id}/media` menerima `image_urls` dan/atau `video_url`, lalu mengunduh media ke local storage. `DELETE /api/products/{id}/media/{mediaID}` menghapus metadata dan file lokal. `GET /api/products/{id}/media/download` mengembalikan ZIP berisi semua file media yang berhasil di-download. Batasan: image maksimal 20 MB, video maksimal 200 MB, timeout download 2 menit, dan URL private/local ditolak. Penamaan media baru melanjutkan nomor media yang sudah ada dan URL duplikat diabaikan.
+
+Contoh menambah media:
+
+```json
+{
+  "image_urls": ["https://cdn.example.com/image.jpg"],
+  "video_url": "https://cdn.example.com/video.mp4"
+}
+```
+
+`PATCH /api/products/{id}` tetap digunakan untuk mengubah `shopee_link`. Setiap produk juga memiliki `tracking_tag` unik yang dibuat saat save dan ditampilkan di dashboard/detail untuk dicopy ke proses pembuatan link affiliate Shopee. Saat AI menghasilkan caption, backend mengirim link affiliate sebagai fakta eksplisit dan normalizer selalu mengganti URL Shopee di output dengan `shopee_link` produk.
 
 ## 6. Caption Template Engine
 

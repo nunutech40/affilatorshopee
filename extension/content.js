@@ -1,6 +1,10 @@
 (() => {
+  if (window.__AFFILIATOR_SHOPEE_CONTENT_LOADED__) return
+  window.__AFFILIATOR_SHOPEE_CONTENT_LOADED__ = true
+
   const DEBUG = false
   const log = (...a) => DEBUG && console.log('[AffiliatorShopee]', ...a)
+  let attachingMedia = false
 
   function getCaptionFromIntent() {
     try {
@@ -11,19 +15,107 @@
     return ''
   }
 
+  function getMediaFromIntent() {
+    try {
+      const url = new URL(location.href)
+      return url.searchParams.getAll('affiliator_media')
+    } catch { return [] }
+  }
+
   async function getCaptionFromStorage() {
     return new Promise((resolve) => {
       try {
-        chrome.storage.local.get(['lastCaption'], (data) => resolve(data.lastCaption || ''))
+      chrome.storage.local.get(['lastCaption', 'pending'], (data) => resolve(data.pending ? (data.lastCaption || '') : ''))
       } catch { resolve('') }
     })
   }
 
-  async function getCaptionFromClipboard() {
+  async function getMediaFromStorage() {
+    return new Promise((resolve) => {
+      try { chrome.storage.local.get(['lastMedia'], (data) => resolve(data.lastMedia || [])) } catch { resolve([]) }
+    })
+  }
+
+  async function attachMedia(urls) {
+    const uniqueUrls = [...new Set(urls)]
+    if (!uniqueUrls.length) return 0
+    let input = document.querySelector('input[data-testid="fileInput"], input[type="file"][accept*="image"], input[type="file"]')
+    if (!input) {
+      const mediaButton = document.querySelector('button[aria-label*="photo" i], button[aria-label*="video" i], [data-testid="attachments"]')
+      if (mediaButton) {
+        mediaButton.click()
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        input = document.querySelector('input[data-testid="fileInput"], input[type="file"][accept*="image"], input[type="file"]')
+      }
+    }
+    if (!input) return 0
+    const attached = new Set((input.getAttribute('data-affiliator-media-keys') || '').split('|').filter(Boolean))
+    const transfer = new DataTransfer()
+    let attachedCount = 0
+    for (const url of uniqueUrls.slice(0, 4)) {
+      if (attached.has(url)) continue
+      try {
+        const result = await new Promise((resolve) => chrome.runtime.sendMessage({ type: 'AFFILIATOR_FETCH_MEDIA', url }, resolve))
+        if (!result?.ok) continue
+        const sourceBlob = new Blob([new Uint8Array(result.data)], { type: result.type })
+        const sourceName = (new URL(url).pathname.split('/').pop() || 'media').replace(/[^\w.-]/g, '_')
+        const file = await prepareXFile(sourceBlob, sourceName)
+        transfer.items.add(file)
+        attached.add(url)
+        attachedCount++
+      } catch (error) { log('media fetch failed', error) }
+    }
+    if (transfer.files.length) {
+      const target = findComposer() || document.querySelector('[role="dialog"]')
+      if (target) {
+        const eventInit = { bubbles: true, cancelable: true, composed: true, dataTransfer: transfer }
+        target.dispatchEvent(new DragEvent('dragenter', eventInit))
+        target.dispatchEvent(new DragEvent('dragover', eventInit))
+        target.dispatchEvent(new DragEvent('drop', eventInit))
+      }
+      input.setAttribute('data-affiliator-media-keys', [...attached].join('|'))
+    }
+    return attachedCount || (attached.size ? -1 : 0)
+  }
+
+  async function prepareXFile(blob, name) {
+    if (blob.type !== 'image/webp') return new File([blob], name, { type: blob.type || 'application/octet-stream' })
+    const bitmap = await createImageBitmap(blob)
+    const canvas = document.createElement('canvas')
+    canvas.width = bitmap.width
+    canvas.height = bitmap.height
+    canvas.getContext('2d').drawImage(bitmap, 0, 0)
+    bitmap.close()
+    const jpeg = await new Promise((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('gagal konversi WebP')), 'image/jpeg', 0.92))
+    return new File([jpeg], name.replace(/\.webp$/i, '.jpg'), { type: 'image/jpeg' })
+  }
+
+  async function rememberIntentMedia() {
+    const caption = getCaptionFromIntent()
+    const intentMedia = getMediaFromIntent()
     try {
-      const t = await navigator.clipboard.readText()
-      return t || ''
-    } catch { return '' }
+      const stored = await new Promise((resolve) => chrome.storage.local.get(['lastMedia'], resolve))
+      const media = [...new Set([...(stored.lastMedia || []), ...intentMedia])]
+      if (!caption && !media.length) return
+      await chrome.storage.local.set({ lastCaption: caption, lastMedia: media, pending: true })
+    } catch {}
+  }
+
+  async function attachMediaWithRetry(urls) {
+    const uniqueUrls = [...new Set(urls)]
+    if (!uniqueUrls.length) return 0
+    if (attachingMedia) return -1
+    attachingMedia = true
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const attached = await attachMedia(uniqueUrls)
+        if (attached !== 0) return attached
+        await new Promise((resolve) => setTimeout(resolve, 700))
+      }
+      return 0
+    } finally {
+      attachingMedia = false
+    }
   }
 
   function findComposer() {
@@ -73,10 +165,26 @@
     setTimeout(() => div.remove(), 3500)
   }
 
+  function notifyMedia(count, total) {
+    if (!count) return
+    const div = document.createElement('div')
+    div.textContent = `✓ ${Math.min(count, total)}/${total} media lokal terlampir`
+    div.style.cssText = 'position:fixed;top:58px;right:12px;z-index:999999;background:#1f6b4f;color:#fff;padding:10px 14px;border-radius:8px;font:600 13px sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.2)'
+    document.body.appendChild(div)
+    setTimeout(() => div.remove(), 3500)
+  }
+
+  function notifyMediaFailure() {
+    const div = document.createElement('div')
+    div.textContent = '✗ Media lokal gagal dilampirkan; preview Shopee bukan file upload'
+    div.style.cssText = 'position:fixed;top:58px;right:12px;z-index:999999;background:#a24c41;color:#fff;padding:10px 14px;border-radius:8px;font:600 13px sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.2)'
+    document.body.appendChild(div)
+    setTimeout(() => div.remove(), 5000)
+  }
+
   async function tryPaste() {
     let caption = getCaptionFromIntent()
     if (!caption) caption = await getCaptionFromStorage()
-    if (!caption) caption = await getCaptionFromClipboard()
     if (!caption) { log('no caption'); return false }
 
     const composer = findComposer()
@@ -89,9 +197,13 @@
     }
 
     insertText(composer, caption)
+    try { await chrome.storage.local.set({ pending: false }) } catch {}
     notify(true)
     return true
   }
+
+  // Simpan media segera, sebelum X berpindah dari URL intent ke composer SPA.
+  rememberIntentMedia()
 
   // Coba beberapa kali karena composer X render async
   let attempts = 0
@@ -112,8 +224,8 @@
 
   // Listen postMessage dari web app (jika web app kirim caption langsung)
   window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'AFFILIATOR_CAPTION') {
-      chrome.storage.local.set({ lastCaption: e.data.caption })
+    if (e.data && (e.data.type === 'AFFILIATOR_CAPTION' || e.data.type === 'AFFILIATOR_SET_CONTENT')) {
+      chrome.storage.local.set({ lastCaption: e.data.caption || '', lastMedia: e.data.media || [], pending: true })
       setTimeout(poll, 300)
     }
   })
@@ -122,6 +234,13 @@
   try {
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === 'AFFILIATOR_PASTE_NOW') poll()
+      if (msg.type === 'AFFILIATOR_ATTACH_MEDIA') {
+        getMediaFromStorage().then(async (media) => {
+          const attached = await attachMediaWithRetry(media)
+          if (attached > 0) notifyMedia(attached, media.length)
+          else if (attached === 0) notifyMediaFailure()
+        })
+      }
     })
   } catch {}
 })()

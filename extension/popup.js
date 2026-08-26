@@ -9,3 +9,16 @@ document.getElementById('pasteBtn').addEventListener('click', async () => {
   })
   window.close()
 })
+
+document.getElementById('attachBtn').addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (!tab?.id) return
+  chrome.tabs.sendMessage(tab.id, { type: 'AFFILIATOR_ATTACH_MEDIA' }, () => {
+    if (chrome.runtime.lastError) {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }, () => {
+        chrome.tabs.sendMessage(tab.id, { type: 'AFFILIATOR_ATTACH_MEDIA' })
+      })
+    }
+  })
+  window.close()
+})

@@ -104,7 +104,7 @@ const reformatSystemPrompt = `Kamu copywriter affiliate Shopee untuk X (Twitter)
 STRUKTUR CAPTION (urutan wajib):
 1. HOOK — mulai dari demand/konteks pemakaian NYATA (ngantor, ngampus, hujan, mudik, gym, lebaran; ambil dari deskripsi RAW atau sifat kategori produk). Formula: [barang singkat] + [value utama dari deskripsi] + [konteks]. Maksimal 12 kata, boleh pakai tanda tanya. Dilarang nama brand/ALL-CAPS, menyalin judul, konteks kosong seperti kebutuhan harian, mengarang tren, atau kata sekarang.
 2. NAMA PRODUK SINGKAT — satu baris, bukan judul lengkap.
-3. BENEFIT — maksimal 2 baris dengan ✅, fitur konkret dari RAW. Bukan potongan judul dan bukan klaim kosong.
+3. BENEFIT — maksimal 2 baris diawali ✅; jika hanya ada SATU yang benar-benar kuat, tulis satu baris saja. Hanya fitur yang membuat orang MAU KLIK: bahan/potongan/cara kerja yang menjawab konteks hook, atau hasil pemakaian nyata. Ukuran tersedia, jumlah warna, varian, stok, dan info serupa adalah urusan halaman produk — DILARANG dipakai sebagai benefit. Bukan potongan judul. Dilarang "bahan berkualitas/nyaman/bagus/harga terjangkau".
 4. PROOF — jika ada di RAW, WAJIB tampil: ⭐️ rating dan 🔥 jumlah terjual, masing-masing satu baris.
 5. OFFER — 💸 harga TERENDAH saja; ⚡ diskon/voucher jika ada.
 6. CTA — 👇 Cek di sini lalu URL Shopee pada baris berikutnya.
@@ -538,11 +538,29 @@ func normalizePromoLayout(text string, product *model.Product) string {
 		}
 		if lowestPrice > 0 {
 			priceLine := "💸 Mulai " + formatPriceValue(lowestPrice)
-			insertAt = 1
-			for insertAt < len(clean) && (strings.HasPrefix(clean[insertAt], "✅") || strings.HasPrefix(clean[insertAt], "⭐") || strings.HasPrefix(clean[insertAt], "🔥")) {
-				insertAt++
+			priceAt := -1
+			for _, pred := range []func(string) bool{
+				func(l string) bool { return strings.HasPrefix(l, "⚡️") },
+				func(l string) bool {
+					ll := strings.ToLower(l)
+					return strings.HasPrefix(l, "👇") || strings.HasPrefix(ll, "http") || strings.Contains(ll, "cek di sini")
+				},
+				func(l string) bool { return strings.HasPrefix(l, "#") },
+			} {
+				for i := 1; i < len(clean); i++ {
+					if pred(clean[i]) {
+						priceAt = i
+						break
+					}
+				}
+				if priceAt >= 0 {
+					break
+				}
 			}
-			clean = append(clean[:insertAt], append([]string{priceLine}, clean[insertAt:]...)...)
+			if priceAt < 0 {
+				priceAt = len(clean)
+			}
+			clean = append(clean[:priceAt], append([]string{priceLine}, clean[priceAt:]...)...)
 		}
 	}
 	return strings.TrimSpace(strings.Join(clean, "\n"))

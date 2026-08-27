@@ -30,8 +30,16 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 	seen := map[string]bool{}
 	for _, event := range events {
 		normalized := normalizeTrackingTag(event.TrackingTag)
-		if event.EventID == "" || normalized == "" {
+		if event.EventID == "" {
 			continue
+		}
+		if normalized == "" {
+			// fallback for Shopee orders without tag - use item_id or order_id to keep unique
+			if event.ItemID != "" {
+				normalized = "item_" + normalizeTrackingTag(event.ItemID)
+			} else {
+				normalized = "order_" + normalizeTrackingTag(event.EventID)
+			}
 		}
 		var created bool
 		err = tx.QueryRowContext(ctx, `INSERT INTO commission_events (event_id, order_id, item_id, model_id, order_status, ordered_at, tracking_tag, normalized_tag, quantity, commission_total, item_name, shop_name)
@@ -121,6 +129,46 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 			return nil, 0, err
 		}
 		items = append(items, s)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *CommissionRepository) ListEvents(ctx context.Context, limit, offset int, search string) ([]model.CommissionEvent, int, error) {
+	where := ""
+	args := []interface{}{}
+	if s := strings.TrimSpace(search); s != "" {
+		where = "WHERE item_name ILIKE $1 OR tracking_tag ILIKE $1 OR shop_name ILIKE $1 OR order_id ILIKE $1"
+		args = append(args, "%"+s+"%")
+	}
+	var total int
+	if where != "" {
+		if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM commission_events "+where, args...).Scan(&total); err != nil {
+			return nil, 0, err
+		}
+	} else {
+		if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM commission_events").Scan(&total); err != nil {
+			return nil, 0, err
+		}
+	}
+	query := "SELECT event_id, order_id, item_id, model_id, order_status, ordered_at, tracking_tag, normalized_tag, quantity, commission_total, item_name, shop_name, imported_at FROM commission_events " + where + " ORDER BY ordered_at DESC NULLS LAST, imported_at DESC LIMIT $" + fmtInt(len(args)+1) + " OFFSET $" + fmtInt(len(args)+2)
+	args = append(args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	items := []model.CommissionEvent{}
+	for rows.Next() {
+		var e model.CommissionEvent
+		var orderedAt sql.NullTime
+		var importedAt sql.NullTime
+		if err := rows.Scan(&e.EventID, &e.OrderID, &e.ItemID, &e.ModelID, &e.OrderStatus, &orderedAt, &e.TrackingTag, &e.NormalizedTag, &e.Quantity, &e.CommissionTotal, &e.ItemName, &e.ShopName, &importedAt); err != nil {
+			return nil, 0, err
+		}
+		if orderedAt.Valid {
+			e.OrderedAt = &orderedAt.Time
+		}
+		items = append(items, e)
 	}
 	return items, total, rows.Err()
 }

@@ -10,6 +10,7 @@ type CommissionEvent struct {
 	OrderStatus     string
 	OrderedAt       *time.Time
 	TrackingTag     string
+	NormalizedTag   string
 	Quantity        int
 	CommissionTotal int64
 	ItemName        string

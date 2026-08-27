@@ -5,15 +5,19 @@ import { useProductStore } from '@/stores/productStore'
 
 const store = useProductStore()
 const items = ref([])
+const events = ref([])
+const eventsTotal = ref(0)
 const total = ref(0)
 const page = ref(1)
 const limit = ref(20)
 const search = ref('')
 const loading = ref(false)
 const error = ref('')
+const activeTab = ref('ringkasan')
 
 const money = (v) => v == null ? '-' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v)
 const totalPages = () => Math.max(1, Math.ceil(total.value / limit.value))
+const eventsTotalPages = () => Math.max(1, Math.ceil(eventsTotal.value / limit.value))
 
 async function load() {
   loading.value = true
@@ -22,6 +26,9 @@ async function load() {
     const data = await store.fetchSoldProducts(page.value, limit.value, search.value)
     items.value = data.items
     total.value = data.total
+    const ev = await store.fetchCommissionEvents(page.value, limit.value, search.value)
+    events.value = ev.items
+    eventsTotal.value = ev.total
   } catch (e) { error.value = e.message } finally { loading.value = false }
 }
 let timer
@@ -37,12 +44,13 @@ watch(limit, () => { page.value = 1; load() })
   <section class="hero"><div><h1>Produk terjual</h1><p class="hero-copy">Ringkasan dari laporan komisi Shopee. Tidak semua dari link kamu — tapi bisa jadi ide follow-up. Kalau tag-nya ada di library, ada link langsung.</p></div><div class="hero-note">Sumber: CSV komisi. Klik & komisi di-sync via CSV di Library.</div></section>
 
   <div class="toolbar"><input v-model="search" class="input" placeholder="Cari tag atau nama produk..." @input="onSearch" /><select v-model.number="limit" class="select" style="width:auto"><option :value="10">10 / hal</option><option :value="20">20 / hal</option><option :value="50">50 / hal</option></select><button class="button" @click="load">Refresh</button></div>
+  <div class="tabs" style="display:flex; gap:8px; margin:12px 0"><button class="button" :class="{ 'button-primary': activeTab==='ringkasan' }" @click="activeTab='ringkasan'">Ringkasan per produk</button><button class="button" :class="{ 'button-primary': activeTab==='detail' }" @click="activeTab='detail'">Detail per pesanan ({{ eventsTotal }} order)</button></div>
 
   <div v-if="error" class="error-box">{{ error }}</div>
   <div v-else-if="loading && !items.length" class="loading">Memuat produk terjual...</div>
   <div v-else-if="!items.length" class="empty"><h3>Belum ada data terjual</h3><p>Upload CSV komisi di Library → Sync Komisi CSV.</p></div>
 
-  <div v-else class="sold-list">
+  <div v-if="activeTab==='ringkasan'" class="sold-list">
     <div class="list-header sold-header"><span>Produk / Tag</span><span>Terjual</span><span>Pesanan</span><span>Komisi</span><span>Link</span></div>
     <article v-for="row in items" :key="row.normalized_tag" class="sold-row" :class="{ matched: row.is_in_library }">
       <div class="sold-main">
@@ -52,7 +60,7 @@ watch(limit, () => { page.value = 1; load() })
         </div>
         <div class="sold-text">
           <div class="sold-title">{{ row.product_name || row.item_name || 'Produk terjual' }}</div>
-          <div class="sold-sub">tag: <code>{{ row.tracking_tag }}</code> · <span :class="{ 'in-lib': row.is_in_library }">{{ row.is_in_library ? 'ada di library' : 'tidak di library' }}</span><span v-if="row.shop_name"> · {{ row.shop_name }}</span><span v-if="row.item_id"> · ID: {{ row.item_id }}</span></div>
+          <div class="sold-sub">tag: <code>{{ row.tracking_tag || '—' }}</code> · <span :class="{ 'in-lib': row.is_in_library }">{{ row.is_in_library ? 'ada di library' : 'tidak di library' }}</span><span v-if="row.shop_name"> · {{ row.shop_name }}</span><span v-if="row.item_id"> · ID: {{ row.item_id }}</span></div>
           <div v-if="row.last_ordered_at" class="sold-sub muted">terakhir {{ new Date(row.last_ordered_at).toLocaleDateString('id-ID') }}</div>
         </div>
       </div>
@@ -61,16 +69,41 @@ watch(limit, () => { page.value = 1; load() })
       <span class="sold-commission">{{ money(row.total_commission) }}</span>
       <div class="sold-actions">
         <RouterLink v-if="row.is_in_library && row.product_id" :to="`/products/${row.product_id}`" class="button-primary small">Buka di library →</RouterLink>
-        <a v-else-if="row.item_id" :href="`https://shopee.co.id/search?keyword=${row.item_id}`" target="_blank" rel="noopener" class="button small">Cari di Shopee →</a>
-        <a v-else-if="row.shopee_link" :href="row.shopee_link" target="_blank" rel="noopener" class="button small">Buka Shopee →</a>
         <span v-else class="muted small">—</span>
       </div>
     </article>
-
     <div class="pagination">
       <button class="button" :disabled="page <= 1" @click="prev">‹ Prev</button>
       <span class="page-info">Hal {{ page }} dari {{ totalPages() }} · {{ total }} produk terjual</span>
       <button class="button" :disabled="page >= totalPages()" @click="next">Next ›</button>
+    </div>
+  </div>
+
+  <div v-else class="detail-table-wrap">
+    <p class="muted" style="margin:6px 0 10px">Semua data penting dari CSV — scroll horizontal untuk lihat semua kolom. <b>Nama Barange</b> tetap di paling kiri.</p>
+    <div class="table-scroll">
+      <table class="detail-table">
+        <thead><tr><th>Nama Barange</th><th>Status</th><th>Toko</th><th>Harga</th><th>Jumlah</th><th>Komisi</th><th>Tag</th><th>Tgl Pesan</th><th>Pesanan</th><th>Aksi</th></tr></thead>
+        <tbody>
+          <tr v-for="ev in events" :key="ev.event_id">
+            <td class="col-name" :title="ev.item_name">{{ ev.item_name || '-' }}</td>
+            <td><span class="badge">{{ ev.order_status || '-' }}</span></td>
+            <td>{{ ev.shop_name || '-' }}</td>
+            <td>-</td>
+            <td>{{ ev.quantity }} pcs</td>
+            <td class="col-commission">{{ money(ev.commission_total) }}</td>
+            <td><code>{{ ev.tracking_tag || '—' }}</code></td>
+            <td>{{ ev.ordered_at ? new Date(ev.ordered_at).toLocaleDateString('id-ID') : '-' }}</td>
+            <td class="mono">{{ (ev.order_id || '').slice(0,12) }}</td>
+            <td><span v-if="ev.tracking_tag && items.find(x=>x.tracking_tag===ev.tracking_tag && x.is_in_library)" class="in-lib">ada di library</span><span v-else class="muted">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button class="button" :disabled="page <= 1" @click="prev">‹ Prev</button>
+      <span class="page-info">Hal {{ page }} dari {{ eventsTotalPages() }} · {{ eventsTotal }} pesanan</span>
+      <button class="button" :disabled="page >= eventsTotalPages()" @click="next">Next ›</button>
     </div>
   </div>
 </template>
@@ -97,5 +130,14 @@ watch(limit, () => { page.value = 1; load() })
 .muted{color:#8a978d}
 @media(max-width:900px){ .sold-header{display:none} .sold-row{grid-template-columns:1fr auto} .sold-qty,.sold-orders,.sold-commission{display:none} }
 @media(min-width:901px){ .sold-header{display:grid} }
+.table-scroll{ overflow:auto; border:1px solid #d9ded6; border-radius:10px; background:rgba(255,255,255,.6)}
+.detail-table{ width:100%; min-width:900px; border-collapse:collapse; font-size:13px}
+.detail-table th{ position:sticky; top:0; background:#eef4ee; text-align:left; font:600 10px 'DM Mono'; letter-spacing:.06em; text-transform:uppercase; color:#6b7a6e; padding:10px 12px; border-bottom:1px solid #d9ded6; white-space:nowrap}
+.detail-table td{ padding:10px 12px; border-bottom:1px solid #e8eeea; white-space:nowrap; max-width:320px; overflow:hidden; text-overflow:ellipsis}
+.detail-table tr:hover td{ background:#fff}
+.col-name{ font-weight:600; color:#1f2721; max-width:380px; white-space:normal}
+.col-commission{ font-weight:700; color:#1f6b4f; text-align:right}
+.badge{ background:#e7eee6; padding:4px 7px; border-radius:999px; font:600 11px 'DM Mono'; color:#5a6b5e}
+.mono{ font:11px 'DM Mono'; color:#8a978d}
 .pagination{ display:flex; align-items:center; gap:10px; justify-content:center; margin-top:18px; flex-wrap:wrap} .page-info{ font:12px 'DM Mono'; color:#6b7a6e}
 </style>

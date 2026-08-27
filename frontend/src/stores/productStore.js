@@ -85,5 +85,10 @@ export const useProductStore = defineStore('products', {
       if (search) params.set('search', search)
       return request(`/api/analytics/commissions/sold?${params}`)
     },
+    async fetchCommissionEvents(page = 1, limit = 50, search = '') {
+      const params = new URLSearchParams({ page, limit })
+      if (search) params.set('search', search)
+      return request(`/api/analytics/commissions/events?${params}`)
+    },
   },
 })

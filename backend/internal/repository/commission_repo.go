@@ -82,12 +82,28 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 	return result, nil
 }
 
-func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offset int, search string) ([]model.SoldProduct, int, error) {
-	where := ""
+func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offset int, search string, start, end *string) ([]model.SoldProduct, int, error) {
+	whereParts := []string{}
 	args := []interface{}{}
+	argIdx := 1
 	if s := strings.TrimSpace(search); s != "" {
-		where = "WHERE ce.tracking_tag ILIKE $1 OR p.product_name ILIKE $1 OR ce.item_name ILIKE $1"
+		whereParts = append(whereParts, "(ce.tracking_tag ILIKE $"+fmtInt(argIdx)+" OR p.product_name ILIKE $"+fmtInt(argIdx)+" OR ce.item_name ILIKE $"+fmtInt(argIdx)+")")
 		args = append(args, "%"+s+"%")
+		argIdx++
+	}
+	if start != nil && *start != "" {
+		whereParts = append(whereParts, "ce.ordered_at >= $"+fmtInt(argIdx))
+		args = append(args, *start)
+		argIdx++
+	}
+	if end != nil && *end != "" {
+		whereParts = append(whereParts, "ce.ordered_at <= $"+fmtInt(argIdx))
+		args = append(args, *end)
+		argIdx++
+	}
+	where := ""
+	if len(whereParts) > 0 {
+		where = "WHERE " + strings.Join(whereParts, " AND ")
 	}
 	countQuery := "SELECT COUNT(*) FROM (SELECT ce.normalized_tag FROM commission_events ce LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag " + where + " GROUP BY ce.normalized_tag) s"
 	var total int
@@ -133,12 +149,28 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	return items, total, rows.Err()
 }
 
-func (r *CommissionRepository) ListEvents(ctx context.Context, limit, offset int, search string) ([]model.CommissionEvent, int, error) {
-	where := ""
+func (r *CommissionRepository) ListEvents(ctx context.Context, limit, offset int, search string, start, end *string) ([]model.CommissionEvent, int, error) {
+	whereParts := []string{}
 	args := []interface{}{}
+	argIdx := 1
 	if s := strings.TrimSpace(search); s != "" {
-		where = "WHERE item_name ILIKE $1 OR tracking_tag ILIKE $1 OR shop_name ILIKE $1 OR order_id ILIKE $1"
+		whereParts = append(whereParts, "(item_name ILIKE $"+fmtInt(argIdx)+" OR tracking_tag ILIKE $"+fmtInt(argIdx)+" OR shop_name ILIKE $"+fmtInt(argIdx)+" OR order_id ILIKE $"+fmtInt(argIdx)+")")
 		args = append(args, "%"+s+"%")
+		argIdx++
+	}
+	if start != nil && *start != "" {
+		whereParts = append(whereParts, "ordered_at >= $"+fmtInt(argIdx))
+		args = append(args, *start)
+		argIdx++
+	}
+	if end != nil && *end != "" {
+		whereParts = append(whereParts, "ordered_at <= $"+fmtInt(argIdx))
+		args = append(args, *end)
+		argIdx++
+	}
+	where := ""
+	if len(whereParts) > 0 {
+		where = "WHERE " + strings.Join(whereParts, " AND ")
 	}
 	var total int
 	if where != "" {
@@ -171,6 +203,48 @@ func (r *CommissionRepository) ListEvents(ctx context.Context, limit, offset int
 		items = append(items, e)
 	}
 	return items, total, rows.Err()
+}
+
+type CommissionSummary struct {
+	TotalCommission int64 `json:"total_commission"`
+	TotalQuantity   int   `json:"total_quantity"`
+	TotalOrders     int   `json:"total_orders"`
+	TotalProducts   int   `json:"total_products"`
+}
+
+func (r *CommissionRepository) GetSummary(ctx context.Context, search string, start, end *string) (CommissionSummary, error) {
+	whereParts := []string{}
+	args := []interface{}{}
+	argIdx := 1
+	if s := strings.TrimSpace(search); s != "" {
+		whereParts = append(whereParts, "(item_name ILIKE $"+fmtInt(argIdx)+" OR tracking_tag ILIKE $"+fmtInt(argIdx)+" OR shop_name ILIKE $"+fmtInt(argIdx)+")")
+		args = append(args, "%"+s+"%")
+		argIdx++
+	}
+	if start != nil && *start != "" {
+		whereParts = append(whereParts, "ordered_at >= $"+fmtInt(argIdx))
+		args = append(args, *start)
+		argIdx++
+	}
+	if end != nil && *end != "" {
+		whereParts = append(whereParts, "ordered_at <= $"+fmtInt(argIdx))
+		args = append(args, *end)
+		argIdx++
+	}
+	where := ""
+	if len(whereParts) > 0 {
+		where = "WHERE " + strings.Join(whereParts, " AND ")
+	}
+	var s CommissionSummary
+	// total orders, quantity, commission
+	if err := r.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(quantity),0)::int, COALESCE(SUM(commission_total),0)::bigint, COUNT(*)::int FROM commission_events "+where, args...).Scan(&s.TotalQuantity, &s.TotalCommission, &s.TotalOrders); err != nil {
+		return s, err
+	}
+	// distinct products (by normalized_tag)
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(DISTINCT normalized_tag) FROM commission_events "+where, args...).Scan(&s.TotalProducts); err != nil {
+		return s, err
+	}
+	return s, nil
 }
 
 func fmtInt(v int) string { return strings.TrimSpace(strings.ReplaceAll(fmt.Sprint(v), " ", "")) }

@@ -21,6 +21,31 @@ func NewCommissionHandler(commissions *repository.CommissionRepository) *Commiss
 	return &CommissionHandler{commissions: commissions}
 }
 
+func parseDateFilter(values map[string]string) (start, end *string) {
+	if m := values["month"]; m != "" {
+		if t, err := time.Parse("2006-01", m); err == nil {
+			s := t.Format("2006-01-02")
+			e := t.AddDate(0, 1, -1).Format("2006-01-02") + " 23:59:59"
+			return &s, &e
+		}
+	}
+	var s, e *string
+	if v := values["start_date"]; v != "" {
+		tmp := v
+		s = &tmp
+	}
+	if v := values["end_date"]; v != "" {
+		if !strings.Contains(v, " ") {
+			tmp := v + " 23:59:59"
+			e = &tmp
+		} else {
+			tmp := v
+			e = &tmp
+		}
+	}
+	return s, e
+}
+
 func (h *CommissionHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit := 20
@@ -36,7 +61,9 @@ func (h *CommissionHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	search := q.Get("search")
-	items, total, err := h.commissions.ListEvents(r.Context(), limit, offset, search)
+	vals := map[string]string{"start_date": q.Get("start_date"), "end_date": q.Get("end_date"), "month": q.Get("month")}
+	start, end := parseDateFilter(vals)
+	items, total, err := h.commissions.ListEvents(r.Context(), limit, offset, search, start, end)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil detail komisi")
 		return
@@ -46,6 +73,18 @@ func (h *CommissionHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 		page = offset/limit + 1
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "total": total, "page": page, "limit": limit})
+}
+
+func (h *CommissionHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	vals := map[string]string{"start_date": q.Get("start_date"), "end_date": q.Get("end_date"), "month": q.Get("month")}
+	start, end := parseDateFilter(vals)
+	summary, err := h.commissions.GetSummary(r.Context(), q.Get("search"), start, end)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil ringkasan komisi")
+		return
+	}
+	writeJSON(w, http.StatusOK, summary)
 }
 
 func (h *CommissionHandler) ListSold(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +102,9 @@ func (h *CommissionHandler) ListSold(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	search := q.Get("search")
-	items, total, err := h.commissions.ListSoldProducts(r.Context(), limit, offset, search)
+	vals2 := map[string]string{"start_date": q.Get("start_date"), "end_date": q.Get("end_date"), "month": q.Get("month")}
+	start, end := parseDateFilter(vals2)
+	items, total, err := h.commissions.ListSoldProducts(r.Context(), limit, offset, search, start, end)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil produk terjual")
 		return
@@ -135,21 +176,19 @@ func (h *CommissionHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 			}
 			return ""
 		}
-		eventID := get("event id", "event_id", "id pemesanan", "id pesanan")
+		orderID := get("order id", "order_id", "id pemesanan", "id pesanan", "kode pesanan affiliate")
+		itemID := get("item id", "item_id", "id barang", "product id", "itemid")
+		modelID := get("model id", "model_id", "id model")
+		eventID := get("event id", "event_id")
 		trackingTag := get("tag_link1", "tag_link2", "tag_link3", "tag_link4", "tag_link5", "tag_link", "tracking tag", "tracking_tag", "tag link")
-		// fallback event_id for Shopee CSV: combine order + item + tag to make unique
-		if eventID == "" {
-			oid := get("id pemesanan", "id pesanan", "order id", "order_id")
-			iid := get("id barang", "id barang", "item id", "item_id")
-			if oid != "" && iid != "" {
-				eventID = oid + "_" + iid + "_" + trackingTag
-			} else if oid != "" {
-				eventID = fmt.Sprintf("row%d_%s", row, oid)
-			} else {
-				continue
-			}
+		// Shopee can report multiple products/models under one order. Use the
+		// composite identity so re-imports update the same line without collisions.
+		if orderID != "" {
+			eventID = orderID + "|" + itemID + "|" + modelID
+		} else if eventID == "" {
+			continue
 		}
-		orderedAtStr := get("ordered at", "ordered_at", "waktu pesan", "waktu pesanan")
+		orderedAtStr := get("ordered at", "ordered_at", "waktu pemesanan", "waktu pesan", "waktu pesanan")
 		var orderedAt *time.Time
 		if orderedAtStr != "" {
 			for _, layout := range []string{"2006-01-02 15:04:05", "2006/01/02 15:04:05", time.RFC3339, "2006-01-02"} {
@@ -191,9 +230,9 @@ func (h *CommissionHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		// allow empty tracking tag - still record as sold
 		events = append(events, model.CommissionEvent{
 			EventID:         eventID,
-			OrderID:         get("order id", "order_id", "id pemesanan", "id pesanan", "kode pesanan affiliate"),
-			ItemID:          get("item id", "item_id", "id barang", "product id", "itemid"),
-			ModelID:         get("model id", "model_id", "id model"),
+			OrderID:         orderID,
+			ItemID:          itemID,
+			ModelID:         modelID,
 			OrderStatus:     get("order status", "order_status", "status pesanan", "status", "status produk affiliate"),
 			OrderedAt:       orderedAt,
 			TrackingTag:     trackingTag,

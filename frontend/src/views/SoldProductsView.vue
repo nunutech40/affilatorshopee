@@ -11,24 +11,34 @@ const total = ref(0)
 const page = ref(1)
 const limit = ref(20)
 const search = ref('')
+const month = ref('')
+const startDate = ref('')
+const endDate = ref('')
 const loading = ref(false)
 const error = ref('')
 const activeTab = ref('ringkasan')
+const summary = ref({ total_commission: 0, total_quantity: 0, total_orders: 0, total_products: 0 })
 
 const money = (v) => v == null ? '-' : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v)
 const totalPages = () => Math.max(1, Math.ceil(total.value / limit.value))
 const eventsTotalPages = () => Math.max(1, Math.ceil(eventsTotal.value / limit.value))
+const filters = () => ({ month: month.value, start_date: startDate.value, end_date: endDate.value })
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await store.fetchSoldProducts(page.value, limit.value, search.value)
+    const f = filters()
+    const [data, ev, sum] = await Promise.all([
+      store.fetchSoldProducts(page.value, limit.value, search.value, f),
+      store.fetchCommissionEvents(page.value, limit.value, search.value, f),
+      store.fetchCommissionSummary(search.value, f),
+    ])
     items.value = data.items
     total.value = data.total
-    const ev = await store.fetchCommissionEvents(page.value, limit.value, search.value)
     events.value = ev.items
     eventsTotal.value = ev.total
+    summary.value = sum
   } catch (e) { error.value = e.message } finally { loading.value = false }
 }
 let timer
@@ -44,6 +54,21 @@ watch(limit, () => { page.value = 1; load() })
   <section class="hero"><div><h1>Produk terjual</h1><p class="hero-copy">Ringkasan dari laporan komisi Shopee. Tidak semua dari link kamu — tapi bisa jadi ide follow-up. Kalau tag-nya ada di library, ada link langsung.</p></div><div class="hero-note">Sumber: CSV komisi. Klik & komisi di-sync via CSV di Library.</div></section>
 
   <div class="toolbar"><input v-model="search" class="input" placeholder="Cari tag atau nama produk..." @input="onSearch" /><select v-model.number="limit" class="select" style="width:auto"><option :value="10">10 / hal</option><option :value="20">20 / hal</option><option :value="50">50 / hal</option></select><button class="button" @click="load">Refresh</button></div>
+  <div class="toolbar" style="gap:8px; flex-wrap:wrap">
+    <input type="month" v-model="month" class="input" style="width:auto" @change="page=1; load()" />
+    <span class="muted">atau custom:</span>
+    <input type="date" v-model="startDate" class="input" style="width:auto" />
+    <input type="date" v-model="endDate" class="input" style="width:auto" />
+    <button class="button" @click="page=1; load()">Terapkan filter</button>
+    <button class="button" @click="month=''; startDate=''; endDate=''; page=1; load()">Reset</button>
+    <span class="muted">Filter by checkout (Waktu Pesanan)</span>
+  </div>
+  <div class="stats" style="display:flex; gap:12px; flex-wrap:wrap; margin:12px 0">
+    <div class="stat"><strong>{{ money(summary.total_commission) }}</strong><span>Total komisi</span></div>
+    <div class="stat"><strong>{{ summary.total_quantity }} pcs</strong><span>Total terjual</span></div>
+    <div class="stat"><strong>{{ summary.total_orders }} order</strong><span>Total pesanan</span></div>
+    <div class="stat"><strong>{{ summary.total_products }} produk</strong><span>Produk unik terjual</span></div>
+  </div>
   <div class="tabs" style="display:flex; gap:8px; margin:12px 0"><button class="button" :class="{ 'button-primary': activeTab==='ringkasan' }" @click="activeTab='ringkasan'">Ringkasan per produk</button><button class="button" :class="{ 'button-primary': activeTab==='detail' }" @click="activeTab='detail'">Detail per pesanan ({{ eventsTotal }} order)</button></div>
 
   <div v-if="error" class="error-box">{{ error }}</div>
@@ -51,7 +76,7 @@ watch(limit, () => { page.value = 1; load() })
   <div v-else-if="!items.length" class="empty"><h3>Belum ada data terjual</h3><p>Upload CSV komisi di Library → Sync Komisi CSV.</p></div>
 
   <div v-if="activeTab==='ringkasan'" class="sold-list">
-    <div class="list-header sold-header"><span>Produk / Tag</span><span>Terjual</span><span>Pesanan</span><span>Komisi</span><span>Link</span></div>
+    <div class="list-header sold-header"><span>Produk / Tag</span><span>Checkout</span><span>Terjual</span><span>Pesanan</span><span>Komisi</span><span>Link</span></div>
     <article v-for="row in items" :key="row.normalized_tag" class="sold-row" :class="{ matched: row.is_in_library }">
       <div class="sold-main">
         <div class="sold-img-wrap">
@@ -64,6 +89,7 @@ watch(limit, () => { page.value = 1; load() })
           <div v-if="row.last_ordered_at" class="sold-sub muted">terakhir {{ new Date(row.last_ordered_at).toLocaleDateString('id-ID') }}</div>
         </div>
       </div>
+      <span class="sold-date">{{ row.last_ordered_at ? new Date(row.last_ordered_at).toLocaleDateString('id-ID') : '—' }}</span>
       <span class="sold-qty">{{ row.total_quantity }} pcs</span>
       <span class="sold-orders">{{ row.order_count }} order</span>
       <span class="sold-commission">{{ money(row.total_commission) }}</span>
@@ -110,8 +136,8 @@ watch(limit, () => { page.value = 1; load() })
 
 <style scoped>
 .sold-list{display:grid; gap:8px}
-.sold-header{display:none; grid-template-columns:1fr 90px 90px 120px 150px; gap:12px; padding:0 16px 6px; font:600 10px 'DM Mono'; letter-spacing:.08em; text-transform:uppercase; color:#8a978d}
-.sold-row{display:grid; grid-template-columns:1fr 90px 90px 120px 150px; gap:12px; align-items:center; padding:14px 16px; background:rgba(255,255,255,.62); border:1px solid #d9ded6; border-radius:10px}
+.sold-header{display:none; grid-template-columns:1fr 90px 90px 90px 120px 150px; gap:12px; padding:0 16px 6px; font:600 10px 'DM Mono'; letter-spacing:.08em; text-transform:uppercase; color:#8a978d}
+.sold-row{display:grid; grid-template-columns:1fr 90px 90px 90px 120px 150px; gap:12px; align-items:center; padding:14px 16px; background:rgba(255,255,255,.62); border:1px solid #d9ded6; border-radius:10px}
 .sold-row.matched{border-color:#b8d8c2; background:rgba(255,255,255,.9)}
 .sold-main{display:flex; gap:12px; align-items:center; min-width:0}
 .sold-img{width:44px; height:44px; border-radius:7px; object-fit:cover; background:#eef4ee; border:1px solid #d9ded6}
@@ -121,6 +147,7 @@ watch(limit, () => { page.value = 1; load() })
 .sold-sub{font:11px 'DM Mono'; color:#8a978d; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .sold-sub.muted{color:#b0bdb2}
 .in-lib{color:#1f6b4f; font-weight:700}
+.sold-date{font:11px 'DM Mono'; color:#6b7a6e; text-align:center}
 .sold-qty{font:700 13px 'Space Grotesk'; color:#1f2721; text-align:center}
 .sold-orders{font:12px 'DM Mono'; color:#6b7a6e; text-align:center}
 .sold-commission{font:700 13px 'Space Grotesk'; color:#1f6b4f; text-align:right}

@@ -80,15 +80,29 @@ export const useProductStore = defineStore('products', {
       body.append('file', file)
       return request('/api/analytics/commissions/import', { method: 'POST', body })
     },
-    async fetchSoldProducts(page = 1, limit = 20, search = '') {
+    async fetchSoldProducts(page = 1, limit = 20, search = '', filters = {}) {
       const params = new URLSearchParams({ page, limit })
       if (search) params.set('search', search)
+      if (filters.month) params.set('month', filters.month)
+      if (filters.start_date) params.set('start_date', filters.start_date)
+      if (filters.end_date) params.set('end_date', filters.end_date)
       return request(`/api/analytics/commissions/sold?${params}`)
     },
-    async fetchCommissionEvents(page = 1, limit = 50, search = '') {
+    async fetchCommissionEvents(page = 1, limit = 50, search = '', filters = {}) {
       const params = new URLSearchParams({ page, limit })
       if (search) params.set('search', search)
+      if (filters.month) params.set('month', filters.month)
+      if (filters.start_date) params.set('start_date', filters.start_date)
+      if (filters.end_date) params.set('end_date', filters.end_date)
       return request(`/api/analytics/commissions/events?${params}`)
+    },
+    async fetchCommissionSummary(search = '', filters = {}) {
+      const params = new URLSearchParams()
+      if (search) params.set('search', search)
+      if (filters.month) params.set('month', filters.month)
+      if (filters.start_date) params.set('start_date', filters.start_date)
+      if (filters.end_date) params.set('end_date', filters.end_date)
+      return request(`/api/analytics/commissions/summary?${params}`)
     },
   },
 })

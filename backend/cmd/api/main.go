@@ -91,6 +91,7 @@ func main() {
 		api.Post("/analytics/commissions/import", commissions.ImportCSV)
 		api.Get("/analytics/commissions/sold", commissions.ListSold)
 		api.Get("/analytics/commissions/events", commissions.ListEvents)
+		api.Get("/analytics/commissions/summary", commissions.GetSummary)
 		api.Post("/analytics/reset", analytics.Reset)
 		api.Post("/products/import/x", xHandler.Import)
 		api.Post("/ai/reformat", ai.Reformat)

@@ -33,6 +33,11 @@ type Product struct {
 	Notes           *string    `json:"notes"`
 	Status          string     `json:"status"`
 	PostCount       int        `json:"post_count"`
+	ClickCount      int        `json:"click_count"`
+	LastClickedAt   *time.Time `json:"last_clicked_at"`
+	SalesCount      int        `json:"sales_count"`
+	PendingSalesCount int      `json:"pending_sales_count"`
+	CommissionTotal int64      `json:"commission_total"`
 	LastPostedAt    *time.Time `json:"last_posted_at"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`

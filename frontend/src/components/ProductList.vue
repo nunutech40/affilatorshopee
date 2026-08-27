@@ -23,7 +23,7 @@ const sourceLabel = (value) => ({ import_x: 'Import X', scrape_shopee: 'Scrape S
       <select class="model-select" :value="product.content_model || ''" @change="emit('update-model', product.id, $event.target.value)"><option value="">Pilih angle</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option v-if="product.content_model === 'capture'" value="capture">Captured (legacy)</option></select>
       <span class="status" :class="product.status">{{ product.status }}</span>
       <span class="row-price">{{ product.sale_price ? money(product.sale_price) : '-' }}</span>
-      <span class="row-post">{{ product.post_count || 0 }}</span>
+      <span class="row-post">{{ product.post_count || 0 }} post · {{ product.click_count || 0 }} klik</span>
       <div class="row-actions"><RouterLink :to="`/products/${product.id}`" class="row-link">Detail →</RouterLink><button class="icon-delete" title="Hapus produk" @click.stop="emit('delete', product.id)">🗑</button></div>
     </article>
   </div>

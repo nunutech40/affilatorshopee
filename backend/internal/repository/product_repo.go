@@ -57,7 +57,8 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (*model.Prod
 		p.urgency, p.caption_template, p.hashtag_pool, p.notes, p.source_category, p.status,
 		p.created_at, p.updated_at,
 		COALESCE((SELECT COUNT(*) FROM post_logs pl WHERE pl.product_id = p.id), 0) AS post_count,
-		(SELECT MAX(pl.posted_at) FROM post_logs pl WHERE pl.product_id = p.id) AS last_posted_at
+		(SELECT MAX(pl.posted_at) FROM post_logs pl WHERE pl.product_id = p.id) AS last_posted_at,
+		p.click_count, p.last_clicked_at, p.sales_count, p.pending_sales_count, p.commission_total
 	FROM products p WHERE p.id = $1`
 
 	return r.scanProduct(r.db.QueryRowContext(ctx, query, id))
@@ -104,7 +105,8 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		p.urgency, p.caption_template, p.hashtag_pool, p.notes, p.source_category, p.status,
 		p.created_at, p.updated_at,
 		COALESCE((SELECT COUNT(*) FROM post_logs pl WHERE pl.product_id = p.id), 0) AS post_count,
-		(SELECT MAX(pl.posted_at) FROM post_logs pl WHERE pl.product_id = p.id) AS last_posted_at
+		(SELECT MAX(pl.posted_at) FROM post_logs pl WHERE pl.product_id = p.id) AS last_posted_at,
+		p.click_count, p.last_clicked_at, p.sales_count, p.pending_sales_count, p.commission_total
 	FROM products p WHERE %s ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d`, whereClause, argPos, argPos+1)
 	args = append(args, filter.Limit, (filter.Page-1)*filter.Limit)
 
@@ -191,7 +193,7 @@ func (r *ProductRepository) scanProduct(row interface {
 		&p.Keyword, &p.Problem, &p.Cluster, &p.ContentModel, &p.CaptureAngle,
 		&p.Benefit1, &p.Benefit2, &p.Benefit3, &p.Urgency, &p.CaptionTemplate,
 		pq.Array(&p.HashtagPool), &p.Notes, &p.SourceCategory, &p.Status, &p.CreatedAt, &p.UpdatedAt,
-		&p.PostCount, &p.LastPostedAt,
+		&p.PostCount, &p.LastPostedAt, &p.ClickCount, &p.LastClickedAt, &p.SalesCount, &p.PendingSalesCount, &p.CommissionTotal,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil

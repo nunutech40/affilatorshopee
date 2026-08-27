@@ -1,10 +1,16 @@
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useProductStore } from '@/stores/productStore'
 import ProductList from '@/components/ProductList.vue'
 
 const products = useProductStore()
+const clickFile = ref(null)
+const clickSyncing = ref(false)
+const clickMessage = ref('')
+const commissionFile = ref(null)
+const commissionSyncing = ref(false)
+const commissionMessage = ref('')
 const totalPages = computed(() => Math.max(1, Math.ceil((products.total || 0) / (products.limit || 20))))
 async function updateModel(id, contentModel) {
   try {
@@ -24,12 +30,34 @@ watch(() => products.limit, () => { products.page = 1; products.fetchProducts() 
 function search() { clearTimeout(timer); timer = setTimeout(() => { products.page = 1; products.fetchProducts() }, 250) }
 function prev() { if (products.page > 1) products.page-- }
 function next() { if (products.page < totalPages.value) products.page++ }
+function selectClickFile(event) { clickFile.value = event.target.files?.[0] || null; clickMessage.value = '' }
+async function syncClicks() {
+  if (!clickFile.value) return
+  clickSyncing.value = true; clickMessage.value = ''
+  try {
+    const result = await products.importClicks(clickFile.value)
+    clickMessage.value = `Sync selesai: ${result.imported} klik baru, ${result.duplicate} duplikat, ${result.matched} produk cocok.`
+    await products.fetchProducts()
+  } catch (error) { clickMessage.value = error.message } finally { clickSyncing.value = false }
+}
+function selectCommissionFile(event) { commissionFile.value = event.target.files?.[0] || null; commissionMessage.value = '' }
+async function syncCommissions() {
+  if (!commissionFile.value) return
+  commissionSyncing.value = true; commissionMessage.value = ''
+  try {
+    const result = await products.importCommissions(commissionFile.value)
+    commissionMessage.value = `Sync komisi: ${result.imported} baru, ${result.updated} update, ${result.matched} produk cocok.`
+    await products.fetchProducts()
+  } catch (error) { commissionMessage.value = error.message } finally { commissionSyncing.value = false }
+}
 onMounted(() => products.fetchProducts())
 </script>
 
 <template>
   <section class="hero"><div><h1>Turn messy product data into ready-to-post copy.</h1><p class="hero-copy">Satu workspace untuk menyimpan produk affiliate, merapikan detail yang berantakan, dan mengulang angle caption tanpa mulai dari nol.</p></div><div class="hero-note">Posting tetap manual di X. Session browser yang menentukan akun, bukan aplikasi ini.</div></section>
   <div class="toolbar"><input v-model="products.filters.search" class="input" placeholder="Cari produk, keyword, atau raw text..." @input="search" /><select v-model="products.filters.status" class="select"><option value="">Semua status</option><option value="raw">Raw</option><option value="reformatted">Reformatted</option><option value="ready">Ready</option></select><select v-model="products.filters.content_model" class="select"><option value="">Semua model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select><input v-model="products.filters.cluster" class="input" placeholder="Filter cluster" /></div>
+  <section class="sync-panel"><div><h3>Sync data klik Shopee</h3><p class="muted">Upload CSV report kapan saja. Klik ID yang sama tidak dihitung ulang.</p></div><input type="file" accept=".csv,text/csv" @change="selectClickFile" /><button class="button-primary" :disabled="!clickFile || clickSyncing" @click="syncClicks">{{ clickSyncing ? 'Menyinkronkan...' : 'Sync Klik CSV' }}</button><span v-if="clickMessage" class="sync-message">{{ clickMessage }}</span></section>
+  <section class="sync-panel"><div><h3>Sync komisi Shopee</h3><p class="muted">Upload CSV komisi (event_id, order_status). Otomatis hitung sales/pending/komisi per tracking tag.</p></div><input type="file" accept=".csv,text/csv" @change="selectCommissionFile" /><button class="button-primary" :disabled="!commissionFile || commissionSyncing" @click="syncCommissions">{{ commissionSyncing ? 'Menyinkronkan...' : 'Sync Komisi CSV' }}</button><span v-if="commissionMessage" class="sync-message">{{ commissionMessage }}</span></section>
   <div v-if="products.error" class="error-box">{{ products.error }}</div>
   <div v-else-if="products.loading && !products.items.length" class="loading">Memuat product library...</div>
   <template v-else-if="products.items.length">

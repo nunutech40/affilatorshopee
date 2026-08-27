@@ -29,6 +29,11 @@ h3 { font-size: 17px; }
 .input:focus, .textarea:focus, .select:focus { border-color: #5d9a78; box-shadow: 0 0 0 3px #d8e9dc; }
 .toolbar .input { flex: 1 1 250px; }
 .toolbar .select { flex: 0 1 170px; }
+.sync-panel { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:15px; margin-bottom:18px; border:1px solid #d9ded6; border-radius:12px; background:rgba(231,238,230,.7); }
+.sync-panel h3 { margin:0; }
+.sync-panel .muted { margin:4px 0 0; font-size:12px; }
+.sync-panel input[type=file] { flex:1; min-width:220px; color:#5d6f63; font-size:12px; }
+.sync-message { flex-basis:100%; color:#52655a; font:12px 'DM Mono'; }
 .button { border: 1px solid #c8d3c9; border-radius: 7px; padding: 10px 14px; color: #365341; background: #fffdf8; font-weight: 600; }
 .button:hover { border-color: #5d9a78; }
 .button-danger { color: #9c4339; border-color: #e1c4be; }

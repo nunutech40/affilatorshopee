@@ -3,8 +3,9 @@ import { defineStore } from 'pinia'
 const API = import.meta.env.VITE_API_URL || ''
 
 async function request(path, options = {}) {
+  const isFormData = options.body instanceof FormData
   const response = await fetch(`${API}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) },
     ...options,
   })
   if (response.status === 204) return null
@@ -68,6 +69,16 @@ export const useProductStore = defineStore('products', {
     },
     async deleteProduct(id) {
       return request(`/api/products/${id}`, { method: 'DELETE' })
+    },
+    async importClicks(file) {
+      const body = new FormData()
+      body.append('file', file)
+      return request('/api/analytics/clicks/import', { method: 'POST', body })
+    },
+    async importCommissions(file) {
+      const body = new FormData()
+      body.append('file', file)
+      return request('/api/analytics/commissions/import', { method: 'POST', body })
     },
   },
 })

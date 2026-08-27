@@ -1,5 +1,5 @@
 (() => {
-  const scraperVersion = '1.2.5'
+  const scraperVersion = '1.2.6'
   if (window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ === scraperVersion) return
   window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ = scraperVersion
 
@@ -71,6 +71,26 @@
 
   function findText(pattern) { return clean(document.body.innerText.match(pattern)?.[0]) }
 
+  function visibleProductPrice() {
+    const pricePattern = /Rp\s*[\d.]+(?:[.,]\d+)?(?:\s*[-–—]\s*Rp?\s*[\d.]+(?:[.,]\d+)?)?/i
+    const rangePattern = /Rp\s*[\d.]+(?:[.,]\d+)?\s*[-–—]\s*Rp?\s*[\d.]+(?:[.,]\d+)?/i
+    const lines = pageLines()
+    const titleIndex = lines.findIndex((line) => isUsefulTitle(line) && line.length > 20)
+    const candidates = lines.slice(Math.max(0, titleIndex), titleIndex >= 0 ? undefined : lines.length)
+    return clean((candidates.find((line) => rangePattern.test(line)) || candidates.find((line) => pricePattern.test(line)) || '').match(pricePattern)?.[0])
+  }
+
+  function normalizeShopeePrice(value) {
+    const text = clean(value)
+    const match = text.match(/[\d.,]+/)
+    if (!match) return ''
+    const numeric = Number(match[0].replace(/[.,]/g, ''))
+    if (!Number.isFinite(numeric)) return text
+    // Shopee's item API commonly returns IDR in 1/100000 rupiah units.
+    if (numeric >= 10000000 && numeric % 100000 === 0) return String(Math.round(numeric / 100000))
+    return String(Math.round(numeric))
+  }
+
   function isUsefulTitle(value) {
     const title = clean(value)
     return title.length > 5 && !/^shopee__?language$/i.test(title) && !/^beli .+ di shopee/i.test(title)
@@ -107,32 +127,19 @@
     return base || brand || fullTitle
   }
 
-  function detailBlockText() {
+  function detailSectionText(section) {
     const lines = pageLines()
-    const starts = lines.map((line, index) => /^(spesifikasi produk|detail produk|deskripsi produk)\b/i.test(line) ? index : -1).filter((index) => index >= 0)
-    const domBlocks = []
-    for (const heading of ['spesifikasi produk', 'detail produk', 'deskripsi produk']) {
-      const headingNode = [...document.querySelectorAll('h1,h2,h3,h4,section,div')].find((node) => clean(node.innerText).toLowerCase() === heading)
-      let container = headingNode
-      for (let depth = 0; container && depth < 5; depth++, container = container.parentElement) {
-        const text = clean(container?.innerText)
-        if (text.length > heading.length + 40 && text.length < 30000) {
-          domBlocks.push(text)
-          break
-        }
+    const headings = ['spesifikasi produk', 'detail produk', 'deskripsi produk']
+    const start = lines.findIndex((line) => new RegExp(`^${section}\\b`, 'i').test(line))
+    if (start < 0) return ''
+    let end = lines.length
+    for (let index = start + 1; index < lines.length; index++) {
+      if (headings.some((heading) => new RegExp(`^${heading}\\b`, 'i').test(lines[index])) || /^(jadwal kirim|pengiriman|cara perawatan|note\s*:|produk terkait|ulasan|penilaian)$/i.test(lines[index])) {
+        end = index
+        break
       }
     }
-    if (!starts.length) return unique(domBlocks).join('\n')
-    const block = []
-    for (const start of starts) {
-      for (let index = start; index < lines.length; index++) {
-        const line = lines[index]
-        if (index > start && /^(jadwal kirim|pengiriman|cara perawatan|note\s*:|produk terkait|ulasan|penilaian)$/i.test(line)) break
-        if (!/^(laporkan|bagikan)$/i.test(line) && !block.includes(line)) block.push(line)
-        if (block.join('\n').length >= 24000) break
-      }
-    }
-    return unique([...domBlocks, block.join('\n')]).join('\n')
+    return lines.slice(start, end).filter((line) => !/^(laporkan|bagikan)$/i.test(line)).join('\n')
   }
 
   function visibleMetric(patterns) {
@@ -174,25 +181,29 @@
     const fullTitle = clean(visibleProductTitle() || (isUsefulTitle(api.title) ? api.title : '') || productJson.name || document.querySelector('meta[property="og:title"]')?.content || document.title.replace(/\s*[|｜].*$/, ''))
     const title = conciseProductTitle(fullTitle, api)
     const description = clean(api.description || productJson.description || document.querySelector('meta[name="description"]')?.content)
-    const details = detailBlockText()
+    const specification = detailSectionText('spesifikasi produk')
+    const descriptionBlock = detailSectionText('deskripsi produk') || detailSectionText('detail produk')
     const networkSpecs = networkSpecificationText()
     const rating = api.rating || productJson.aggregateRating?.ratingValue || visibleMetric([/\b([0-5](?:[.,]\d)?)\s+(?=⭐|★)/i, /\b([0-5](?:[.,]\d)?)\s+\d+[.,]?\d*\s*[KkMm]?\s+penilaian\b/i])
     const reviews = visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+penilaian\b/i]) || firstNetworkValue(['rating_count', 'ratingCount', 'review_count', 'reviewCount'])
     const sold = api.sold ? `${api.sold} terjual` : (visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+terjual\b/i, /\bterjual\s*(\d+[.,]?\d*\s*[KkMm]?\+?)/i]) ? `${visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+terjual\b/i, /\bterjual\s*(\d+[.,]?\d*\s*[KkMm]?\+?)/i])} terjual` : '')
-    const price = api.price || productJson.offers?.price || findText(/Rp\s*[\d.]+(?:[.,]\d+)?(?:\s*[-–—]\s*Rp?\s*[\d.]+)?/i)
+    const visiblePrice = visibleProductPrice()
+    const price = visiblePrice || normalizeShopeePrice(api.price || productJson.offers?.price)
     const discount = findText(/\b\d{1,2}%\b/)
     const images = unique([...findNetworkValues(api, ['image', 'images', 'image_url', 'imageUrl', 'cover']), ...imageCandidates()]).filter((url) => /^https?:\/\//i.test(url) && /shopee|seaimg|susercontent|cdn/i.test(url)).slice(0, 20)
     const video = videoCandidate()
     const raw = [
+      'RINGKASAN PRODUK',
       title,
       fullTitle !== title ? `Judul lengkap: ${fullTitle}` : '',
-      description,
-      details,
-      networkSpecs && !details.includes(networkSpecs) ? `Spesifikasi Produk\n${networkSpecs}` : '',
       rating || reviews ? `⭐️ Rating ${rating}${reviews ? ` · ${reviews} penilaian` : ''}` : '',
       sold ? `🔥 ${sold}` : '',
       price ? `💸 Harga ${clean(price)}` : '',
       discount ? `⚡️ Diskon ${discount}` : '',
+      'SPESIFIKASI PRODUK',
+      specification || (networkSpecs ? networkSpecs : ''),
+      'DESKRIPSI PRODUK',
+      descriptionBlock || description,
       'Media produk diambil dari halaman detail Shopee.'
     ].filter(Boolean).join('\n')
     return { source_category: 'scrape_shopee', source_url: location.href, shopee_link: '', raw_text: raw, image_urls: images, video_url: video, product_name: title || null }

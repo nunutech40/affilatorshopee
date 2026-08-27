@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AffiliatorShopee Product Scraper",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Ambil data produk dan media dari halaman detail Shopee ke AffiliatorShopee.",
   "permissions": ["activeTab", "storage", "scripting", "clipboardWrite"],
   "host_permissions": [

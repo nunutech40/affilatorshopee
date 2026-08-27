@@ -1,7 +1,7 @@
 ---
 type: prd
 project: AffiliatorShopee
-status: ready-for-coding
+status: implemented-local-mvp
 ---
 
 # Product Requirements Document — AffiliatorShopee
@@ -23,7 +23,7 @@ Fokus pertama: dipakai sendiri oleh owner. Fitur monetisasi, autentikasi operato
 
 - Bukan auto-posting penuh yang mengabaikan keamanan akun
 - Bukan platform publik atau SaaS di fase awal
-- Bukan scraping otomatis Shopee
+- Bukan scraping server-side otomatis; scraping dilakukan saat user membuka halaman Shopee melalui extension scraper
 - Bukan analitik/dashboard kompleks
 - Tidak ada autentikasi operator/tim di MVP
 
@@ -46,14 +46,13 @@ Posting produk affiliate secara manual memakan waktu karena:
 
 Web app dengan fitur:
 
-1. Simpan produk dengan data mentah dari Shopee
-2. AI merapikan data mentah menjadi field lengkap
-3. Generate caption dari template yang sudah teruji
+1. Simpan raw text dari paste, import X, atau scraper Shopee
+2. Saat produk raw disimpan, AI mencoba membuat satu promo text berdasarkan content model
+3. Generate variasi caption terpisah dari promo yang sudah ada
 4. Pilih hashtag berdasarkan cluster
-5. Buat variasi caption untuk posting ulang
-6. Tombol share ke X yang membuka tab dengan caption terisi
-7. Download beberapa URL gambar dan URL video ke local storage agar mudah di-upload manual ke X
-8. Catat riwayat posting tanpa menyimpan identitas akun X
+5. Tombol share ke X yang membuka composer dengan caption dan media lokal
+6. Download beberapa URL gambar dan URL video ke local storage agar mudah di-upload manual ke X
+7. Catat riwayat posting tanpa menyimpan identitas akun X
 
 ## 7. Flowchart Bisnis
 
@@ -79,13 +78,12 @@ flowchart TD
     A[User Copy Data Shopee] --> B{Paste ke Web App}
     B --> C[Simpan raw_text + link + image_url]
     C --> D[Status: raw]
-    D --> E{Panggil AI Reformat?}
-    E -->|Ya| F[Bulk Reformat max 10]
-    F --> G[Simpan hasil AI, Status: reformatted]
-    G --> H[Edit manual bila perlu]
-    H --> I[Save, Status: ready]
-    E -->|Tidak| J[Edit manual via form]
-    J --> I
+    D --> E{AI reformat berhasil?}
+    E -->|Ya| F[Simpan promo, Status: reformatted]
+    F --> G[Edit manual bila perlu]
+    E -->|Tidak| H[Tetap raw, tampilkan retry]
+    G --> I[Save promo manual]
+    H --> I
 ```
 
 ### 7.3 Flow Generate Caption
@@ -122,11 +120,11 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Produk Tersimpan] --> B{Panggil AI?}
-    B -->|Bulk Reformat max 10| C[AI Rapikan dan Simpan Data]
-    B -->|Tidak| D[Generate dari Template]
-    C --> D
-    D --> E[Tampilkan Hasil]
+    A[Raw text tersimpan] --> B[Reformat AI satu kali saat save]
+    B -->|Berhasil| C[Simpan promo text]
+    B -->|Gagal| D[Tetap raw + tampilkan retry]
+    C --> E[Edit promo atau buat varian]
+    E --> F[Share ke X]
 ```
 
 ## 8. Status Produk
@@ -144,16 +142,19 @@ flowchart TD
 - Tambah produk via paste data mentah dari Shopee
 - Simpan link affiliate dan image URL
 - Edit dan hapus produk
-- Status workflow: raw → reformatted → ready
+- Status workflow: raw → reformatted → ready; produk yang di-reset kembali memerlukan reformat
 - Riwayat posting disimpan di `post_logs`; posting ulang tidak mengubah status produk
-- Produk baru selalu berstatus `raw`; AI mengubah `raw` menjadi `reformatted`; penyimpanan manual setelah data lengkap dapat mengubahnya menjadi `ready`
-- Produk `raw` juga dapat langsung diubah menjadi `ready` melalui pengisian manual tanpa AI
+- Produk raw dengan raw text dibuatkan promo otomatis sekali saat save; jika AI gagal, produk tetap tersimpan raw dan tombol `Reformat AI` aktif di detail
+- `Reformat AI` memakai raw text saja; `Reformat varian caption` memakai promo yang sudah ada dan tetap terpisah
 
 ### 9.2 AI Reformat
 
-- Pilih produk dengan checkbox, maksimal 10 per bulk
-- AI merapikan data mentah jadi field lengkap
+- Produk baru dengan raw text memanggil AI satu kali saat save
+- Detail menyediakan tombol retry `Reformat AI` untuk produk raw atau promo yang kosong
+- Dashboard dapat menjalankan bulk reformat maksimal 10 produk bila tersedia di UI
+- AI menghasilkan promo text berdasarkan content model `trending`, `branded`, atau `cheap`
 - Hasil AI langsung disimpan ke produk
+- Jika gagal, raw text tetap tersimpan dan error ditampilkan; reset menghapus promo dan mengaktifkan reformat ulang
 - Edit manual tetap tersedia setelah reformat
 
 ### 9.3 Caption Generator
@@ -211,15 +212,13 @@ flowchart TD
 3. User paste link affiliate, beberapa image URL, dan video URL jika ada
 4. User klik "Simpan Produk", status = raw
 5. Sistem mencoba men-download media ke local storage
-6. User pilih beberapa produk (max 10) dan klik "Bulk Reformat AI"
-7. AI merapikan data dan langsung menyimpan hasil, status = reformatted
-8. User edit manual jika perlu, status = ready
-9. User pilih produk, pilih template, generate caption
-10. User pilih variasi dan hashtag
-11. User klik "Share ke X"
-12. Caption tersalin ke clipboard, tab X terbuka
-13. User upload media lokal dan klik Post
-14. User kembali ke web app dan mencatat posting
+6. Jika raw text tersedia, sistem mencoba reformat AI satu kali; jika gagal, produk tetap raw
+7. User edit promo atau klik retry `Reformat AI` dari detail
+8. User dapat membuat `Reformat varian caption` dari promo saat ini
+9. User klik "Share ke X"
+10. Caption tersalin ke clipboard, tab X terbuka, extension membantu mengisi media lokal
+11. User upload media lokal dan klik Post
+12. User kembali ke web app dan mencatat posting
 ```
 
 ## 11. Data Produk
@@ -242,7 +241,7 @@ flowchart TD
 | cluster | string | Kategori/cluster |
 | keyword | string | Keyword utama untuk hook |
 | problem | string | Problem yang ingin diangkat |
-| content_model | enum | capture / cheap / trending |
+| content_model | enum | capture legacy / cheap / trending / branded |
 | capture_angle | enum | search / reply / trend / problem |
 | benefit_1 | string | Benefit utama |
 | benefit_2 | string | Benefit kedua |
@@ -259,8 +258,10 @@ flowchart TD
 
 | Model | Channel | Karakteristik |
 |---|---|---|
-| 4 Capture Models | X | Search, Reply, Trend, Problem Capture |
-| Curated Cheap/Value | X | Produk murah, berguna, deal |
+| Trending | X | Demand/momen yang sedang panas, lalu produk sebagai jawaban |
+| Branded | X | Reminder brand yang sudah dipercaya + diskon/deal/urgency faktual |
+| Murah | X | Harga termurah + kegunaan nyata + proof/value |
+| Capture legacy | X | Search, Reply, Trend, Problem Capture; dipetakan ke Trending |
 
 ## 13. Aturan Caption
 
@@ -276,9 +277,9 @@ flowchart TD
 
 - Tidak ada auto-posting penuh
 - Media di-download ke local storage oleh app, lalu di-upload manual oleh user ke X
-- Tidak ada scraping Shopee otomatis
+- Tidak ada scraping server-side otomatis; extension scraper mengambil data saat halaman Shopee dibuka user
 - Input produk dari copy-paste user
-- AI dipakai terbatas untuk reformat data, bukan generate semua caption
+- AI menghasilkan promo text dari raw text; reformat varian caption adalah operasi terpisah
 - Bulk reformat AI maksimal 10 produk per request
 - Web app tidak login, memilih, atau menyimpan identitas akun X
 - Chrome Extension Manifest V3 (helper auto-paste ke composer X/Threads) adalah satu kesatuan dengan web app
@@ -288,7 +289,7 @@ flowchart TD
 
 ### AC-1: Tambah Produk
 
-Diberikan user di halaman tambah produk, ketika paste data mentah dari Shopee, link, dan image URL, maka produk tersimpan dengan status raw.
+Diberikan user di halaman tambah produk, ketika paste raw text atau mengirim hasil scraper/import, maka produk tersimpan. Jika raw text tersedia, sistem mencoba reformat AI satu kali; kegagalan tidak membatalkan penyimpanan.
 
 ### AC-1b: Reformat Manual
 
@@ -302,7 +303,7 @@ Diberikan user mengisi beberapa image URL atau video URL, ketika produk disimpan
 
 ### AC-2: Bulk Reformat AI
 
-Diberikan user memilih maksimal 10 produk dengan status raw dan memilih model dari dropdown (default `muse-spark-1.2-contributor-free` gratis dari auth session opencode), ketika klik "Bulk Reformat", maka AI merapikan data dengan model tersebut dan langsung menyimpan hasilnya dengan status reformatted.
+Diberikan user memilih maksimal 10 produk raw dan model dari Settings, ketika klik reformat, maka AI membuat promo text dari raw text dengan provider/model terpilih dan menyimpannya sebagai reformatted. Produk yang gagal tetap raw dan dapat di-retry dari detail.
 
 ### AC-3: Generate Caption
 

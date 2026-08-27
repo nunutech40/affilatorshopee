@@ -22,7 +22,7 @@ async function save(payload) {
       router.push({ path: `/products/${created.product.id}`, query: { ai: 'failed' } })
       return
     }
-    router.push('/')
+    router.push(`/products/${created.product.id}`)
   } catch (e) {
     error.value = created
       ? `Produk tersimpan sebagai raw text. Reformat AI gagal: ${e.message}`

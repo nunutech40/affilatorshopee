@@ -12,6 +12,7 @@ type ModelInfo struct {
 func ListModels() []ModelInfo {
 	return []ModelInfo{
 		{ID: "stealth/ox-alpha", Provider: "openrouter", Name: "Ox Alpha (OpenRouter)", Free: false, Context: 200000, Note: "OpenRouter"},
+		{ID: "openrouter/minimax/minimax-m3:free", Provider: "openrouter", Name: "MiniMax M3 Free", Free: true, Context: 196608, Note: "OpenRouter"},
 		{ID: "opencode/muse-spark-1.2-contributor-free", Provider: "opencode", Name: "Muse Spark 1.2 Contributor Free", Free: true, Context: 1048576, Note: "OpenCode"},
 		{ID: "opencode/muse-spark-1.2", Provider: "opencode", Name: "Muse Spark 1.2", Free: false, Context: 1048576, Note: "OpenCode"},
 		{ID: "opencode/gpt-5.6-luna", Provider: "opencode", Name: "GPT-5.6 Luna", Free: false, Context: 1050000, Note: "OpenCode"},

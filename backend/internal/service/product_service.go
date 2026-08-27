@@ -35,11 +35,17 @@ func (s *ProductService) Create(ctx context.Context, product *model.Product) err
 	if strings.TrimSpace(product.RawText) == "" {
 		return fmt.Errorf("%w: raw_text wajib diisi", ErrValidation)
 	}
-	if strings.TrimSpace(product.ShopeeLink) == "" {
+	if strings.TrimSpace(product.ShopeeLink) == "" && product.SourceCategory != "scrape_shopee" {
 		return fmt.Errorf("%w: shopee_link wajib diisi", ErrValidation)
 	}
-	if err := validateURL(product.ShopeeLink); err != nil {
-		return err
+	if strings.TrimSpace(product.ShopeeLink) != "" {
+		if err := validateURL(product.ShopeeLink); err != nil {
+			return err
+		}
+	}
+	if product.SourceCategory == "scrape_shopee" && (product.Notes == nil || strings.TrimSpace(*product.Notes) == "") {
+		note := "Sumber: halaman produk Shopee; link affiliate belum diisi."
+		product.Notes = &note
 	}
 	product.Status = "raw"
 	if product.SourceCategory == "" {
@@ -64,8 +70,6 @@ func generateTrackingTag(raw string) string {
 	for _, r := range base {
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
 			slug.WriteRune(r)
-		} else if slug.Len() > 0 && !strings.HasSuffix(slug.String(), "-") {
-			slug.WriteByte('-')
 		}
 		if slug.Len() >= 24 {
 			break
@@ -77,9 +81,9 @@ func generateTrackingTag(raw string) string {
 	}
 	random := make([]byte, 4)
 	if _, err := rand.Read(random); err != nil {
-		return value + "-tag"
+		return value + "tag"
 	}
-	return value + "-" + hex.EncodeToString(random)
+	return value + hex.EncodeToString(random)
 }
 
 func (s *ProductService) GetByID(ctx context.Context, id string) (*model.Product, error) {
@@ -113,11 +117,13 @@ func (s *ProductService) Update(ctx context.Context, product *model.Product) err
 	if strings.TrimSpace(product.RawText) == "" {
 		return fmt.Errorf("%w: raw_text tidak boleh kosong", ErrValidation)
 	}
-	if strings.TrimSpace(product.ShopeeLink) == "" {
+	if strings.TrimSpace(product.ShopeeLink) == "" && product.SourceCategory != "scrape_shopee" {
 		return fmt.Errorf("%w: shopee_link wajib diisi", ErrValidation)
 	}
-	if err := validateURL(product.ShopeeLink); err != nil {
-		return err
+	if strings.TrimSpace(product.ShopeeLink) != "" {
+		if err := validateURL(product.ShopeeLink); err != nil {
+			return err
+		}
 	}
 	if err := validateProductFields(product); err != nil {
 		return err
@@ -298,7 +304,7 @@ func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIServi
 			continue
 		}
 		applyAIResult(&product, result)
-		if product.Status == "raw" {
+		if product.Status == "raw" && strings.TrimSpace(result.PromoText) != "" {
 			product.Status = "reformatted"
 		}
 		if err := s.repo.Update(ctx, &product); err != nil {

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "AffiliatorShopee Product Scraper",
+  "version": "1.2.5",
+  "description": "Ambil data produk dan media dari halaman detail Shopee ke AffiliatorShopee.",
+  "permissions": ["activeTab", "storage", "scripting", "clipboardWrite"],
+  "host_permissions": [
+    "https://shopee.co.id/*",
+    "https://*.shopee.co.id/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    { "matches": ["https://shopee.co.id/*", "https://*.shopee.co.id/*"], "js": ["network-hook.js"], "run_at": "document_start", "world": "MAIN" },
+    { "matches": ["https://shopee.co.id/*", "https://*.shopee.co.id/*"], "js": ["content.js"], "run_at": "document_start" },
+    { "matches": ["http://localhost:8080/*", "http://127.0.0.1:8080/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "action": { "default_title": "Scrape produk Shopee", "default_popup": "popup.html" },
+  "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" }
+}

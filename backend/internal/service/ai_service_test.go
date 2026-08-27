@@ -52,4 +52,57 @@ func TestAIServiceTimeout(t *testing.T) {
 	}
 }
 
+func TestParseProviderJSONSupportsProviderResponseShapes(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "chat completion string",
+			body: `{"choices":[{"message":{"content":"caption"}}]}`,
+			want: "caption",
+		},
+		{
+			name: "chat completion content blocks",
+			body: `{"choices":[{"message":{"content":[{"type":"text","text":"caption"}]}}]}`,
+			want: "caption",
+		},
+		{
+			name: "responses output text",
+			body: `{"output":[{"content":[{"type":"output_text","text":"caption"}]}]}`,
+			want: "caption",
+		},
+		{
+			name: "stream delta",
+			body: `{"choices":[{"delta":{"content":"cap"}}]}`,
+			want: "cap",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := parseProviderJSON([]byte(test.body))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want {
+				t.Fatalf("got %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestParseProviderContentSupportsSSE(t *testing.T) {
+	body := []byte("data: " + `{"choices":[{"delta":{"content":"cap"}}]}` + "\n" +
+		"data: " + `{"choices":[{"delta":{"content":"tion"}}]}` + "\n" +
+		"data: [DONE]\n")
+	got, err := parseProviderContent(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "caption" {
+		t.Fatalf("got %q, want %q", got, "caption")
+	}
+}
+
 func stringPtr(value string) *string { return &value }

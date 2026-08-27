@@ -6,6 +6,34 @@
   const log = (...a) => DEBUG && console.log('[AffiliatorShopee]', ...a)
   let attachingMedia = false
 
+  function normalizeCaption(value) {
+    let text = String(value || '').replace(/(#[\p{L}\p{N}_]+)(?=#)/gu, '$1 ')
+    const seen = new Set()
+    text = text.replace(/(^|\s)#([\p{L}\p{N}_]+)/gu, (match, prefix, tag) => {
+      const key = tag.toLocaleLowerCase()
+      if (seen.has(key)) return ''
+      seen.add(key)
+      return `${prefix}#${tag}`
+    })
+    text = text.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').trim()
+    const seenLines = new Set()
+    text = text.split('\n').filter((line) => {
+      const lineKey = line.trim().toLocaleLowerCase()
+      if (!lineKey || !/^(?:[💸⚡️👇🔥⭐️✅]|harga|https?:\/\/|#)/u.test(lineKey)) return true
+      if (seenLines.has(lineKey)) return false
+      seenLines.add(lineKey)
+      return true
+    }).join('\n').trim()
+    if (text.length <= 280) return text
+    const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+    const suffixStart = lines.findIndex((line, index) => index > 0 && (/https?:\/\//i.test(line) || /(^|\s)#/u.test(line)))
+    if (suffixStart < 0) return text.slice(0, 280).trim()
+    const suffix = lines.slice(suffixStart).join('\n')
+    const prefix = lines.slice(0, suffixStart)
+    while (prefix.length && `${prefix.join('\n')}\n${suffix}`.length > 280) prefix.pop()
+    return (prefix.length ? `${prefix.join('\n')}\n${suffix}` : suffix).slice(0, 280).trim()
+  }
+
   function getCaptionFromIntent() {
     try {
       const url = new URL(location.href)
@@ -192,10 +220,23 @@
 
     // Jangan timpa jika user sudah mengetik
     const existing = (composer.innerText || composer.textContent || '').trim()
+    caption = normalizeCaption(caption)
+    const normalizedExisting = normalizeCaption(existing)
+    if (existing && normalizedExisting === caption && existing !== caption) {
+      composer.textContent = ''
+      composer.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    }
+    if (existing.trim() === caption.trim()) {
+      try { await chrome.storage.local.set({ pending: false }) } catch {}
+      return true
+    }
     if (existing.length > 8 && existing !== caption.trim().slice(0, existing.length)) {
       log('composer already filled, skip'); return false
     }
 
+    const marker = btoa(unescape(encodeURIComponent(caption))).slice(0, 80)
+    if (composer.getAttribute('data-affiliator-caption-key') === marker) return true
+    composer.setAttribute('data-affiliator-caption-key', marker)
     insertText(composer, caption)
     try { await chrome.storage.local.set({ pending: false }) } catch {}
     notify(true)
@@ -225,7 +266,7 @@
   // Listen postMessage dari web app (jika web app kirim caption langsung)
   window.addEventListener('message', (e) => {
     if (e.data && (e.data.type === 'AFFILIATOR_CAPTION' || e.data.type === 'AFFILIATOR_SET_CONTENT')) {
-      chrome.storage.local.set({ lastCaption: e.data.caption || '', lastMedia: e.data.media || [], pending: true })
+      chrome.storage.local.set({ lastCaption: normalizeCaption(e.data.caption || ''), lastMedia: e.data.media || [], pending: true })
       setTimeout(poll, 300)
     }
   })

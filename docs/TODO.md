@@ -3,7 +3,7 @@
 Project: AffiliatorShopee
 Deskripsi: Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan AI, membuat caption, dan membantu posting manual ke X.
 Target: MVP yang bisa dipakai sendiri.
-Stack: Go, PostgreSQL, Vue 3 + Vite + Tailwind + Pinia, OpenRouter AI.
+Stack: Go, PostgreSQL, Vue 3 + Vite + Tailwind + Pinia, AI provider OpenRouter/9router/OpenCode.
 Deployment: Docker Compose di Orbstack.
 
 Dokumen sumber:
@@ -48,7 +48,7 @@ Dokumen sumber:
 - [x] Buat migration `004_create_product_media.up.sql` dan `004_create_product_media.down.sql`
 - [x] Buat koneksi PostgreSQL dan menjalankan migration saat startup
 - [x] Buat model `Product`, `PostLog`, `CaptionVariation`, dan `MediaFile`
-- [x] Buat config loader untuk `PORT`, `DATABASE_URL`, `STORAGE_PATH`, `AI_API_KEY`, `OPENROUTER_MODEL`, dan `ENV`
+- [x] Buat config loader untuk `PORT`, `DATABASE_URL`, `STORAGE_PATH`, provider AI, model, dan `ENV`
 - [x] Implementasikan `ProductRepository`: Create, GetByID, List, Update, Delete
 - [x] Implementasikan `PostLogRepository`: Create, List
 - [x] Implementasikan `CaptionVariationRepository`: Create, List
@@ -67,7 +67,7 @@ Dokumen sumber:
 
 ## Phase 3: AI Reformat
 
-- [x] Buat `AIService` dengan HTTP client ke OpenRouter
+- [x] Buat `AIService` dengan client OpenAI-compatible untuk OpenRouter, 9router, dan OpenCode
 - [x] Buat prompt reformat sesuai `TRD.md`
 - [x] Parse response JSON secara strict
 - [x] Validasi ID, enum, angka, hashtag, dan field hasil AI
@@ -76,6 +76,8 @@ Dokumen sumber:
 - [x] Tolak request dengan lebih dari 10 `product_ids`
 - [x] Simpan hasil AI langsung dan ubah status menjadi `reformatted`
 - [x] Laporkan partial failure per produk
+- [x] Reformat otomatis satu kali saat save produk yang memiliki raw text; gagal tetap tersimpan raw dan bisa di-retry dari detail
+- [x] Validasi angka caption terhadap raw text dan normalisasi harga bersufiks
 - [ ] Test response valid, invalid, timeout, dan partial failure dengan mock server
 
 ## Phase 4: Caption Generator
@@ -118,6 +120,8 @@ Dokumen sumber:
 - [x] Buat `ProductParser.vue` untuk paste raw text
 - [x] Buat `ProductForm.vue` untuk edit produk
 - [x] Buat `BulkReformat.vue` dengan batas maksimal 10 produk
+- [x] Pisahkan Chrome Extension menjadi `x-helper` dan `shopee-scraper` dengan icon berbeda
+- [x] Implementasikan scraper Shopee berbasis halaman terbuka, DOM, metadata, dan response network
 - [x] Buat `ProductDetailView.vue`
 - [x] Tambahkan edit link affiliate serta tambah/hapus media dari product detail
 - [x] Buat `CaptionGenerator.vue`
@@ -157,12 +161,12 @@ Dokumen sumber:
 ## Catatan untuk AI Coder
 
 - Gunakan `PRD.md` sebagai source of truth produk dan `TRD.md` sebagai source of truth teknis.
-- Jangan membuat fitur Threads atau extension sebelum Phase 8; media lokal sudah bagian dari MVP.
+- Jangan memperluas ke Threads atau auto-posting; dua extension MV3 yang ada (`x-helper` dan `shopee-scraper`) sudah menjadi bagian MVP.
 - Data mentah harus selalu dipertahankan.
 - AI boleh memperbaiki data, tetapi tidak boleh mengarang proof, harga, rating, atau urgency.
 - Produk tidak berubah menjadi status `posted`; posting dicatat sebagai `post_logs` dan boleh berulang.
 - User tetap meng-upload media dan menekan Post secara manual di X.
-- API key OpenRouter hanya berada di backend.
+- API key/provider auth hanya berada di backend; model di UI hanya identifier pilihan.
 - Setiap phase besar sebaiknya dibuat dalam commit terpisah.
 - DeepSeek Flash boleh mengerjakan implementasi sesuai `AI-CODER-GUIDE.md`; Luna melakukan review akhir sebelum merge atau push.
 - Jangan mengubah `OPENROUTER_MODEL` hanya karena coding model diganti.

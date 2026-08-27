@@ -255,6 +255,10 @@ Setelah JSON diterima, backend tetap melakukan normalisasi deterministik:
 12. Menghapus COD, retur, garansi, pengiriman, toleransi ukuran, produksi massal, dan catatan logistik.
 13. Mengganti hook pertama hanya jika kosong, URL, hashtag, atau berisi token data mentah. Hook AI yang valid dipertahankan.
 14. Tidak menggunakan mock caption saat provider AI gagal; error provider dikembalikan eksplisit ke UI.
+15. Normalizer tidak menghapus harga dari hook atau baris biasa. Harga hanya dibuang dari baris harga berikon `💸` atau baris yang menjadi kosong setelah stripping.
+16. Harga dengan sufiks `rb/ribu/jt/juta/k` dinormalisasi ke nilai rupiah penuh. `💸 Mulai ...` tidak ditambahkan bila caption sudah memiliki harga.
+17. `100% Real Pict`, `Original Quality`, dan `100% Premium Quality` bukan diskon. Persentase hanya dikonversi menjadi diskon jika baris memuat `diskon`, `promo`, `voucher`, `off`, atau `deal`.
+18. Semua angka pada caption harus dapat ditemukan pada raw setelah normalisasi harga/sufiks; jika tidak, hasil AI ditolak sebelum disimpan.
 
 Fallback value tidak membaca baris pertama raw (judul/brand), menyaring token ALL-CAPS, dan benefit ber-prefix bullet yang menyerupai fragmen judul tidak dipakai.
 
@@ -263,5 +267,7 @@ Fallback value tidak membaca baris pertama raw (judul/brand), menyaring token AL
 - Maksimal 10 produk per request.
 - Satu request menghasilkan satu JSON array.
 - Satu produk menghasilkan satu objek `product_id` + `promo_text`.
-- Model default saat ini: `stealth/ox-alpha` melalui OpenRouter.
-- Endpoint OpenAI-compatible: `https://openrouter.ai/api/v1/chat/completions`.
+- Provider runtime yang didukung: OpenRouter, 9router, dan OpenCode.
+- Model default: `stealth/ox-alpha` melalui OpenRouter, tetapi pilihan user disimpan di `localStorage.ai_model`.
+- `/api/ai/models` menggabungkan discovery `/models` ketiga provider dan memakai registry statis sebagai fallback.
+- Model Codex/Responses dikirim tanpa parameter `temperature`.

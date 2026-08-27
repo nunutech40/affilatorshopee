@@ -27,10 +27,10 @@ Simpan data produk mentah
 
 Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 
-## Scope MVP
+## Scope implementasi saat ini
 
 - CRUD produk curated
-- AI reformat maksimal 10 produk per request (OpenRouter, default `stealth/ox-alpha`)
+- AI reformat maksimal 10 produk per request (OpenRouter, 9router, atau OpenCode; default `stealth/ox-alpha`)
 - Content model Trending, Branded, dan Murah
 - Reformat utama dan varian caption terpisah
 - Share ke X via Web Intent dan clipboard + Chrome Extension helper auto-paste (Manifest V3, satu kesatuan)
@@ -47,5 +47,5 @@ Threads adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa d
 - Backend: Go
 - Database: PostgreSQL
 - Frontend: Vue 3 + Vite + Tailwind CSS + Pinia
-- AI: OpenRouter
+- AI: OpenRouter + 9router + OpenCode (provider/model dipilih dari Settings)
 - Deployment: Docker Compose

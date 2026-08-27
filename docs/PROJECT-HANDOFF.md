@@ -37,13 +37,13 @@ Config backend mendukung tiga provider terpisah: model `openrouter/*` dikirim ke
 
 - List produk dengan filter status, content model, cluster, search, dan pagination.
 - Bulk pilih maksimal 10 produk.
-- Bulk `Reformat AI` untuk caption baru.
+- Bulk `Reformat AI` untuk caption baru bila diperlukan; operasi individual tetap tersedia di detail.
 - Bulk `Buat varian caption` untuk variasi caption berbasis promo yang sudah ada.
 - Dropdown AI tersimpan di `localStorage.ai_model`.
 - Loading state mengunci tombol selama request AI agar tidak terjadi double-click.
 - Content model dapat diubah dari list: `Trending`, `Branded`, `Murah`.
-- Bulk reformat sudah dikeluarkan dari dashboard karena request besar lambat dan rawan error.
 - Model AI dipilih dari halaman `/settings` dan disimpan di `localStorage.ai_model`.
+- Model selector mengambil model dari OpenRouter, 9router, dan OpenCode; pencarian mempertahankan label provider.
 
 ### Product detail
 
@@ -52,21 +52,23 @@ Config backend mendukung tiga provider terpisah: model `openrouter/*` dikirim ke
 - Dropdown AI sendiri; pilihan tersinkron dengan dashboard melalui `localStorage.ai_model`.
 - Dropdown content model: `Trending`, `Branded`, `Murah`.
 - Produk manual dengan raw text memanggil Reformat AI otomatis setelah save.
-- Detail hanya memiliki `Reformat varian caption`; ini berlaku untuk produk raw maupun import X.
-- Source category ditampilkan sebagai `Raw text` atau `Import X`.
+- Detail memiliki `Reformat AI` utama yang selalu membangun promo dari raw text, serta `Reformat varian caption` yang memakai promo saat ini; varian berlaku untuk produk raw maupun import X.
+- Source category ditampilkan sebagai `Raw text`, `Import X`, atau `Scrape Shopee`.
 - Setiap produk memiliki `tracking_tag` unik yang dibuat saat save; produk lama di-backfill saat migration 009.
 - Tracking tag ditampilkan di dashboard/detail dan bisa dicopy untuk dipakai saat membuat link affiliate Shopee.
 - Loading spinner dan tombol terkunci selama AI bekerja.
 - Link affiliate Shopee bisa diedit dari detail.
 - Media lokal bisa ditambah dari URL image/video, dihapus, atau diunduh sebagai ZIP.
 - Share ke X mengirim promo text dan media lokal.
+- Jika promo text kosong setelah reset/gagal, tombol `Reformat AI` aktif kembali; `Save promo text` hanya aktif jika ada teks.
 
 ### Chrome Extension
 
-Folder: `extension/`.
+Folder: `extension/x-helper/` dan `extension/shopee-scraper/`.
 
-- Load unpacked melalui `chrome://extensions`.
-- Extension membaca payload share dari halaman X dan membantu paste caption/media.
+- Load masing-masing folder secara terpisah melalui `chrome://extensions`.
+- `x-helper` membaca payload share dari halaman X dan membantu paste caption/media. Versi extension saat ini `1.8.3`.
+- `shopee-scraper` membaca DOM, metadata, dan response network halaman detail Shopee yang sedang terbuka, mengambil raw text + media, lalu mengirimkannya ke tab `/products/new`. Versi extension saat ini `1.2.0`.
 - Posting tetap harus dikonfirmasi manual oleh user di composer X.
 - Jangan mengubah algoritma attach media tanpa reproduksi dan verifikasi di composer X; X dapat memproses upload media secara asynchronous.
 
@@ -97,7 +99,7 @@ Vue dashboard/detail
   → POST /api/ai/reformat
   → ProductService.Reformat (maksimal 10 product ID)
   → AIService.Reformat
-  → OpenRouter /v1/chat/completions
+  → provider terpilih (OpenRouter / 9router / OpenCode)
   → parse JSON array
   → normalizePromoLayout
   → validateAIResults
@@ -115,14 +117,15 @@ Timeout HTTP AI saat ini 3 menit karena Ox Alpha dapat lebih lambat daripada req
 - `../backend/internal/service/model_registry.go` — fallback model registry.
 - `../backend/internal/config/config.go` — environment provider AI.
 - `../backend/internal/service/product_service.go` — validasi status dan penyimpanan hasil AI.
-- `../backend/internal/db/migrations/008_add_source_category.up.sql` — source category `raw_text` atau `import_x`.
+- `../backend/internal/db/migrations/008_add_source_category.up.sql`, `010_add_scrape_shopee_source.up.sql` — source category `raw_text`, `import_x`, atau `scrape_shopee`.
 - `../backend/internal/db/migrations/009_add_tracking_tag.up.sql` — tracking tag unik per produk.
 - `../frontend/src/views/HomeView.vue` — dashboard.
 - `../frontend/src/views/ProductDetailView.vue` — detail, model selector, reformat, share.
 - `../frontend/src/components/ModelSelector.vue` — dropdown AI bersama.
 - `../frontend/src/stores/productStore.js` — API client dan loading state request AI.
 - `../frontend/src/components/ShareButton.vue` — payload share ke extension/X.
-- `extension/background.js`, `extension/content.js` — helper paste dan attach media.
+- `extension/x-helper/background.js`, `extension/x-helper/content.js` — helper paste dan attach media.
+- `extension/shopee-scraper/content.js` — ekstraksi produk Shopee dan pengiriman payload ke web app.
 - `../backend/internal/db/migrations/007_add_branded_content_model.up.sql` — dukungan content model branded.
 
 ## Verifikasi setelah perubahan
@@ -146,5 +149,5 @@ Jangan menjalankan reformat AI live hanya untuk test tanpa persetujuan, karena r
 - `shopee_link` dikirim eksplisit sebagai fakta AI dan normalizer mengganti URL Shopee hasil model dengan link affiliate produk yang tersimpan. Ini mencegah UUID produk atau URL hasil halusinasi masuk ke caption.
 - Media detail memakai endpoint `POST /api/products/{id}/media` untuk download URL baru dan `DELETE /api/products/{id}/media/{mediaID}` untuk menghapus file + metadata.
 - Normalizer dapat mengubah hasil AI secara agresif. Jika output Hermes berbeda, review `normalizePromoLayout` selain prompt.
-- Model registry saat ini sengaja hanya menampilkan `stealth/ox-alpha` agar model provider lama tidak terkirim ke OpenRouter.
+- Model registry dinamis mencoba `/models` pada OpenRouter, 9router, dan OpenCode; registry statis menjadi fallback jika discovery provider gagal.
 - `.env` harus tetap untracked dan tidak boleh dibagikan.

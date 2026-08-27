@@ -136,10 +136,10 @@ func (r *ProductRepository) UpdateReformatted(ctx context.Context, product *mode
 func (r *ProductRepository) update(ctx context.Context, product *model.Product, requiredStatus string) error {
 	query := `UPDATE products SET
 		reformatted_text=$2, product_name=$3, shopee_link=$4, tracking_tag=$5, image_url=$6, image_urls=$7, video_url=$8,
-		normal_price=$8, sale_price=$9, discount_percent=$10, rating=$11,
-		sold_count=$12, review_count=$13, keyword=$14, problem=$15, cluster=$16,
-		content_model=$17, capture_angle=$18, benefit_1=$19, benefit_2=$20, benefit_3=$21,
-		urgency=$22, caption_template=$23, hashtag_pool=$24, notes=$25, source_category=$26, status=$27
+		normal_price=$9, sale_price=$10, discount_percent=$11, rating=$12,
+		sold_count=$13, review_count=$14, keyword=$15, problem=$16, cluster=$17,
+		content_model=$18, capture_angle=$19, benefit_1=$20, benefit_2=$21, benefit_3=$22,
+		urgency=$23, caption_template=$24, hashtag_pool=$25, notes=$26, source_category=$27, status=$28
 	WHERE id=$1`
 	args := []interface{}{
 		product.ID, product.ReformattedText, product.ProductName, product.ShopeeLink, product.TrackingTag, product.ImageURL,

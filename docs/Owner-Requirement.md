@@ -20,9 +20,9 @@ Web app pribadi untuk menyimpan produk-produk curated affiliate Shopee, lalu mem
 
 | Model | Karakteristik |
 |---|---|---|
-| 4 Capture Models | Search, Reply, Trend, Problem Capture |
-| Curated Cheap/Value | Produk murah, berguna, deal |
-| Curated Branded | Roadmap: brand dikenal, diskon, voucher, promo |
+| Trending | Demand/momen yang sedang panas, lalu produk sebagai jawaban |
+| Branded | Reminder brand yang sudah dipercaya + diskon/deal/urgency faktual |
+| Murah | Harga termurah + kegunaan nyata + proof/value, tanpa mengarang |
 
 ## Keputusan Penting: Tidak Auto-Posting Penuh
 
@@ -32,7 +32,8 @@ Solusi yang dipilih:
 
 ```text
 Simpan produk mentah di web app
-→ AI merapikan dan menyimpan hasil
+→ AI membuat promo text dari raw text dan menyimpan hasil
+→ Buat varian caption bila perlu
 → Pilih caption + hashtag
 → Klik "Share ke X"
 → Tab X terbuka, caption terisi
@@ -48,10 +49,10 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 
 ### 1. Manajemen Produk Curated
 
-- Tambah produk dari data mentah dan link affiliate
+- Tambah produk dari raw text, import X, atau extension scraper Shopee
 - Paste satu atau beberapa link gambar eksternal
 - Paste link video eksternal jika ada, termasuk `.mp4`
-- Kategorikan cluster
+- Pilih/ubah content model Trending, Branded, atau Murah; cluster tetap metadata terpisah
 - Riwayat posting sederhana per produk
 - Produk boleh diposting berulang kali
 

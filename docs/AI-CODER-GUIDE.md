@@ -8,7 +8,7 @@ Dokumen ini mengatur penggunaan AI coding assistant, termasuk DeepSeek Flash, un
 
 - **Coding model:** DeepSeek Flash boleh digunakan untuk membuat dan mengubah source code.
 - **Review model:** Luna melakukan review akhir terhadap code, security, schema, API, dan testing.
-- **Runtime model:** fitur AI reformat memakai `OPENROUTER_MODEL` melalui OpenRouter. Default saat ini `stealth/ox-alpha`; secret hanya berada di `.env` lokal.
+- **Runtime model:** fitur AI reformat memakai model/provider yang dipilih dari Settings. Provider yang didukung: OpenRouter, 9router, dan OpenCode; secret hanya berada di backend environment atau mount auth OpenCode.
 
 ## Pekerjaan yang Boleh Dikerjakan DeepSeek Flash
 
@@ -16,7 +16,7 @@ Dokumen ini mengatur penggunaan AI coding assistant, termasuk DeepSeek Flash, un
 - Migration PostgreSQL sesuai `TRD.md`.
 - Model, repository, service, handler, dan router.
 - CRUD products, post logs, dan caption variations.
-- AI service OpenRouter dengan mock HTTP test.
+- AI service OpenAI-compatible untuk OpenRouter/9router/OpenCode dengan mock HTTP test.
 - Caption template engine, formatter, hashtag validation, dan character count.
 - Vue views, components, Pinia stores, API client, loading state, dan error state.
 - Unit test, API test, migration test, dan frontend test.
@@ -40,7 +40,7 @@ Dokumen ini mengatur penggunaan AI coding assistant, termasuk DeepSeek Flash, un
 1. Baca `PRD.md`, `TRD.md`, `TODO.md`, dan file yang relevan.
 2. Kerjakan satu phase atau satu vertical slice saja.
 3. Ikuti kontrak yang sudah ada; jangan menebak requirement baru.
-4. Gunakan mock untuk OpenRouter dan data fixture untuk test.
+4. Gunakan mock provider dan data fixture untuk test; jangan memanggil endpoint AI live.
 5. Jalankan formatter dan test yang relevan.
 6. Periksa `git diff` dan `git diff --check`.
 7. Laporkan file yang berubah, command test, hasil test, dan risiko yang tersisa.

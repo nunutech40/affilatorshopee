@@ -22,6 +22,7 @@ func NewProductHandler(products *service.ProductService, media *service.MediaSer
 
 type createProductRequest struct {
 	RawText        string   `json:"raw_text"`
+	ProductName    *string  `json:"product_name"`
 	ShopeeLink     string   `json:"shopee_link"`
 	SourceCategory string   `json:"source_category"`
 	ImageURL       *string  `json:"image_url"`
@@ -86,7 +87,7 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product := &model.Product{
-		RawText: request.RawText, ShopeeLink: request.ShopeeLink, SourceCategory: request.SourceCategory, ImageURL: request.ImageURL,
+		RawText: request.RawText, ProductName: request.ProductName, ShopeeLink: request.ShopeeLink, SourceCategory: request.SourceCategory, ImageURL: request.ImageURL,
 		ImageURLs: request.ImageURLs, VideoURL: request.VideoURL, ContentModel: request.ContentModel, Notes: request.Notes,
 	}
 	if product.SourceCategory == "" {

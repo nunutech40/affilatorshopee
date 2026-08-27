@@ -1,0 +1,1 @@
+-- Formatting-only migration; original separators cannot be restored safely.

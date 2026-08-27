@@ -4,7 +4,7 @@ project: AffiliatorShopee
 status: aligned-with-prd
 ---
 
-> **Implementation update 2026-08-26:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI sekarang OpenRouter `stealth/ox-alpha`, request maksimal 10 produk, content model aktif `trending`, `branded`, dan `cheap`, serta media di-download ke local storage dan dikirim melalui extension. Referensi handoff faktual: `PROJECT-HANDOFF.md`.
+> **Implementation update 2026-08-27:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI mendukung OpenRouter, 9router, dan OpenCode; model ditemukan dinamis dengan fallback registry, request maksimal 10 produk, content model aktif `trending`, `branded`, dan `cheap`, serta media di-download ke local storage dan dikirim melalui extension. Scraper Shopee dan helper X dipisah menjadi dua extension MV3. Referensi handoff faktual: `PROJECT-HANDOFF.md`.
 
 # Technical Requirements Document - AffiliatorShopee
 
@@ -18,7 +18,7 @@ status: aligned-with-prd
 | HTTP Client | Fetch API |
 | Routing | Vue Router |
 | State | Pinia |
-| AI | OpenRouter |
+| AI | OpenRouter, 9router, OpenCode (OpenAI-compatible) |
 | Deployment | Docker Compose di Orbstack |
 
 MVP mencakup web app pribadi + Chrome Extension helper sebagai satu kesatuan dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator atau Threads pada MVP.
@@ -34,7 +34,7 @@ Go Backend API
    |             |
    | SQL         | HTTPS API
    v             v
-PostgreSQL    OpenRouter
+PostgreSQL    AI provider terpilih
 ```
 
 User tetap meng-upload gambar/video langsung di X dan menekan tombol Post secara manual. Backend menyimpan data produk, caption, catatan posting, serta file media yang di-download dari URL eksternal ke local storage.
@@ -356,7 +356,7 @@ POST /api/ai/reformat
 Content-Type: application/json
 ```
 
-`GET /api/ai/models` mengembalikan model runtime yang tersedia di registry aplikasi. Saat ini registry hanya menampilkan `stealth/ox-alpha` dari OpenRouter. Auth runtime memakai `OPENROUTER_API_KEY` dan tidak boleh ditulis ke source code.
+`GET /api/ai/models` menggabungkan model dinamis dari OpenRouter dan 9router dengan model statis/fallback dari OpenCode dan registry aplikasi. Setiap pilihan membawa identitas provider agar model bernama sama tidak tertukar. Auth runtime hanya dibaca backend dari environment atau mount auth OpenCode dan tidak boleh ditulis ke source code.
 
 Request reformat:
 
@@ -647,9 +647,9 @@ Tidak ada placeholder `proof` terpisah. Proof dibentuk hanya dari rating, jumlah
 
 ### 7.1 Provider
 
-- Endpoint: `https://openrouter.ai/api/v1/chat/completions`
-- Model wajib diambil dari `OPENROUTER_MODEL`; tidak ada model provider yang di-hardcode oleh backend.
-- API key hanya dibaca backend dari `AI_API_KEY`.
+- Provider dipilih dari model yang disimpan di Settings: OpenRouter (`OPENROUTER_BASE_URL`), 9router (`NINEROUTER_BASE_URL`), atau OpenCode (`OPENCODE_BASE_URL`/endpoint Zen).
+- Model default dan fallback diambil dari environment/registry; UI tidak mengirim API key.
+- API key hanya dibaca backend dari environment atau file auth OpenCode yang di-mount read-only.
 - HTTP client memiliki timeout dan tidak mengirim API key ke frontend.
 - `raw_text` diperlakukan sebagai untrusted content, dikirim di dalam delimiter prompt, dan tidak ditulis ke log aplikasi.
 - Kirim hanya data yang diperlukan untuk reformat; jangan mengirim secret atau data pribadi ke provider AI.
@@ -772,7 +772,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PORT: 8080
       STORAGE_PATH: ${STORAGE_PATH:-/app/data/uploads}
-      AI_API_KEY: ${AI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      NINEROUTER_API_KEY: ${NINEROUTER_API_KEY}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL}
       ENV: ${ENV:-development}
     ports:
@@ -796,8 +798,12 @@ POSTGRES_USER=affiliator
 POSTGRES_PASSWORD=change-me
 POSTGRES_DB=affiliator
 STORAGE_PATH=/app/data/uploads
-AI_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=replace-with-tested-openrouter-model
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=stealth/ox-alpha
+NINEROUTER_BASE_URL=https://9router.103-59-94-121.nip.io/v1
+NINEROUTER_API_KEY=9r-...
+OPENCODE_BASE_URL=https://opencode.ai/zen/v1
+OPENCODE_MODEL=muse-spark-1.2-contributor-free
 ENV=development
 ```
 
@@ -808,13 +814,13 @@ Jangan commit file `.env` atau API key ke repository.
 - MVP hanya untuk local/private use dan tidak memiliki auth.
 - Bind port API dan database ke `127.0.0.1`.
 - Jangan expose service ke internet sebelum auth dan authorization tersedia.
-- API key hanya berada di backend.
+- API key/provider auth hanya berada di backend.
  - Validasi ukuran body, panjang string, URL, enum, angka, dan jumlah hashtag.
  - Validasi media URL hanya `http/https` tanpa private IP dan batas ukuran 20 MB image / 200 MB video.
  - CORS hanya mengizinkan origin development lokal yang ditentukan, misalnya `http://localhost:5173`.
 - Batasi request AI dengan rate limit dan concurrency limit agar biaya terkendali.
-- Validasi environment wajib saat startup dan fail-fast bila `DATABASE_URL` atau `AI_API_KEY` tidak valid.
-- Gunakan timeout, error handling, dan logging terstruktur untuk OpenRouter.
+- Validasi environment wajib saat startup dan fail-fast bila `DATABASE_URL` atau konfigurasi provider aktif tidak valid.
+- Gunakan timeout, error handling, dan logging terstruktur untuk setiap provider; 429/5xx harus menjadi error yang terlihat, bukan output kosong yang sukses.
 - Jangan menyimpan raw product text di log aplikasi secara default.
 - Semua query database menggunakan parameter binding.
 - Caption di-encode dengan aman sebelum dipakai pada URL intent.

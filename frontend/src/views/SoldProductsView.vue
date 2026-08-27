@@ -51,8 +51,8 @@ watch(limit, () => { page.value = 1; load() })
           <span v-else class="sold-img placeholder">📦</span>
         </div>
         <div class="sold-text">
-          <div class="sold-title">{{ row.product_name || 'Produk luar library' }}</div>
-          <div class="sold-sub">tag: <code>{{ row.tracking_tag }}</code> · <span :class="{ 'in-lib': row.is_in_library }">{{ row.is_in_library ? 'ada di library' : 'tidak di library' }}</span></div>
+          <div class="sold-title">{{ row.product_name || row.item_name || 'Produk terjual' }}</div>
+          <div class="sold-sub">tag: <code>{{ row.tracking_tag }}</code> · <span :class="{ 'in-lib': row.is_in_library }">{{ row.is_in_library ? 'ada di library' : 'tidak di library' }}</span><span v-if="row.shop_name"> · {{ row.shop_name }}</span><span v-if="row.item_id"> · ID: {{ row.item_id }}</span></div>
           <div v-if="row.last_ordered_at" class="sold-sub muted">terakhir {{ new Date(row.last_ordered_at).toLocaleDateString('id-ID') }}</div>
         </div>
       </div>
@@ -61,6 +61,7 @@ watch(limit, () => { page.value = 1; load() })
       <span class="sold-commission">{{ money(row.total_commission) }}</span>
       <div class="sold-actions">
         <RouterLink v-if="row.is_in_library && row.product_id" :to="`/products/${row.product_id}`" class="button-primary small">Buka di library →</RouterLink>
+        <a v-else-if="row.item_id" :href="`https://shopee.co.id/search?keyword=${row.item_id}`" target="_blank" rel="noopener" class="button small">Cari di Shopee →</a>
         <a v-else-if="row.shopee_link" :href="row.shopee_link" target="_blank" rel="noopener" class="button small">Buka Shopee →</a>
         <span v-else class="muted small">—</span>
       </div>

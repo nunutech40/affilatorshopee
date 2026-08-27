@@ -142,13 +142,15 @@ func (h *CommissionHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		events = append(events, model.CommissionEvent{
 			EventID:         eventID,
 			OrderID:         get("order id", "order_id", "id pesanan"),
-			ItemID:          get("item id", "item_id"),
+			ItemID:          get("item id", "item_id", "product id", "itemid"),
 			ModelID:         get("model id", "model_id"),
 			OrderStatus:     get("order status", "order_status", "status pesanan", "status"),
 			OrderedAt:       orderedAt,
 			TrackingTag:     trackingTag,
 			Quantity:        quantity,
 			CommissionTotal: commission,
+			ItemName:        get("item name", "item_name", "product name", "product_name", "nama produk", "nama item"),
+			ShopName:        get("shop name", "shop_name", "nama toko", "toko"),
 		})
 	}
 	result, err := h.commissions.Sync(r.Context(), events)

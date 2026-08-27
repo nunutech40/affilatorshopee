@@ -34,8 +34,8 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 			continue
 		}
 		var created bool
-		err = tx.QueryRowContext(ctx, `INSERT INTO commission_events (event_id, order_id, item_id, model_id, order_status, ordered_at, tracking_tag, normalized_tag, quantity, commission_total)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (event_id) DO UPDATE SET order_status=EXCLUDED.order_status, ordered_at=EXCLUDED.ordered_at, tracking_tag=EXCLUDED.tracking_tag, normalized_tag=EXCLUDED.normalized_tag, quantity=EXCLUDED.quantity, commission_total=EXCLUDED.commission_total RETURNING (xmax = 0)`, event.EventID, event.OrderID, event.ItemID, event.ModelID, event.OrderStatus, event.OrderedAt, event.TrackingTag, normalized, event.Quantity, event.CommissionTotal).Scan(&created)
+		err = tx.QueryRowContext(ctx, `INSERT INTO commission_events (event_id, order_id, item_id, model_id, order_status, ordered_at, tracking_tag, normalized_tag, quantity, commission_total, item_name, shop_name)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (event_id) DO UPDATE SET order_status=EXCLUDED.order_status, ordered_at=EXCLUDED.ordered_at, tracking_tag=EXCLUDED.tracking_tag, normalized_tag=EXCLUDED.normalized_tag, quantity=EXCLUDED.quantity, commission_total=EXCLUDED.commission_total, item_name=EXCLUDED.item_name, shop_name=EXCLUDED.shop_name RETURNING (xmax = 0)`, event.EventID, event.OrderID, event.ItemID, event.ModelID, event.OrderStatus, event.OrderedAt, event.TrackingTag, normalized, event.Quantity, event.CommissionTotal, event.ItemName, event.ShopName).Scan(&created)
 		if err != nil {
 			return result, err
 		}
@@ -78,7 +78,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	where := ""
 	args := []interface{}{}
 	if s := strings.TrimSpace(search); s != "" {
-		where = "WHERE ce.tracking_tag ILIKE $1 OR p.product_name ILIKE $1"
+		where = "WHERE ce.tracking_tag ILIKE $1 OR p.product_name ILIKE $1 OR ce.item_name ILIKE $1"
 		args = append(args, "%"+s+"%")
 	}
 	countQuery := "SELECT COUNT(*) FROM (SELECT ce.normalized_tag FROM commission_events ce LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag " + where + " GROUP BY ce.normalized_tag) s"
@@ -96,6 +96,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	query := `
 		SELECT ce.normalized_tag, ce.tracking_tag,
 			p.id, p.product_name, p.shopee_link, p.image_url,
+			MAX(ce.item_name), MAX(ce.item_id), MAX(ce.shop_name),
 			SUM(ce.quantity)::int AS total_quantity,
 			SUM(ce.commission_total)::bigint AS total_commission,
 			COUNT(*)::int AS order_count,
@@ -116,7 +117,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	items := []model.SoldProduct{}
 	for rows.Next() {
 		var s model.SoldProduct
-		if err := rows.Scan(&s.NormalizedTag, &s.TrackingTag, &s.ProductID, &s.ProductName, &s.ShopeeLink, &s.ImageURL, &s.TotalQuantity, &s.TotalCommission, &s.OrderCount, &s.LastOrderedAt, &s.IsInLibrary); err != nil {
+		if err := rows.Scan(&s.NormalizedTag, &s.TrackingTag, &s.ProductID, &s.ProductName, &s.ShopeeLink, &s.ImageURL, &s.ItemName, &s.ItemID, &s.ShopName, &s.TotalQuantity, &s.TotalCommission, &s.OrderCount, &s.LastOrderedAt, &s.IsInLibrary); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, s)

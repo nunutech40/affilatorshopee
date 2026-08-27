@@ -12,6 +12,8 @@ type CommissionEvent struct {
 	TrackingTag     string
 	Quantity        int
 	CommissionTotal int64
+	ItemName        string
+	ShopName        string
 }
 
 type SoldProduct struct {
@@ -21,6 +23,9 @@ type SoldProduct struct {
 	ProductName     *string    `json:"product_name"`
 	ShopeeLink      *string    `json:"shopee_link"`
 	ImageURL        *string    `json:"image_url"`
+	ItemName        *string    `json:"item_name"`
+	ItemID          *string    `json:"item_id"`
+	ShopName        *string    `json:"shop_name"`
 	TotalQuantity   int        `json:"total_quantity"`
 	TotalCommission int64      `json:"total_commission"`
 	OrderCount      int        `json:"order_count"`

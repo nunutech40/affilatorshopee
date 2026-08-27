@@ -19,7 +19,7 @@ Dokumen sumber:
 
 - [x] Tetapkan stack final: Go, PostgreSQL, Vue 3, Vite, Tailwind, Pinia
 - [x] Tetapkan scope MVP: produk, AI reformat, caption, hashtag, share X, post log
-- [x] Keluarkan manajemen identitas akun X dan Threads dari MVP; media lokal (download URL ke `STORAGE_PATH`) dan Chrome Extension helper tetap bagian MVP (satu kesatuan)
+- [x] Keluarkan manajemen identitas akun X dan Threads dari MVP; media lokal (download URL ke `STORAGE_PATH`) dan dua Chrome Extension terpisah tetap bagian MVP
 - [x] Tetapkan produk boleh diposting berulang kali
 - [x] Tetapkan post log tidak menyimpan identitas akun X
 - [x] Tetapkan AI reformat langsung menyimpan hasil tanpa preview

@@ -6,8 +6,13 @@ const sendBtn = document.getElementById('send')
 function setStatus(message, type = '') { statusEl.textContent = message; statusEl.className = `status ${type}` }
 function activeTab() { return chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => tab) }
 function productPageKey(url) {
-  const match = String(url || '').match(/shopee\.co\.id\/product\/\d+\/\d+/i)
-  return match ? match[0].toLowerCase() : ''
+  try {
+    const parsed = new URL(url)
+    if (!/(^|\.)shopee\.co\.id$/i.test(parsed.hostname)) return ''
+    const path = parsed.pathname.replace(/\/+$/, '')
+    const match = path.match(/\/product\/\d+\/\d+$/i) || path.match(/\/[^/]+-i\.\d+\.\d+$/i)
+    return match ? `${parsed.hostname.toLowerCase()}${path.toLowerCase()}` : ''
+  } catch { return '' }
 }
 
 Promise.all([

@@ -1,5 +1,5 @@
 (() => {
-  const scraperVersion = '1.2.6'
+  const scraperVersion = '1.2.9'
   if (window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ === scraperVersion) return
   window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ = scraperVersion
 
@@ -28,10 +28,34 @@
 
   function imageCandidates() {
     const productJson = currentProductJson()
-    const values = [productJson.image, document.querySelector('meta[property="og:image"]')?.content]
-    values.push(...networkData.flatMap((data) => findNetworkValues(data, ['image', 'images', 'image_url', 'imageUrl', 'cover'])) )
-    values.push(...[...document.images].map((image) => image.currentSrc || image.src || image.dataset.src || image.getAttribute('data-src')))
-    return unique(values.flat()).filter((url) => /^https?:\/\//i.test(url) && /shopee|seaimg|susercontent|cdn/i.test(url)).slice(0, 20)
+    const isImageURL = (value) => {
+      const url = clean(value)
+      if (!/^https?:\/\//i.test(url) || !/shopee|seaimg|susercontent|cdn/i.test(url)) return false
+      return !/(?:icon|logo|avatar|profile|sprite|favicon|badge|emoji|flag)/i.test(url)
+    }
+    const domImages = [...document.images]
+      .filter((image) => (image.naturalWidth || image.width) >= 240 && (image.naturalHeight || image.height) >= 240)
+      .map((image) => image.currentSrc || image.src || image.dataset.src || image.getAttribute('data-src'))
+      .filter(isImageURL)
+    const structuredImages = [productJson.image, document.querySelector('meta[property="og:image"]')?.content]
+      .flat(Infinity)
+      .filter(isImageURL)
+    const networkImages = networkData
+      .flatMap((data) => findNetworkValues(data, ['image', 'images', 'image_url', 'imageUrl', 'cover']))
+      .filter(isImageURL)
+    // DOM images are the rendered product gallery. Only fall back to network
+    // payloads when the gallery has not rendered enough images yet; otherwise
+    // API payloads also contain icons, avatars, and recommendation thumbnails.
+    const values = domImages.length > 0
+      ? [...structuredImages, ...domImages]
+      : [...structuredImages, ...networkImages]
+    const seen = new Set()
+    return values.filter((url) => {
+      const canonical = String(url).replace(/[?#].*$/, '')
+      if (seen.has(canonical)) return false
+      seen.add(canonical)
+      return true
+    }).slice(0, 20)
   }
 
   function findNetworkValues(value, keys, depth = 0) {
@@ -72,22 +96,28 @@
   function findText(pattern) { return clean(document.body.innerText.match(pattern)?.[0]) }
 
   function visibleProductPrice() {
-    const pricePattern = /Rp\s*[\d.]+(?:[.,]\d+)?(?:\s*[-–—]\s*Rp?\s*[\d.]+(?:[.,]\d+)?)?/i
-    const rangePattern = /Rp\s*[\d.]+(?:[.,]\d+)?\s*[-–—]\s*Rp?\s*[\d.]+(?:[.,]\d+)?/i
+    const pricePattern = /Rp\s*[\d]+(?:[.,]\d+)*(?:\s*[-–—]\s*Rp?\s*[\d]+(?:[.,]\d+)*)?/i
     const lines = pageLines()
-    const titleIndex = lines.findIndex((line) => isUsefulTitle(line) && line.length > 20)
-    const candidates = lines.slice(Math.max(0, titleIndex), titleIndex >= 0 ? undefined : lines.length)
-    return clean((candidates.find((line) => rangePattern.test(line)) || candidates.find((line) => pricePattern.test(line)) || '').match(pricePattern)?.[0])
+    // Harga PDP selalu lebih dapat dipercaya daripada field API yang kadang
+    // memakai unit mikro-rupiah. Scan seluruh teks agar tetap bekerja saat
+    // judul atau panel harga dirender oleh layout Shopee yang berbeda.
+    const match = lines.map((line) => line.match(pricePattern)).find(Boolean)
+    return clean(match?.[0] || '')
   }
 
   function normalizeShopeePrice(value) {
     const text = clean(value)
-    const match = text.match(/[\d.,]+/)
+    const match = text.match(/[\d]+(?:[.,]\d+)*/)
     if (!match) return ''
-    const numeric = Number(match[0].replace(/[.,]/g, ''))
+    const rawNumber = match[0]
+    const numeric = Number(rawNumber.replace(/[.,]/g, ''))
     if (!Number.isFinite(numeric)) return text
     // Shopee's item API commonly returns IDR in 1/100000 rupiah units.
-    if (numeric >= 10000000 && numeric % 100000 === 0) return String(Math.round(numeric / 100000))
+    if (numeric >= 10000000 && numeric % 100000 === 0) {
+      const normalized = Math.round(numeric / 100000)
+      // Guard against an already formatted/display value being scaled twice.
+      if (normalized >= 1000 && normalized <= 100000000) return String(normalized)
+    }
     return String(Math.round(numeric))
   }
 
@@ -184,13 +214,15 @@
     const specification = detailSectionText('spesifikasi produk')
     const descriptionBlock = detailSectionText('deskripsi produk') || detailSectionText('detail produk')
     const networkSpecs = networkSpecificationText()
-    const rating = api.rating || productJson.aggregateRating?.ratingValue || visibleMetric([/\b([0-5](?:[.,]\d)?)\s+(?=⭐|★)/i, /\b([0-5](?:[.,]\d)?)\s+\d+[.,]?\d*\s*[KkMm]?\s+penilaian\b/i])
+    const visibleRating = visibleMetric([/\b([0-5](?:[.,]\d)?)\s+(?=⭐|★)/i, /\b([0-5](?:[.,]\d)?)\s+\d+[.,]?\d*\s*[KkMm]?\s+penilaian\b/i])
+    const rating = visibleRating || productJson.aggregateRating?.ratingValue || api.rating
     const reviews = visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+penilaian\b/i]) || firstNetworkValue(['rating_count', 'ratingCount', 'review_count', 'reviewCount'])
-    const sold = api.sold ? `${api.sold} terjual` : (visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+terjual\b/i, /\bterjual\s*(\d+[.,]?\d*\s*[KkMm]?\+?)/i]) ? `${visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+terjual\b/i, /\bterjual\s*(\d+[.,]?\d*\s*[KkMm]?\+?)/i])} terjual` : '')
+    const visibleSold = visibleMetric([/\b(\d+[.,]?\d*\s*[KkMm]?\+?)\s+terjual\b/i, /\bterjual\s*(\d+[.,]?\d*\s*[KkMm]?\+?)/i])
+    const sold = visibleSold ? `${visibleSold} terjual` : (api.sold ? `${api.sold} terjual` : '')
     const visiblePrice = visibleProductPrice()
     const price = visiblePrice || normalizeShopeePrice(api.price || productJson.offers?.price)
     const discount = findText(/\b\d{1,2}%\b/)
-    const images = unique([...findNetworkValues(api, ['image', 'images', 'image_url', 'imageUrl', 'cover']), ...imageCandidates()]).filter((url) => /^https?:\/\//i.test(url) && /shopee|seaimg|susercontent|cdn/i.test(url)).slice(0, 20)
+    const images = imageCandidates()
     const video = videoCandidate()
     const raw = [
       'RINGKASAN PRODUK',
@@ -209,22 +241,24 @@
     return { source_category: 'scrape_shopee', source_url: location.href, shopee_link: '', raw_text: raw, image_urls: images, video_url: video, product_name: title || null }
   }
 
-  chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'AFFILIATOR_SCRAPE_PRODUCT' || message.type === 'AFFILIATOR_SCRAPE_PRODUCT_V2') {
-      const currentURL = new URL(location.href)
-      const isShopeeHost = /(^|\.)shopee\.co\.id$/i.test(currentURL.hostname)
-      const isProductPage = /\/product\/\d+\/\d+/i.test(currentURL.pathname)
-      if (!isShopeeHost || !isProductPage) {
-        sendResponse({ ok: false, error: `Buka halaman detail produk Shopee terlebih dahulu. URL aktif: ${currentURL.href}` })
-        return
-      }
-      // Shopee sering merender spesifikasi/deskripsi setelah section masuk viewport.
-      window.scrollTo(0, document.documentElement.scrollHeight)
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      window.scrollTo(0, 0)
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      const product = scrape()
-      chrome.storage.local.set({ lastShopeeProduct: product }, () => sendResponse({ ok: true, product }))
+      ;(async () => {
+        const currentURL = new URL(location.href)
+        const isShopeeHost = /(^|\.)shopee\.co\.id$/i.test(currentURL.hostname)
+        const isProductPage = /\/product\/\d+\/\d+(?:\/|$)/i.test(currentURL.pathname) || /\/[^/]+-i\.\d+\.\d+(?:\/|$)/i.test(currentURL.pathname)
+        if (!isShopeeHost || !isProductPage) {
+          sendResponse({ ok: false, error: `Buka halaman detail produk Shopee terlebih dahulu. URL aktif: ${currentURL.href}` })
+          return
+        }
+        // Shopee sering merender spesifikasi/deskripsi setelah section masuk viewport.
+        window.scrollTo(0, document.documentElement.scrollHeight)
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        window.scrollTo(0, 0)
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        const product = scrape()
+        chrome.storage.local.set({ lastShopeeProduct: product }, () => sendResponse({ ok: true, product }))
+      })().catch((error) => sendResponse({ ok: false, error: error.message || 'Gagal membaca halaman Shopee' }))
       return true
     }
     if (message.type === 'AFFILIATOR_IMPORT_SHOPEE_PRODUCT') {

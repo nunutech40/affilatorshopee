@@ -58,6 +58,7 @@ func main() {
 	postLogService := service.NewPostLogService(postLogRepo)
 	aiService := service.NewAIService(cfg.AIAPIKey, cfg.OpenRouterModel, cfg.AIBaseURL)
 	aiService.ConfigureProviders(cfg.NineRouterAPIKey, cfg.NineRouterBaseURL, cfg.OpenCodeAPIKey)
+	aiService.ConfigureCodexBridge(cfg.CodexBridgeURL, cfg.CodexBridgeToken)
 	localStorage, err := storage.NewLocalStorage(cfg.StoragePath)
 	if err != nil {
 		log.Fatal(err)

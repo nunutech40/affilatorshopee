@@ -26,11 +26,32 @@ const saveNotice = ref('')
 const previewFile = ref(null)
 const selectedMedia = ref([])
 
+function injectAffiliateLink(text, link) {
+  const promo = String(text || '')
+  const affiliateLink = String(link || '').trim()
+  if (!affiliateLink) return promo
+
+  const shopeeURLPattern = /https?:\/\/(?:www\.)?(?:s\.shopee\.co\.id|shopee\.co\.id)\/[^\s)\]]+/gi
+  if (shopeeURLPattern.test(promo)) {
+    return promo.replace(shopeeURLPattern, affiliateLink)
+  }
+
+  const lines = promo.split(/\r?\n/)
+  const ctaIndex = lines.findIndex((line) => {
+    const normalized = line.trim().toLowerCase()
+    return normalized.startsWith('👇') || normalized.includes('cek di sini')
+  })
+  if (ctaIndex >= 0) {
+    lines.splice(ctaIndex + 1, 0, affiliateLink)
+  } else {
+    lines.push('👇 Cek di sini', affiliateLink)
+  }
+  return lines.join('\n')
+}
+
 function getPromo(p) {
   if (!p) return ''
-  const text = p.reformatted_text || ''
-  if (!p.shopee_link) return text
-  return text.replace(/https?:\/\/(?:www\.)?(?:s\.shopee\.co\.id|shopee\.co\.id)\/[^\s)\]]+/gi, p.shopee_link)
+  return injectAffiliateLink(p.reformatted_text || '', p.shopee_link || '')
 }
 
 watch(product, (p) => { if (p) { editText.value = getPromo(p); selectedContentModel.value = p.content_model || 'cheap'; shopeeLink.value = p.shopee_link || '' } })
@@ -64,8 +85,16 @@ async function updateContentModel() {
 async function saveShopeeLink() {
   savingLink.value = true
   error.value = ''
+  saveNotice.value = ''
   try {
-    product.value = await products.updateProduct(route.params.id, { shopee_link: shopeeLink.value.trim() })
+    const link = shopeeLink.value.trim()
+    const promo = injectAffiliateLink(editText.value || product.value?.reformatted_text || '', link)
+    const patch = { shopee_link: link }
+    if (promo.trim()) patch.reformatted_text = promo
+    product.value = await products.updateProduct(route.params.id, patch)
+    shopeeLink.value = product.value.shopee_link || link
+    editText.value = getPromo(product.value)
+    saveNotice.value = 'Link affiliate berhasil disimpan dan dimasukkan ke CTA.'
   } catch (e) { error.value = e.message } finally { savingLink.value = false }
 }
 

@@ -5,6 +5,8 @@ web/dist/
 *.log
 /api
 frontend/dist/
+tools/codex-bridge/affiliatorshopee-codex-bridge
+*.DS_Store
 backend/dist/
 frontend/node_modules/
 frontend/dist/

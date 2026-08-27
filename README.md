@@ -4,7 +4,7 @@ Web app pribadi untuk menyimpan produk affiliate Shopee, merapikan data dengan A
 
 ## Dokumen
 
-- [Dokumentasi](docs/) - seluruh PRD, TRD, TODO, handoff, dan prompt AI
+- [Dokumentasi](docs/) - seluruh PRD, TRD, TODO, handoff, prompt AI, dan Codex bridge
 
 ## Alur utama
 
@@ -38,8 +38,22 @@ Core MVP sudah diimplementasikan dan dideploy lokal via Docker/OrbStack. Jika re
 
 1. Load unpacked folder `extension/shopee-scraper/` di `chrome://extensions`.
 2. Buka halaman detail produk Shopee dengan pola `/product/.../...`.
-3. Klik ikon extension → **Ambil data halaman ini** → **Kirim ke web app**.
+3. Klik ikon extension → **Ambil data halaman ini** → **Insert ke web app**.
 4. Pastikan tab `http://localhost:8080/products/new` sudah terbuka. Form akan terisi raw text dan URL media, tanpa link affiliate.
-5. Klik **Kirim ke web app**, lalu simpan produk. AI menghasilkan caption dan tracking tag; jika gagal, produk tetap raw. Isi/ganti link affiliate dari detail.
+5. Klik **Insert ke web app**, lalu simpan produk. AI menghasilkan caption dan tracking tag; jika gagal, produk tetap raw. Isi/ganti link affiliate dari detail.
 
-Scraping membaca DOM, metadata, dan response network halaman yang sedang dibuka, tanpa membaca cookie atau membypass login. Extension scraper saat ini versi `1.2.0` dan dipisah dari extension X helper.
+Scraping membaca DOM, metadata, dan response network halaman yang sedang dibuka, tanpa membaca cookie atau membypass login. Extension scraper saat ini versi `1.2.9`, memprioritaskan gambar galeri produk, serta memfilter icon/logo/avatar dan URL duplikat. Extension scraper dipisah dari extension X helper dan harus di-reload dari `chrome://extensions` setelah update.
+
+## Codex CLI lokal
+
+Model `codex/*` dapat dipilih dari Settings melalui bridge Codex CLI di host.
+Lihat [docs/CODEX-CLI-BRIDGE.md](docs/CODEX-CLI-BRIDGE.md).
+
+Bridge juga menyediakan endpoint OpenAI-compatible `POST /v1/chat/completions`
+di `http://host.docker.internal:8787/v1`. Hermes mengakses endpoint ini secara
+langsung dengan `CODEX_BRIDGE_TOKEN`, lalu bridge menjalankan Codex CLI memakai
+session login Codex lokal. Jalur ini tidak melewati OpenRouter atau 9router dan
+bridge harus tetap aktif selama request berjalan. Pada macOS, double-click
+`tools/codex-bridge/start-codex-bridge.command`; jendela Terminal yang terbuka
+adalah proses listener dan dapat ditutup untuk menghentikannya. Gunakan
+`CGO_ENABLED=0` bila diperlukan.

@@ -30,15 +30,17 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 ## Scope implementasi saat ini
 
 - CRUD produk curated
-- AI reformat maksimal 10 produk per request (OpenRouter, 9router, atau OpenCode; default `stealth/ox-alpha`)
+- AI reformat maksimal 10 produk per request (OpenRouter, 9router, OpenCode, atau Codex CLI bridge; default `stealth/ox-alpha`)
 - Content model Trending, Branded, dan Murah
 - Reformat utama dan varian caption terpisah
-- Share ke X via Web Intent dan clipboard + Chrome Extension helper auto-paste (Manifest V3, satu kesatuan)
+- Share ke X via Web Intent dan Chrome Extension helper auto-paste (Manifest V3)
+- Scrape produk Shopee memakai extension terpisah; hasil scrape di-insert ke web app tanpa link affiliate
 - Download image/video URL ke local storage (banyak URL + tombol `+ Add image URL`, termasuk `.mp4`)
 - Edit link affiliate Shopee dari product detail
 - Tambah dan hapus media lokal dari product detail
 - Riwayat posting sederhana tanpa menyimpan identitas akun X
 - Lihat metadata media dan download ZIP
+- Media detail tampil sebagai grid preview; bisa dipilih massal untuk dihapus. Scraper memfilter icon/logo/avatar kecil dan URL duplikat.
 
 Threads adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa depan.
 
@@ -47,5 +49,7 @@ Threads adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa d
 - Backend: Go
 - Database: PostgreSQL
 - Frontend: Vue 3 + Vite + Tailwind CSS + Pinia
-- AI: OpenRouter + 9router + OpenCode (provider/model dipilih dari Settings)
+- AI: OpenRouter + 9router + OpenCode + Codex CLI bridge (provider/model dipilih dari Settings)
+- Codex CLI memakai session login Codex di host melalui `tools/codex-bridge/`; lihat [CODEX-CLI-BRIDGE.md](CODEX-CLI-BRIDGE.md)
+- Codex bridge menyediakan `POST /v1/chat/completions` OpenAI-compatible dan menghubungkan Hermes langsung ke Codex CLI lokal; bridge tidak melewati OpenRouter/9router dan harus tetap aktif.
 - Deployment: Docker Compose

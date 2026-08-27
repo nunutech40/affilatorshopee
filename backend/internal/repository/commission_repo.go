@@ -33,6 +33,31 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 		if event.EventID == "" {
 			continue
 		}
+		// The first importer used order_id as the event ID. Newer imports use
+		// order_id|item_id|model_id so multiple items in one order remain
+		// distinct. Reconcile the legacy row before upserting; otherwise the
+		// same commission is counted twice when an old CSV is imported again.
+		if event.OrderID != "" && event.ItemID != "" && event.ModelID != "" {
+			canonicalID := event.OrderID + "|" + event.ItemID + "|" + event.ModelID
+			if _, err := tx.ExecContext(ctx, `
+				DELETE FROM commission_events legacy
+				WHERE legacy.order_id=$1 AND legacy.item_id=$2 AND legacy.model_id=$3
+				  AND legacy.event_id<>$4
+				  AND EXISTS (SELECT 1 FROM commission_events canonical WHERE canonical.event_id=$4)`,
+				event.OrderID, event.ItemID, event.ModelID, canonicalID); err != nil {
+				return result, err
+			}
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE commission_events
+				SET event_id=$4
+				WHERE order_id=$1 AND item_id=$2 AND model_id=$3
+				  AND event_id<>$4
+				  AND NOT EXISTS (SELECT 1 FROM commission_events WHERE event_id=$4)`,
+				event.OrderID, event.ItemID, event.ModelID, canonicalID); err != nil {
+				return result, err
+			}
+			event.EventID = canonicalID
+		}
 		if normalized == "" {
 			// fallback for Shopee orders without tag - use item_id or order_id to keep unique
 			if event.ItemID != "" {

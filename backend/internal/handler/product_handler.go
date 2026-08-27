@@ -193,6 +193,9 @@ func applyProductPatch(product *model.Product, patch productPatch) {
 	if patch.TrackingTag != nil {
 		product.TrackingTag = *patch.TrackingTag
 	}
+	if patch.ShopeeLink != nil {
+		product.ShopeeLink = *patch.ShopeeLink
+	}
 	if patch.ReformattedText != nil {
 		product.ReformattedText = patch.ReformattedText
 	}

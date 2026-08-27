@@ -26,6 +26,8 @@ type AIService struct {
 	nineRouterAPIKey   string
 	nineRouterEndpoint string
 	openCodeAPIKey     string
+	codexBridgeURL     string
+	codexBridgeToken   string
 	modelsMu           sync.Mutex
 	modelsCache        []ModelInfo
 	modelsAt           time.Time
@@ -35,6 +37,11 @@ func (s *AIService) ConfigureProviders(nineRouterKey, nineRouterBaseURL, openCod
 	s.nineRouterAPIKey = strings.TrimSpace(nineRouterKey)
 	s.nineRouterEndpoint = strings.TrimRight(strings.TrimSpace(nineRouterBaseURL), "/") + "/chat/completions"
 	s.openCodeAPIKey = strings.TrimSpace(openCodeKey)
+}
+
+func (s *AIService) ConfigureCodexBridge(url, token string) {
+	s.codexBridgeURL = strings.TrimRight(strings.TrimSpace(url), "/")
+	s.codexBridgeToken = strings.TrimSpace(token)
 }
 
 func NewAIService(apiKey, model string, baseURL ...string) *AIService {
@@ -268,6 +275,7 @@ MODE: ` + variantRule + `
 	cleanModel := strings.TrimPrefix(selectedModel, "opencode/")
 	cleanModel = strings.TrimPrefix(cleanModel, "9router/")
 	cleanModel = strings.TrimPrefix(cleanModel, "openrouter/")
+	cleanModel = strings.TrimPrefix(cleanModel, "codex/")
 	endpoint, apiKey := s.endpoint, s.apiKey
 	if strings.HasPrefix(selectedModel, "opencode/") {
 		endpoint = "https://opencode.ai/zen/v1/chat/completions"
@@ -278,6 +286,12 @@ MODE: ` + variantRule + `
 	}
 	if isCodexModel(selectedModel) {
 		endpoint = strings.TrimSuffix(endpoint, "/chat/completions") + "/responses"
+	}
+	if isLocalCodexModel(selectedModel) {
+		if strings.TrimSpace(s.codexBridgeURL) == "" {
+			return nil, fmt.Errorf("Codex CLI bridge belum dikonfigurasi")
+		}
+		return s.reformatViaCodexBridge(ctx, cleanModel, systemText, strings.Join(input, "\n\n"), products)
 	}
 	if strings.TrimSpace(apiKey) == "" {
 		return nil, fmt.Errorf("API key provider untuk model %s belum dikonfigurasi", selectedModel)
@@ -412,6 +426,77 @@ func parseProviderContent(body []byte) (string, error) {
 	return parseProviderJSON(body)
 }
 
+// Codex CLI emits JSONL events; the final agent_message is the generated text.
+func parseCodexCLIContent(body []byte) (string, error) {
+	var final string
+	for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
+		var event struct {
+			Type string `json:"type"`
+			Item struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"item"`
+		}
+		if json.Unmarshal([]byte(line), &event) == nil && event.Type == "item.completed" && event.Item.Type == "agent_message" && strings.TrimSpace(event.Item.Text) != "" {
+			final = event.Item.Text
+		}
+	}
+	if strings.TrimSpace(final) == "" {
+		return "", fmt.Errorf("Codex CLI response tidak memiliki agent message")
+	}
+	return final, nil
+}
+
+type codexBridgeRequest struct {
+	Model        string `json:"model"`
+	Instructions string `json:"instructions"`
+	Input        string `json:"input"`
+}
+
+func (s *AIService) reformatViaCodexBridge(ctx context.Context, model, instructions, input string, products []model.Product) ([]AIReformatResult, error) {
+	body, err := json.Marshal(codexBridgeRequest{Model: model, Instructions: instructions, Input: input})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.codexBridgeURL+"/v1/execute", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if s.codexBridgeToken != "" {
+		req.Header.Set("Authorization", "Bearer "+s.codexBridgeToken)
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Codex CLI bridge tidak dapat dihubungi: %w", err)
+	}
+	defer resp.Body.Close()
+	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return nil, fmt.Errorf("baca respons Codex CLI bridge: %w", err)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("Codex CLI bridge gagal (status %d): %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))
+	}
+	content, err := parseCodexCLIContent(responseBody)
+	if err != nil {
+		return nil, err
+	}
+	content = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(content, "```json"), "```"), "```"))
+	var results []AIReformatResult
+	if err := json.Unmarshal([]byte(content), &results); err != nil {
+		if len(products) == 1 {
+			results = []AIReformatResult{{ProductID: products[0].ID, PromoText: content}}
+		} else {
+			return nil, fmt.Errorf("parse Codex CLI JSON: %w", err)
+		}
+	}
+	if err := validateAIResults(products, results); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
 func parseProviderJSON(body []byte) (string, error) {
 	var raw any
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -479,6 +564,10 @@ func isCodexModel(model string) bool {
 	return strings.Contains(strings.ToLower(model), "oai-codex/")
 }
 
+func isLocalCodexModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "codex/")
+}
+
 // ListAvailableModels reads each provider's OpenAI-compatible /models endpoint.
 // The static registry remains the fallback when a provider is unavailable.
 func (s *AIService) ListAvailableModels(ctx context.Context) []ModelInfo {
@@ -494,6 +583,11 @@ func (s *AIService) ListAvailableModels(ctx context.Context) []ModelInfo {
 	models = append(models, s.fetchModels(ctx, strings.TrimSuffix(s.endpoint, "/chat/completions"), s.apiKey, "openrouter", "openrouter/")...)
 	models = append(models, s.fetchModels(ctx, "https://opencode.ai/zen/v1", s.openCodeAPIKey, "opencode", "opencode/")...)
 	models = append(models, s.fetchModels(ctx, strings.TrimSuffix(s.nineRouterEndpoint, "/chat/completions"), s.nineRouterAPIKey, "9router", "9router/")...)
+	for _, model := range ListModels() {
+		if model.Provider == "codex" {
+			models = append(models, model)
+		}
+	}
 	if len(models) == 0 {
 		return ListModels()
 	}

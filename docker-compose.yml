@@ -31,6 +31,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      CODEX_BRIDGE_URL: ${CODEX_BRIDGE_URL:-http://host.docker.internal:8787}
+      CODEX_BRIDGE_TOKEN: ${CODEX_BRIDGE_TOKEN:-}
       ENV: ${ENV:-development}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
     ports:

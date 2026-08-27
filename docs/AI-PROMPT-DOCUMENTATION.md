@@ -267,7 +267,8 @@ Fallback value tidak membaca baris pertama raw (judul/brand), menyaring token AL
 - Maksimal 10 produk per request.
 - Satu request menghasilkan satu JSON array.
 - Satu produk menghasilkan satu objek `product_id` + `promo_text`.
-- Provider runtime yang didukung: OpenRouter, 9router, dan OpenCode.
+- Provider runtime yang didukung: OpenRouter, 9router, OpenCode, dan Codex CLI bridge lokal.
 - Model default: `stealth/ox-alpha` melalui OpenRouter, tetapi pilihan user disimpan di `localStorage.ai_model`.
+- Model Codex memakai `codex/gpt-5.6-luna` dari Settings dan dijalankan melalui Codex CLI bridge; auth tidak dikirim ke frontend atau container.
 - `/api/ai/models` menggabungkan discovery `/models` ketiga provider dan memakai registry statis sebagai fallback.
 - Model Codex/Responses dikirim tanpa parameter `temperature`.

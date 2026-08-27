@@ -29,7 +29,9 @@ OPENROUTER_MODEL=stealth/ox-alpha
 OPENROUTER_API_KEY=<secret lokal, jangan ditulis di sini>
 ```
 
-Config backend mendukung tiga provider terpisah: model `openrouter/*` dikirim ke OpenRouter, `9router/*` ke base URL 9router, dan `opencode/*` ke OpenCode Zen dengan auth OpenCode. Daftar model di Settings diambil dari endpoint `/models` masing-masing provider dan memakai registry statis sebagai fallback. Model default lama tetap `stealth/ox-alpha`, tetapi pilihan tersimpan di browser.
+Config backend mendukung empat provider terpisah: model `openrouter/*` dikirim ke OpenRouter, `9router/*` ke base URL 9router, `opencode/*` ke OpenCode Zen dengan auth OpenCode, dan `codex/*` ke Codex CLI bridge di host. Daftar model di Settings diambil dari endpoint `/models` masing-masing provider dan memakai registry statis sebagai fallback. Model default lama tetap `stealth/ox-alpha`, tetapi pilihan tersimpan di browser.
+
+Codex bridge lokal sudah dites dari dalam container pada `http://host.docker.internal:8787`. Model `codex/gpt-5.6-luna` diteruskan sebagai `gpt-5.6-luna` ke Codex CLI. Lihat [CODEX-CLI-BRIDGE.md](CODEX-CLI-BRIDGE.md).
 
 ## Struktur fitur utama
 
@@ -68,7 +70,9 @@ Folder: `extension/x-helper/` dan `extension/shopee-scraper/`.
 
 - Load masing-masing folder secara terpisah melalui `chrome://extensions`.
 - `x-helper` membaca payload share dari halaman X dan membantu paste caption/media. Versi extension saat ini `1.8.3`.
-- `shopee-scraper` membaca DOM, metadata, dan response network halaman detail Shopee yang sedang terbuka, mengambil raw text + media, lalu mengirimkannya ke tab `/products/new`. Versi extension saat ini `1.2.0`.
+- `shopee-scraper` membaca DOM, metadata, dan response network halaman detail Shopee yang sedang terbuka, mengambil raw text + media produk, lalu meng-insertkannya ke web app. Versi extension saat ini `1.2.9`; icon/logo/avatar kecil dan URL duplikat difilter.
+- `x-helper` dan `shopee-scraper` adalah dua extension unpacked terpisah. Klik Reload di `chrome://extensions` setelah mengganti source extension.
+- Untuk bridge Codex di macOS, double-click `tools/codex-bridge/start-codex-bridge.command`. Script membaca token dari `.env`, build binary jika perlu, dan menjalankan listener pada port `8787`; tutup Terminal atau tekan `Ctrl+C` untuk menghentikannya.
 - Posting tetap harus dikonfirmasi manual oleh user di composer X.
 - Jangan mengubah algoritma attach media tanpa reproduksi dan verifikasi di composer X; X dapat memproses upload media secara asynchronous.
 
@@ -99,7 +103,7 @@ Vue dashboard/detail
   → POST /api/ai/reformat
   → ProductService.Reformat (maksimal 10 product ID)
   → AIService.Reformat
-  → provider terpilih (OpenRouter / 9router / OpenCode)
+  → provider terpilih (OpenRouter / 9router / OpenCode / Codex CLI bridge)
   → parse JSON array
   → normalizePromoLayout
   → validateAIResults

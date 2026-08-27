@@ -4,7 +4,7 @@ project: AffiliatorShopee
 status: aligned-with-prd
 ---
 
-> **Implementation update 2026-08-27:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI mendukung OpenRouter, 9router, dan OpenCode; model ditemukan dinamis dengan fallback registry, request maksimal 10 produk, content model aktif `trending`, `branded`, dan `cheap`, serta media di-download ke local storage dan dikirim melalui extension. Scraper Shopee dan helper X dipisah menjadi dua extension MV3. Referensi handoff faktual: `PROJECT-HANDOFF.md`.
+> **Implementation update 2026-08-27:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI mendukung OpenRouter, 9router, OpenCode, dan Codex CLI bridge lokal; model ditemukan dinamis dengan fallback registry, request maksimal 10 produk, content model aktif `trending`, `branded`, dan `cheap`, serta media di-download ke local storage dan dikirim melalui extension. Scraper Shopee dan helper X dipisah menjadi dua extension MV3. Referensi handoff faktual: `PROJECT-HANDOFF.md` dan `CODEX-CLI-BRIDGE.md`.
 
 # Technical Requirements Document - AffiliatorShopee
 
@@ -18,10 +18,10 @@ status: aligned-with-prd
 | HTTP Client | Fetch API |
 | Routing | Vue Router |
 | State | Pinia |
-| AI | OpenRouter, 9router, OpenCode (OpenAI-compatible) |
+| AI | OpenRouter, 9router, OpenCode (OpenAI-compatible), Codex CLI bridge |
 | Deployment | Docker Compose di Orbstack |
 
-MVP mencakup web app pribadi + Chrome Extension helper sebagai satu kesatuan dan alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator atau Threads pada MVP.
+MVP mencakup web app pribadi + dua Chrome Extension terpisah (X helper dan Shopee scraper) serta alur posting manual ke X. Web app tidak login, memilih, atau menyimpan identitas akun X. Media dari URL gambar/video di-download ke local storage (`STORAGE_PATH`) saat produk disimpan. Tidak ada autentikasi operator atau Threads pada MVP.
 
 ## 2. Arsitektur Sistem
 
@@ -356,7 +356,7 @@ POST /api/ai/reformat
 Content-Type: application/json
 ```
 
-`GET /api/ai/models` menggabungkan model dinamis dari OpenRouter dan 9router dengan model statis/fallback dari OpenCode dan registry aplikasi. Setiap pilihan membawa identitas provider agar model bernama sama tidak tertukar. Auth runtime hanya dibaca backend dari environment atau mount auth OpenCode dan tidak boleh ditulis ke source code.
+`GET /api/ai/models` menggabungkan model dinamis dari OpenRouter, 9router, dan OpenCode dengan model statis/fallback dari registry aplikasi, termasuk model Codex CLI. Setiap pilihan membawa identitas provider agar model bernama sama tidak tertukar. Auth runtime hanya dibaca backend dari environment, mount auth OpenCode, atau session Codex CLI host melalui bridge; tidak boleh ditulis ke source code.
 
 Request reformat:
 
@@ -647,9 +647,10 @@ Tidak ada placeholder `proof` terpisah. Proof dibentuk hanya dari rating, jumlah
 
 ### 7.1 Provider
 
-- Provider dipilih dari model yang disimpan di Settings: OpenRouter (`OPENROUTER_BASE_URL`), 9router (`NINEROUTER_BASE_URL`), atau OpenCode (`OPENCODE_BASE_URL`/endpoint Zen).
+- Provider dipilih dari model yang disimpan di Settings: OpenRouter (`OPENROUTER_BASE_URL`), 9router (`NINEROUTER_BASE_URL`), OpenCode (endpoint Zen), atau Codex CLI bridge (`CODEX_BRIDGE_URL`).
 - Model default dan fallback diambil dari environment/registry; UI tidak mengirim API key.
 - API key hanya dibaca backend dari environment atau file auth OpenCode yang di-mount read-only.
+- Codex bridge memakai session login Codex CLI di host dan meneruskan model tanpa prefix `codex/`.
 - HTTP client memiliki timeout dan tidak mengirim API key ke frontend.
 - `raw_text` diperlakukan sebagai untrusted content, dikirim di dalam delimiter prompt, dan tidak ditulis ke log aplikasi.
 - Kirim hanya data yang diperlukan untuk reformat; jangan mengirim secret atau data pribadi ke provider AI.

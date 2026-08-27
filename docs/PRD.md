@@ -47,7 +47,7 @@ Posting produk affiliate secara manual memakan waktu karena:
 Web app dengan fitur:
 
 1. Simpan raw text dari paste, import X, atau scraper Shopee
-2. Saat produk raw disimpan, AI mencoba membuat satu promo text berdasarkan content model
+2. Saat produk raw disimpan, AI mencoba membuat satu promo text berdasarkan content model; provider dapat dipilih dari OpenRouter, 9router, OpenCode, atau Codex CLI bridge lokal
 3. Generate variasi caption terpisah dari promo yang sudah ada
 4. Pilih hashtag berdasarkan cluster
 5. Tombol share ke X yang membuka composer dengan caption dan media lokal
@@ -156,6 +156,7 @@ flowchart TD
 - Hasil AI langsung disimpan ke produk
 - Jika gagal, raw text tetap tersimpan dan error ditampilkan; reset menghapus promo dan mengaktifkan reformat ulang
 - Edit manual tetap tersedia setelah reformat
+- Codex CLI tersedia sebagai provider lokal melalui bridge host; terminal bridge harus aktif selama request.
 
 ### 9.3 Caption Generator
 
@@ -282,7 +283,7 @@ flowchart TD
 - AI menghasilkan promo text dari raw text; reformat varian caption adalah operasi terpisah
 - Bulk reformat AI maksimal 10 produk per request
 - Web app tidak login, memilih, atau menyimpan identitas akun X
-- Chrome Extension Manifest V3 (helper auto-paste ke composer X/Threads) adalah satu kesatuan dengan web app
+- Chrome Extension Manifest V3 untuk helper X dan scraper Shopee dikelola sebagai dua extension terpisah yang mendukung web app
 - Threads bukan bagian MVP awal
 
 ## 15. Acceptance Criteria

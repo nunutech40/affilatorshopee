@@ -16,6 +16,8 @@ type Config struct {
 	NineRouterAPIKey   string
 	NineRouterBaseURL  string
 	OpenCodeAPIKey     string
+	CodexBridgeURL     string
+	CodexBridgeToken   string
 	OpenRouterModel    string
 	AIBaseURL          string
 	Env                string
@@ -49,6 +51,8 @@ func Load() (*Config, error) {
 		NineRouterAPIKey:  strings.TrimSpace(os.Getenv("NINEROUTER_API_KEY")),
 		NineRouterBaseURL: strings.TrimRight(getenv("NINEROUTER_BASE_URL", "https://9router.103-59-94-121.nip.io/v1"), "/"),
 		OpenCodeAPIKey:    openCodeKey,
+		CodexBridgeURL:    strings.TrimRight(strings.TrimSpace(os.Getenv("CODEX_BRIDGE_URL")), "/"),
+		CodexBridgeToken:  strings.TrimSpace(os.Getenv("CODEX_BRIDGE_TOKEN")),
 		OpenRouterModel:   model,
 		AIBaseURL:         strings.TrimRight(firstNonEmptyEnv("OPENROUTER_BASE_URL", "OPENAI_BASE_URL"), "/"),
 		Env:               getenv("ENV", "development"),

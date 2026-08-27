@@ -11,6 +11,8 @@ type ModelInfo struct {
 
 func ListModels() []ModelInfo {
 	return []ModelInfo{
+		{ID: "codex/gpt-5.6-luna", Provider: "codex", Name: "GPT-5.6 Luna (Codex CLI)", Free: false, Context: 400000, Note: "Local Codex CLI bridge"},
+		{ID: "codex/gpt-5.6-sol", Provider: "codex", Name: "GPT-5.6 Sol (Codex CLI)", Free: false, Context: 400000, Note: "Local Codex CLI bridge"},
 		{ID: "stealth/ox-alpha", Provider: "openrouter", Name: "Ox Alpha (OpenRouter)", Free: false, Context: 200000, Note: "OpenRouter"},
 		{ID: "openrouter/minimax/minimax-m3:free", Provider: "openrouter", Name: "MiniMax M3 Free", Free: true, Context: 196608, Note: "OpenRouter"},
 		{ID: "opencode/muse-spark-1.2-contributor-free", Provider: "opencode", Name: "Muse Spark 1.2 Contributor Free", Free: true, Context: 1048576, Note: "OpenCode"},

@@ -13,8 +13,8 @@ const filteredModels = computed(() => {
   if (!query) return models.value
   return models.value.filter(model => `${model.name} ${model.id} ${model.provider}`.toLowerCase().includes(query))
 })
-const providers = ['openrouter', '9router', 'opencode']
-const providerLabel = (provider) => provider === '9router' ? '9router' : provider === 'openrouter' ? 'OpenRouter' : 'OpenCode'
+const providers = ['openrouter', '9router', 'opencode', 'codex']
+const providerLabel = (provider) => provider === '9router' ? '9router' : provider === 'openrouter' ? 'OpenRouter' : provider === 'opencode' ? 'OpenCode' : 'Codex CLI (lokal)'
 
 onMounted(async () => {
   try {

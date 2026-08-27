@@ -19,12 +19,13 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 type ProductListFilter struct {
-	Cluster      string
-	ContentModel string
-	Status       string
-	Search       string
-	Page         int
-	Limit        int
+	Cluster        string
+	ContentModel   string
+	SourceCategory string
+	Status         string
+	Search         string
+	Page           int
+	Limit          int
 }
 
 func (r *ProductRepository) Create(ctx context.Context, product *model.Product) error {
@@ -77,6 +78,11 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 	if filter.ContentModel != "" {
 		where = append(where, fmt.Sprintf("p.content_model = $%d", argPos))
 		args = append(args, filter.ContentModel)
+		argPos++
+	}
+	if filter.SourceCategory != "" {
+		where = append(where, fmt.Sprintf("p.source_category = $%d", argPos))
+		args = append(args, filter.SourceCategory)
 		argPos++
 	}
 	if filter.Status != "" {

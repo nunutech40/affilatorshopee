@@ -26,7 +26,7 @@ export const useProductStore = defineStore('products', {
     limit: 20,
     loading: false,
     error: '',
-    filters: { search: '', status: '', content_model: '', cluster: '' },
+    filters: { search: '', status: '', content_model: '', source_category: '', cluster: '' },
   }),
   actions: {
     async fetchProducts() {

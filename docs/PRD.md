@@ -346,7 +346,10 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Scheduling post
 - Integrasi lebih dalam dengan X API
 - Model konten Curated Branded
-- Integrasi Threads
+- Share ke Threads dengan flow dan extension yang terpisah dari X
+- Riset posting X yang populer, dikelompokkan berdasarkan niche, lalu reformat dengan AI khusus X
+- Riset konten Facebook yang populer, dikelompokkan berdasarkan niche, lalu reformat dengan AI khusus Facebook
+- Share atau bantu posting konten terkurasi ke Facebook melalui flow dan extension khusus Facebook
 - Opsi dijual sebagai SaaS
 - Support platform lain: TikTok, Instagram, Facebook
 

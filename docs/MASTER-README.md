@@ -42,7 +42,7 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Lihat metadata media dan download ZIP
 - Media detail tampil sebagai grid preview; bisa dipilih massal untuk dihapus. Scraper memfilter icon/logo/avatar kecil dan URL duplikat.
 
-Threads adalah roadmap lanjutan. S3/CDN adalah pengganti local storage di masa depan.
+Threads, riset konten populer per niche untuk X/Facebook, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Implementasinya harus dipisahkan per platform agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
 
 ## Tech Stack
 

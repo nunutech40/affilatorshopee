@@ -151,7 +151,12 @@ Dokumen sumber:
 
 ## Phase 8: Roadmap Setelah MVP
 
-- [ ] Integrasi Threads
+- [ ] Share ke Threads melalui flow dan extension khusus Threads
+- [ ] Riset posting X yang populer berdasarkan niche, simpan dan kelompokkan hasilnya per niche
+- [ ] Reformat hasil riset X dengan AI memakai prompt/aturan khusus kanal X
+- [ ] Riset konten Facebook yang populer berdasarkan niche, simpan dan kelompokkan hasilnya per niche
+- [ ] Reformat hasil riset Facebook dengan AI memakai prompt/aturan khusus Facebook
+- [ ] Share atau bantu posting konten terkurasi ke Facebook melalui flow/extension Facebook
 - [ ] S3/CDN untuk media (pengganti local storage)
 - [ ] Scheduling dan analytics
 - [ ] Auth dan multi-user
@@ -161,7 +166,7 @@ Dokumen sumber:
 ## Catatan untuk AI Coder
 
 - Gunakan `PRD.md` sebagai source of truth produk dan `TRD.md` sebagai source of truth teknis.
-- Jangan memperluas ke Threads atau auto-posting; dua extension MV3 yang ada (`x-helper` dan `shopee-scraper`) sudah menjadi bagian MVP.
+- Jangan mencampur implementasi roadmap Threads/Facebook dengan flow X MVP; kanal, riset niche, prompt AI, dan extension harus dipisahkan per platform.
 - Data mentah harus selalu dipertahankan.
 - AI boleh memperbaiki data, tetapi tidak boleh mengarang proof, harga, rating, atau urgency.
 - Produk tidak berubah menjadi status `posted`; posting dicatat sebagai `post_logs` dan boleh berulang.

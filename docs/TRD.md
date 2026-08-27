@@ -878,7 +878,10 @@ Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration haru
 
 ## 16. Roadmap Setelah MVP
 
-- Integrasi Threads.
+- Integrasi Threads melalui adapter, payload, composer, dan extension yang terpisah dari X.
+- Riset posting X populer per niche: collector, penyimpanan sumber, pengelompokan niche, dan pipeline reformat AI khusus X.
+- Riset konten Facebook populer per niche: collector, penyimpanan sumber, pengelompokan niche, dan pipeline reformat AI khusus Facebook.
+- Share atau bantu posting konten Facebook melalui adapter dan extension Facebook; jangan memakai parser/payload X secara langsung.
 - S3/CDN untuk media (menggantikan local storage).
 - Scheduling dan analytics.
 - Auth, multi-user, dan admin panel.

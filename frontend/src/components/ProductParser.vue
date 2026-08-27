@@ -10,6 +10,7 @@ const productPageURL = ref('')
 const imageURLs = ref([''])
 const videoURL = ref('')
 const contentModel = ref('')
+const trackingTag = ref('')
 const sourceCategory = ref('raw_text')
 const productName = ref('')
 const notes = ref('')
@@ -54,6 +55,7 @@ function submit() {
     raw_text: rawText.value,
     product_name: productName.value.trim() || null,
     shopee_link: shopeeLink.value.trim(),
+    tracking_tag: trackingTag.value.trim() || null,
     image_url: images[0] || null,
     image_urls: images,
     video_url: videoURL.value.trim() || null,
@@ -101,7 +103,7 @@ async function importFromX() {
     </div>
     <div class="form-grid"><div class="field"><label>Link affiliate Shopee (opsional, bisa diganti di detail)</label><input v-model="shopeeLink" :disabled="isXMode" class="input" :class="{ disabled: isXMode }" placeholder="https://s.shopee.co.id/..." /></div><div class="field"><label>Video URL (optional)</label><input v-model="videoURL" :disabled="isXMode" class="input" :class="{ disabled: isXMode }" placeholder="https://.../video.mp4" /></div></div>
     <div class="field"><label>URL gambar eksternal</label><div v-for="(imageURL, index) in imageURLs" :key="index" class="url-row"><input v-model="imageURLs[index]" :disabled="isXMode" class="input" :class="{ disabled: isXMode }" placeholder="https://.../image.jpg" /><button v-if="imageURLs.length > 1" class="button button-danger" type="button" :disabled="isXMode" @click="removeImageURL(index)">×</button></div><button class="button add-url" type="button" :disabled="isXMode" @click="addImageURL">+ Add image URL</button></div>
-    <div class="field"><label>Content model awal</label><select v-model="contentModel" class="select"><option value="">Belum ditentukan (bisa diisi AI)</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select></div>
+    <div class="form-grid"><div class="field"><label>Content model awal</label><select v-model="contentModel" class="select"><option value="">Belum ditentukan (bisa diisi AI)</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select></div><div class="field"><label>Tracking tag (opsional, untuk match komisi)</label><input v-model="trackingTag" :disabled="isXMode" class="input" :class="{ disabled: isXMode }" placeholder="misal: mytag01" /></div></div>
     <div class="field"><label>Catatan</label><input v-model="notes" :disabled="isXMode" class="input" :class="{ disabled: isXMode }" placeholder="Opsional" /></div>
     <button v-if="!isXMode" class="button-primary" :disabled="props.saving || !rawText.trim() || !(shopeeLink.trim() || productPageURL.trim())" @click="submit">{{ props.saving ? 'Menyimpan + Reformat AI...' : 'Simpan + Reformat AI' }}</button>
     <p v-else class="muted">Link X terisi — gunakan tombol <b>Import dari X</b> di atas.</p>

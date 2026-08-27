@@ -80,5 +80,10 @@ export const useProductStore = defineStore('products', {
       body.append('file', file)
       return request('/api/analytics/commissions/import', { method: 'POST', body })
     },
+    async fetchSoldProducts(page = 1, limit = 20, search = '') {
+      const params = new URLSearchParams({ page, limit })
+      if (search) params.set('search', search)
+      return request(`/api/analytics/commissions/sold?${params}`)
+    },
   },
 })

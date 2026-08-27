@@ -153,7 +153,7 @@ func (r *ProductRepository) update(ctx context.Context, product *model.Product, 
 		pq.Array(product.HashtagPool), product.Notes, product.SourceCategory, product.Status,
 	}
 	if requiredStatus != "" {
-		query = query + " AND status=$28"
+		query = query + " AND status=$29"
 		args = append(args, requiredStatus)
 	}
 	result, err := r.db.ExecContext(ctx, query, args...)

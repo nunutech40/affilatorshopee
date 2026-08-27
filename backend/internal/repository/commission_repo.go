@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/nunutech40/affilatorshopee/internal/model"
@@ -72,5 +73,57 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 	}
 	return result, nil
 }
+
+func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offset int, search string) ([]model.SoldProduct, int, error) {
+	where := ""
+	args := []interface{}{}
+	if s := strings.TrimSpace(search); s != "" {
+		where = "WHERE ce.tracking_tag ILIKE $1 OR p.product_name ILIKE $1"
+		args = append(args, "%"+s+"%")
+	}
+	countQuery := "SELECT COUNT(*) FROM (SELECT ce.normalized_tag FROM commission_events ce LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag " + where + " GROUP BY ce.normalized_tag) s"
+	var total int
+	countArgs := args
+	if where != "" {
+		if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+			return nil, 0, err
+		}
+	} else {
+		if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+			return nil, 0, err
+		}
+	}
+	query := `
+		SELECT ce.normalized_tag, ce.tracking_tag,
+			p.id, p.product_name, p.shopee_link, p.image_url,
+			SUM(ce.quantity)::int AS total_quantity,
+			SUM(ce.commission_total)::bigint AS total_commission,
+			COUNT(*)::int AS order_count,
+			MAX(ce.ordered_at) AS last_ordered_at,
+			(p.id IS NOT NULL) AS is_in_library
+		FROM commission_events ce
+		LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag
+		` + where + `
+		GROUP BY ce.normalized_tag, ce.tracking_tag, p.id, p.product_name, p.shopee_link, p.image_url
+		ORDER BY total_quantity DESC, last_ordered_at DESC
+		LIMIT $` + fmtInt(len(args)+1) + ` OFFSET $` + fmtInt(len(args)+2)
+	args = append(args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	items := []model.SoldProduct{}
+	for rows.Next() {
+		var s model.SoldProduct
+		if err := rows.Scan(&s.NormalizedTag, &s.TrackingTag, &s.ProductID, &s.ProductName, &s.ShopeeLink, &s.ImageURL, &s.TotalQuantity, &s.TotalCommission, &s.OrderCount, &s.LastOrderedAt, &s.IsInLibrary); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, s)
+	}
+	return items, total, rows.Err()
+}
+
+func fmtInt(v int) string { return strings.TrimSpace(strings.ReplaceAll(fmt.Sprint(v), " ", "")) }
 
 var _ = strings.TrimSpace

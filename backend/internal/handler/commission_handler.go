@@ -21,6 +21,38 @@ func NewCommissionHandler(commissions *repository.CommissionRepository) *Commiss
 	return &CommissionHandler{commissions: commissions}
 }
 
+func (h *CommissionHandler) ListSold(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	limit := 20
+	offset := 0
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 100 {
+			limit = n
+		}
+	}
+	if v := q.Get("page"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			offset = (n - 1) * limit
+		}
+	}
+	search := q.Get("search")
+	items, total, err := h.commissions.ListSoldProducts(r.Context(), limit, offset, search)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil produk terjual")
+		return
+	}
+	page := 1
+	if offset > 0 {
+		page = offset/limit + 1
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items": items,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
+}
+
 func (h *CommissionHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(4 << 20); err != nil {
 		writeError(w, http.StatusBadRequest, "INVALID_FILE", "File CSV tidak valid atau terlalu besar")

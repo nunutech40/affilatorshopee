@@ -3,6 +3,8 @@ data/
 web/node_modules/
 web/dist/
 *.log
-api
+/api
 frontend/dist/
 backend/dist/
+frontend/node_modules/
+frontend/dist/

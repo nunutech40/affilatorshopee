@@ -24,6 +24,7 @@ type createProductRequest struct {
 	RawText        string   `json:"raw_text"`
 	ProductName    *string  `json:"product_name"`
 	ShopeeLink     string   `json:"shopee_link"`
+	TrackingTag    *string  `json:"tracking_tag"`
 	SourceCategory string   `json:"source_category"`
 	ImageURL       *string  `json:"image_url"`
 	ImageURLs      []string `json:"image_urls"`
@@ -37,6 +38,7 @@ type productPatch struct {
 	ResetReformatted bool      `json:"reset_reformatted"`
 	ProductName      *string   `json:"product_name"`
 	ShopeeLink       *string   `json:"shopee_link"`
+	TrackingTag      *string   `json:"tracking_tag"`
 	ImageURL         **string  `json:"image_url"`
 	ImageURLs        *[]string `json:"image_urls"`
 	VideoURL         **string  `json:"video_url"`
@@ -87,8 +89,11 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product := &model.Product{
-		RawText: request.RawText, ProductName: request.ProductName, ShopeeLink: request.ShopeeLink, SourceCategory: request.SourceCategory, ImageURL: request.ImageURL,
+		RawText: request.RawText, ProductName: request.ProductName, ShopeeLink: request.ShopeeLink, TrackingTag: "", SourceCategory: request.SourceCategory, ImageURL: request.ImageURL,
 		ImageURLs: request.ImageURLs, VideoURL: request.VideoURL, ContentModel: request.ContentModel, Notes: request.Notes,
+	}
+	if request.TrackingTag != nil {
+		product.TrackingTag = *request.TrackingTag
 	}
 	if product.SourceCategory == "" {
 		product.SourceCategory = "raw_text"
@@ -185,14 +190,14 @@ func applyProductPatch(product *model.Product, patch productPatch) {
 	if patch.SourceCategory != nil {
 		product.SourceCategory = *patch.SourceCategory
 	}
+	if patch.TrackingTag != nil {
+		product.TrackingTag = *patch.TrackingTag
+	}
 	if patch.ReformattedText != nil {
 		product.ReformattedText = patch.ReformattedText
 	}
 	if patch.ProductName != nil {
 		product.ProductName = patch.ProductName
-	}
-	if patch.ShopeeLink != nil {
-		product.ShopeeLink = *patch.ShopeeLink
 	}
 	if patch.ImageURL != nil {
 		product.ImageURL = *patch.ImageURL

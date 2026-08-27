@@ -140,7 +140,7 @@ STRUKTUR CAPTION (urutan wajib):
 1. HOOK — mulai dari demand/konteks pemakaian NYATA (ngantor, ngampus, hujan, mudik, gym, lebaran; ambil dari deskripsi RAW atau sifat kategori produk). Formula: [barang singkat] + [value utama dari deskripsi] + [konteks]. Maksimal 12 kata, boleh pakai tanda tanya. Dilarang nama brand/ALL-CAPS, menyalin judul, konteks kosong seperti kebutuhan harian, mengarang tren, atau kata sekarang. KECUALI content_model branded: menyebut nama brand di hook DIWAJIBKAN, dan boleh ditulis kapital sesuai ejaan brand-nya.
 2. NAMA PRODUK SINGKAT — satu baris, bukan judul lengkap.
 3. BENEFIT — maksimal 2 baris diawali ✅; jika hanya ada SATU yang benar-benar kuat, tulis satu baris saja. Hanya fitur yang membuat orang MAU KLIK: bahan/potongan/cara kerja yang menjawab konteks hook, atau hasil pemakaian nyata. Ukuran tersedia, jumlah warna, varian, stok, dan info serupa adalah urusan halaman produk — DILARANG dipakai sebagai benefit. Bukan potongan judul. Dilarang "bahan berkualitas/nyaman/bagus/harga terjangkau".
-4. PROOF — jika ada di RAW, WAJIB tampil: ⭐️ rating dan 🔥 jumlah terjual, masing-masing satu baris.
+4. PROOF — untuk content_model trending dan cheap, jika ada di RAW WAJIB tampil dan tidak boleh dipangkas: ⭐️ rating dan 🔥 jumlah terjual, masing-masing satu baris. Semua bentuk jumlah terjual seperti "10rb++ terjual", "10RB+ Terjual", atau "21,2RB Terjual" harus dipertahankan faktanya pada satu baris yang diawali tepat dengan "🔥 ". Jangan menjadikan jumlah terjual sebagai benefit ✅ dan jangan menghilangkan jumlahnya. Untuk content_model branded, JANGAN tampilkan rating atau jumlah terjual; fokusnya adalah brand reminder dan deal.
 5. OFFER — 💸 harga TERENDAH saja; ⚡ diskon/voucher jika ada.
 6. CTA — 👇 Cek di sini lalu URL Shopee pada baris berikutnya.
 7. HASHTAG — baris terakhir, maksimal 3.
@@ -152,11 +152,12 @@ ANGLE CONTENT_MODEL:
 
 ATURAN:
 - Output HANYA array JSON [{"product_id":"...","promo_text":"..."}], tanpa markdown/penjelasan.
-- Maksimal 280 karakter termasuk link dan hashtag. Pangkas benefit tambahan, bukan proof/offer/link.
+- Maksimal 280 karakter termasuk link dan hashtag. Untuk trending/cheap, pangkas benefit tambahan sebelum memangkas rating, terjual, offer, link, atau hashtag. Untuk branded, pangkas proof rating/terjual karena memang tidak boleh ditampilkan.
 - Jangan mengarang rating, terjual, harga, diskon, voucher, brand, benefit, momen, atau fakta lain.
 - Jangan sebut COD, pengiriman, retur, garansi, same-day, toleransi ukuran, atau catatan operasional toko.
 - Ikon: ✅ benefit, ⭐️ rating, 🔥 terjual, 💸 harga, ⚡ promo, 👇 CTA.
 - Bahasa Indonesia santai-informal; jangan gunakan Kak, Bestie, Gess, Sumpah, atau Recommended banget.
+- FORMAT BLOK: pisahkan HOOK dari body dengan satu baris kosong; body berisi nama produk, benefit, proof, dan offer. Pisahkan body dari CTA dengan satu baris kosong, dan CTA dari hashtag dengan satu baris kosong. Hashtag tetap satu baris terakhir.
 
 MODE: `
 
@@ -226,8 +227,8 @@ BRANDED:
 - Ini Brand Reminder: orang sudah mengenal/percaya brand. Tugas caption adalah mengingatkan deal yang sedang lewat, bukan menjual kualitas dari nol.
 - Ini caption reminder: brand sudah punya trust, jadi jangan ceramah soal kualitas.
 - Hook langsung mengingatkan brand + deal/diskon yang sedang lewat.
-- Fokus TRUST brand + DISCOUNT + URGENCY. Tambahkan rating/terjual jika tersedia sebagai penguat.
-- Prioritaskan harga normal → sale → diskon dan voucher/flash sale jika ada.
+- Fokus TRUST brand + DISCOUNT + URGENCY. JANGAN menampilkan rating, bintang, jumlah terjual, atau proof sosial lain meskipun tersedia di RAW.
+- Prioritaskan harga normal → sale → diskon dan voucher/flash sale jika ada. Tambahkan batas waktu atau urgensi lain hanya jika faktual di RAW; jangan mengarang deadline.
 
 CHEAP:
 - Ini Generic/Cheap Alternative: tangkap demand yang sudah ada, tawarkan alternatif murah, lalu buktikan dengan rating/terjual dan jelaskan value dibanding harganya.
@@ -253,9 +254,10 @@ Aturan OUTPUT WAJIB:
   - Jangan menempelkan token seperti Rp... lalu ✅, terjual lalu ✅, URL dengan hashtag, atau teks tanpa spasi.
   - Ikon hanya boleh ditambahkan untuk memperjelas fakta yang memang ada di RAW; jangan menambahkan angka/fakta baru.
 - FORMAT SALES WAJIB:
-  - Urutan utama: HOOK → 1-2 benefit konkret → rating/bintang + jumlah terjual → harga termurah → diskon/voucher → CTA.
+  - Urutan utama trending/cheap: HOOK → 1-2 benefit konkret → rating/bintang + jumlah terjual → harga termurah → diskon/voucher → CTA.
+  - Urutan branded: HOOK brand + deal → 1-2 penguat singkat → harga/diskon/voucher → urgensi faktual → CTA; tanpa rating dan jumlah terjual.
   - Jika ada beberapa harga/varian, tampilkan hanya harga paling rendah dengan format “💸 Mulai Rp97.788”. Jangan menulis semua rentang harga.
-  - Rating/bintang dan jumlah terjual tidak boleh ditukar dengan kalimat filler. Jika ada di RAW, keduanya wajib dipakai.
+  - Untuk trending/cheap, rating/bintang dan jumlah terjual tidak boleh ditukar dengan kalimat filler. Jika ada di RAW, keduanya wajib dipakai. Untuk branded, keduanya wajib dihilangkan.
 - TARGET BENTUK CAPTION:
   Hook bernilai + harga → nama produk singkat → 2-3 benefit konkret → ⭐️ rating/🔥 terjual → 💸 harga termurah + diskon → ⚡ voucher → “Cocok untuk ...” → 👇 link → hashtag.
 - Contoh struktur (JANGAN menyalin isinya):

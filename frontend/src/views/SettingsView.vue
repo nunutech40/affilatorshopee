@@ -14,10 +14,10 @@ async function loadNiches() { niches.value = await products.fetchNiches() }
 async function addNiche() {
   if (!newNiche.value.trim()) return
   nicheSaving.value = true; nicheError.value = ''; nicheMessage.value = ''
-  try { const niche = await products.createNiche(newNiche.value); niches.value = [...niches.value, niche].sort((a, b) => a.name.localeCompare(b.name)); newNiche.value = ''; nicheMessage.value = 'Niche berhasil ditambahkan.' } catch (e) { nicheError.value = e.message } finally { nicheSaving.value = false }
+  try { const niche = await products.createNiche(newNiche.value); niches.value = [...niches.value, niche].sort((a, b) => a.name.localeCompare(b.name)); newNiche.value = ''; nicheMessage.value = 'Jenis barang berhasil ditambahkan.' } catch (e) { nicheError.value = e.message } finally { nicheSaving.value = false }
 }
 async function removeNiche(niche) {
-  if (!confirm(`Hapus niche "${niche.name}"? Relasi niche dari produk juga akan dihapus.`)) return
+  if (!confirm(`Hapus jenis barang "${niche.name}"? Relasi dari produk juga akan dihapus.`)) return
   try { await products.deleteNiche(niche.id); niches.value = niches.value.filter((item) => item.id !== niche.id) } catch (e) { nicheError.value = e.message }
 }
 onMounted(loadNiches)
@@ -32,11 +32,11 @@ onMounted(loadNiches)
     <div class="setting-note"><b>Alur AI:</b> produk raw baru otomatis direformat sekali setelah disimpan. Jika gagal, produk tetap tersimpan sebagai raw dan bisa diulang dari detail. Reformat varian caption tetap terpisah.</div>
   </section>
   <section class="panel niche-panel">
-    <h2>Master niche</h2>
-    <p class="muted">Niche bisa dipasang lebih dari satu pada produk, lalu dipakai untuk filter di dashboard.</p>
-    <div class="niche-add"><input v-model="newNiche" class="input" placeholder="Contoh: Kecantikan" @keyup.enter="addNiche" /><button class="button-primary" :disabled="nicheSaving || !newNiche.trim()" @click="addNiche">{{ nicheSaving ? 'Menambah...' : 'Tambah niche' }}</button></div>
+    <h2>Master jenis barang</h2>
+    <p class="muted">Jenis barang bisa dipasang lebih dari satu pada produk, lalu dipakai untuk filter di dashboard.</p>
+    <div class="niche-add"><input v-model="newNiche" class="input" placeholder="Contoh: Kecantikan" @keyup.enter="addNiche" /><button class="button-primary" :disabled="nicheSaving || !newNiche.trim()" @click="addNiche">{{ nicheSaving ? 'Menambah...' : 'Tambah jenis barang' }}</button></div>
     <p v-if="nicheMessage" class="save-notice">✓ {{ nicheMessage }}</p><p v-if="nicheError" class="error-box">{{ nicheError }}</p>
-    <div class="niche-master-list"><div v-for="niche in niches" :key="niche.id" class="niche-master-item"><span>{{ niche.name }}</span><button class="button button-danger" @click="removeNiche(niche)">Hapus</button></div><p v-if="!niches.length" class="muted">Belum ada master niche.</p></div>
+    <div class="niche-master-list"><div v-for="niche in niches" :key="niche.id" class="niche-master-item"><span>{{ niche.name }}</span><button class="button button-danger" @click="removeNiche(niche)">Hapus</button></div><p v-if="!niches.length" class="muted">Belum ada master jenis barang.</p></div>
   </section>
 </template>
 

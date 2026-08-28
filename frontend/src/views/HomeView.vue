@@ -11,6 +11,7 @@ const clickMessage = ref('')
 const commissionFile = ref(null)
 const commissionSyncing = ref(false)
 const commissionMessage = ref('')
+const niches = ref([])
 const totalPages = computed(() => Math.max(1, Math.ceil((products.total || 0) / (products.limit || 20))))
 async function updateModel(id, contentModel) {
   try {
@@ -24,7 +25,7 @@ async function remove(id) {
   try { await products.deleteProduct(id); await products.fetchProducts() } catch (e) { products.error = e.message }
 }
 let timer
-watch(() => [products.filters.status, products.filters.content_model, products.filters.source_category, products.filters.cluster], () => { products.page = 1; products.fetchProducts() })
+watch(() => [products.filters.status, products.filters.content_model, products.filters.source_category, products.filters.cluster, products.filters.niche_id], () => { products.page = 1; products.fetchProducts() })
 watch(() => products.page, () => products.fetchProducts())
 watch(() => products.limit, () => { products.page = 1; products.fetchProducts() })
 function search() { clearTimeout(timer); timer = setTimeout(() => { products.page = 1; products.fetchProducts() }, 250) }
@@ -50,12 +51,12 @@ async function syncCommissions() {
     await products.fetchProducts()
   } catch (error) { commissionMessage.value = error.message } finally { commissionSyncing.value = false }
 }
-onMounted(() => products.fetchProducts())
+onMounted(async () => { niches.value = await products.fetchNiches().catch(() => []); await products.fetchProducts() })
 </script>
 
 <template>
   <section class="hero"><div><h1>Turn messy product data into ready-to-post copy.</h1><p class="hero-copy">Satu workspace untuk menyimpan produk affiliate, merapikan detail yang berantakan, dan mengulang angle caption tanpa mulai dari nol.</p></div><div class="hero-note">Posting tetap manual di X. Session browser yang menentukan akun, bukan aplikasi ini.</div></section>
-  <div class="toolbar"><input v-model="products.filters.search" class="input" placeholder="Cari produk, keyword, atau raw text..." @input="search" /><select v-model="products.filters.status" class="select"><option value="">Semua status</option><option value="raw">Raw</option><option value="reformatted">Reformatted</option><option value="ready">Ready</option></select><select v-model="products.filters.content_model" class="select"><option value="">Semua model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select><select v-model="products.filters.source_category" class="select"><option value="">Semua sumber</option><option value="import_x">X</option><option value="scrape_shopee">Shopee</option><option value="raw_text">Copas</option></select><input v-model="products.filters.cluster" class="input" placeholder="Filter cluster" /></div>
+  <div class="toolbar"><input v-model="products.filters.search" class="input" placeholder="Cari produk, keyword, atau raw text..." @input="search" /><select v-model="products.filters.status" class="select"><option value="">Semua status</option><option value="raw">Raw</option><option value="reformatted">Reformatted</option><option value="ready">Ready</option></select><select v-model="products.filters.content_model" class="select"><option value="">Semua model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select><select v-model="products.filters.source_category" class="select"><option value="">Semua sumber</option><option value="import_x">X</option><option value="scrape_shopee">Shopee</option><option value="raw_text">Copas</option></select><select v-model="products.filters.niche_id" class="select"><option value="">Semua niche</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><input v-model="products.filters.cluster" class="input" placeholder="Filter cluster" /></div>
   <section class="sync-panel"><div><h3>Sync data klik Shopee</h3><p class="muted">Upload CSV report kapan saja. Klik ID yang sama tidak dihitung ulang.</p></div><input type="file" accept=".csv,text/csv" @change="selectClickFile" /><button class="button-primary" :disabled="!clickFile || clickSyncing" @click="syncClicks">{{ clickSyncing ? 'Menyinkronkan...' : 'Sync Klik CSV' }}</button><span v-if="clickMessage" class="sync-message">{{ clickMessage }}</span></section>
   <section class="sync-panel"><div><h3>Sync komisi Shopee</h3><p class="muted">Upload CSV komisi (event_id, order_status). Otomatis hitung sales/pending/komisi per tracking tag.</p></div><input type="file" accept=".csv,text/csv" @change="selectCommissionFile" /><button class="button-primary" :disabled="!commissionFile || commissionSyncing" @click="syncCommissions">{{ commissionSyncing ? 'Menyinkronkan...' : 'Sync Komisi CSV' }}</button><span v-if="commissionMessage" class="sync-message">{{ commissionMessage }}</span><RouterLink to="/sold" class="button" style="margin-left:8px">Lihat produk terjual →</RouterLink></section>
   <div v-if="products.error" class="error-box">{{ products.error }}</div>

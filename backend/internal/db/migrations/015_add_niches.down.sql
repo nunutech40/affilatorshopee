@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS product_niches;
+DROP TABLE IF EXISTS niches;

@@ -46,6 +46,7 @@ func main() {
 	}
 
 	productRepo := repository.NewProductRepository(database)
+	nicheRepo := repository.NewNicheRepository(database)
 	clickRepo := repository.NewClickRepository(database)
 	commissionRepo := repository.NewCommissionRepository(database)
 	postLogRepo := repository.NewPostLogRepository(database)
@@ -74,6 +75,7 @@ func main() {
 	})
 
 	products := handler.NewProductHandler(productService, mediaService)
+	niches := handler.NewNicheHandler(nicheRepo)
 	clicks := handler.NewClickHandler(clickRepo)
 	commissions := handler.NewCommissionHandler(commissionRepo)
 	analytics := handler.NewAnalyticsHandler(database, clickRepo, commissionRepo, productRepo)
@@ -86,8 +88,12 @@ func main() {
 
 	r.Route("/api", func(api chi.Router) {
 		api.Get("/ai/models", ai.Models)
+		api.Get("/niches", niches.List)
+		api.Post("/niches", niches.Create)
+		api.Delete("/niches/{id}", niches.Delete)
 		api.Get("/products", products.List)
 		api.Post("/products", products.Create)
+		api.Put("/products/{id}/niches", niches.ReplaceProduct)
 		api.Post("/analytics/clicks/import", clicks.ImportCSV)
 		api.Post("/analytics/commissions/import", commissions.ImportCSV)
 		api.Get("/analytics/commissions/sold", commissions.ListSold)

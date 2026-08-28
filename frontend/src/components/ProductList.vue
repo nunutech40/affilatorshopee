@@ -19,6 +19,7 @@ const sourceLabel = (value) => ({ import_x: 'Import X', scrape_shopee: 'Scrape S
       <div class="row-main">
         <RouterLink :to="`/products/${product.id}`" class="row-title">{{ product.product_name || 'Raw product belum direformat' }}</RouterLink>
         <div class="row-sub">{{ sourceLabel(product.source_category) }} · {{ product.cluster || 'uncategorized' }} · tag: {{ product.tracking_tag || '-' }}</div>
+        <div v-if="product.niches?.length" class="niche-list"><span v-for="niche in product.niches" :key="niche.id" class="niche-pill">{{ niche.name }}</span></div>
       </div>
       <select class="model-select" :value="product.content_model || ''" @change="emit('update-model', product.id, $event.target.value)"><option value="">Pilih angle</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option v-if="product.content_model === 'capture'" value="capture">Captured (legacy)</option></select>
       <span class="status" :class="product.status">{{ product.status }}</span>
@@ -37,6 +38,7 @@ const sourceLabel = (value) => ({ import_x: 'Import X', scrape_shopee: 'Scrape S
 .row-main{min-width:0}
 .row-title{ display:block; font:600 14px 'Space Grotesk'; color:#1f2721; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .row-sub{ font:11px 'DM Mono'; color:#8a978d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px}
+.niche-list{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}.niche-pill{font:10px 'DM Mono';color:#1f6b4f;background:#e7f1e8;border-radius:999px;padding:3px 7px}
 .badge.model{ justify-self:start; font:600 11px 'DM Mono'; text-transform:capitalize; color:#5a6b5e; background:#e7eee6; padding:5px 8px; border-radius:999px}
 .model-select{width:100%; border:1px solid #d9ded6; border-radius:7px; padding:7px 5px; background:#f8fbf7; color:#52655a; font:600 11px 'DM Mono'}
 .row-price{ font:600 13px 'Space Grotesk'; color:#1f6b4f}

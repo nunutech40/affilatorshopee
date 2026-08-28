@@ -26,7 +26,7 @@ export const useProductStore = defineStore('products', {
     limit: 20,
     loading: false,
     error: '',
-    filters: { search: '', status: '', content_model: '', source_category: '', cluster: '' },
+    filters: { search: '', status: '', content_model: '', source_category: '', cluster: '', niche_id: '' },
   }),
   actions: {
     async fetchProducts() {
@@ -52,6 +52,10 @@ export const useProductStore = defineStore('products', {
     async getProduct(id) {
       return request(`/api/products/${id}`)
     },
+    async fetchNiches() { return request('/api/niches') },
+    async updateProductNiches(id, nicheIds) { return request(`/api/products/${id}/niches`, { method: 'PUT', body: JSON.stringify({ niche_ids: nicheIds }) }) },
+    async createNiche(name) { return request('/api/niches', { method: 'POST', body: JSON.stringify({ name }) }) },
+    async deleteNiche(id) { return request(`/api/niches/${id}`, { method: 'DELETE' }) },
     async updateProduct(id, payload) {
       return request(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
     },

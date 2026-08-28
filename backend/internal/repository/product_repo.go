@@ -20,6 +20,7 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 
 type ProductListFilter struct {
 	Cluster        string
+	NicheID        string
 	ContentModel   string
 	SourceCategory string
 	Status         string
@@ -62,7 +63,14 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (*model.Prod
 		p.click_count, p.last_clicked_at, p.sales_count, p.pending_sales_count, p.commission_total
 	FROM products p WHERE p.id = $1`
 
-	return r.scanProduct(r.db.QueryRowContext(ctx, query, id))
+	product, err := r.scanProduct(r.db.QueryRowContext(ctx, query, id))
+	if err != nil || product == nil {
+		return product, err
+	}
+	if err := r.attachNiches(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
 }
 
 func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) ([]model.Product, int, error) {
@@ -73,6 +81,11 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 	if filter.Cluster != "" {
 		where = append(where, fmt.Sprintf("p.cluster = $%d", argPos))
 		args = append(args, filter.Cluster)
+		argPos++
+	}
+	if filter.NicheID != "" {
+		where = append(where, fmt.Sprintf("EXISTS (SELECT 1 FROM product_niches pn WHERE pn.product_id = p.id AND pn.niche_id = $%d)", argPos))
+		args = append(args, filter.NicheID)
 		argPos++
 	}
 	if filter.ContentModel != "" {
@@ -128,9 +141,31 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		if err != nil {
 			return nil, 0, err
 		}
+		if err := r.attachNiches(ctx, product); err != nil {
+			return nil, 0, err
+		}
 		products = append(products, *product)
 	}
 	return products, total, rows.Err()
+}
+
+func (r *ProductRepository) attachNiches(ctx context.Context, product *model.Product) error {
+	rows, err := r.db.QueryContext(ctx, `SELECT n.id, n.name, n.created_at
+		FROM niches n JOIN product_niches pn ON pn.niche_id = n.id
+		WHERE pn.product_id = $1 ORDER BY n.name`, product.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	product.Niches = []model.Niche{}
+	for rows.Next() {
+		var niche model.Niche
+		if err := rows.Scan(&niche.ID, &niche.Name, &niche.CreatedAt); err != nil {
+			return err
+		}
+		product.Niches = append(product.Niches, niche)
+	}
+	return rows.Err()
 }
 
 func (r *ProductRepository) Update(ctx context.Context, product *model.Product) error {

@@ -25,6 +25,9 @@ const copiedTag = ref(false)
 const saveNotice = ref('')
 const previewFile = ref(null)
 const selectedMedia = ref([])
+const nicheOptions = ref([])
+const selectedNicheIDs = ref([])
+const savingNiches = ref(false)
 
 function injectAffiliateLink(text, link) {
   const promo = String(text || '')
@@ -54,9 +57,14 @@ function getPromo(p) {
   return injectAffiliateLink(p.reformatted_text || '', p.shopee_link || '')
 }
 
-watch(product, (p) => { if (p) { editText.value = getPromo(p); selectedContentModel.value = p.content_model || 'cheap'; shopeeLink.value = p.shopee_link || '' } })
+watch(product, (p) => { if (p) { editText.value = getPromo(p); selectedContentModel.value = p.content_model || 'cheap'; shopeeLink.value = p.shopee_link || ''; selectedNicheIDs.value = (p.niches || []).map((niche) => niche.id) } })
 
-async function load() { loading.value = true; error.value = ''; try { product.value = await products.getProduct(route.params.id); const logData = await apiRequest(`/api/post-logs?product_id=${route.params.id}`); logs.value = logData.items; media.value = await apiRequest(`/api/products/${route.params.id}/media`); if (route.query.ai === 'failed') error.value = 'Produk tersimpan sebagai raw text. Reformat AI bisa dicoba ulang dari tombol di atas.' } catch (e) { error.value = e.message } finally { loading.value = false } }
+async function load() { loading.value = true; error.value = ''; try { const [loadedProduct, logData, loadedMedia, loadedNiches] = await Promise.all([products.getProduct(route.params.id), apiRequest(`/api/post-logs?product_id=${route.params.id}`), apiRequest(`/api/products/${route.params.id}/media`), products.fetchNiches()]); product.value = loadedProduct; logs.value = logData.items; media.value = loadedMedia; nicheOptions.value = loadedNiches; if (route.query.ai === 'failed') error.value = 'Produk tersimpan sebagai raw text. Reformat AI bisa dicoba ulang dari tombol di atas.' } catch (e) { error.value = e.message } finally { loading.value = false } }
+
+async function saveNiches() {
+  savingNiches.value = true; error.value = ''; saveNotice.value = ''
+  try { await products.updateProductNiches(route.params.id, selectedNicheIDs.value); product.value = await products.getProduct(route.params.id); saveNotice.value = 'Niche produk berhasil disimpan.' } catch (e) { error.value = e.message } finally { savingNiches.value = false }
+}
 
 async function saveReformat() {
   saving.value = true
@@ -196,6 +204,7 @@ onMounted(load)
     <div class="stats"><div class="stat"><strong>{{ product.click_count || 0 }}</strong><span>Klik affiliate</span></div><div class="stat"><strong>{{ product.post_count || 0 }}</strong><span>Posting</span></div></div>
     <div class="form-layout">
       <div>
+        <section class="panel"><div class="section-heading"><div><h2>Niche</h2><p class="muted">Pilih satu atau beberapa niche untuk kurasi dan filter dashboard.</p></div><button class="button-primary" :disabled="savingNiches" @click="saveNiches">{{ savingNiches ? 'Menyimpan...' : 'Simpan niche' }}</button></div><div class="niche-options"><label v-for="niche in nicheOptions" :key="niche.id" class="niche-option"><input v-model="selectedNicheIDs" type="checkbox" :value="niche.id" /> <span>{{ niche.name }}</span></label><p v-if="!nicheOptions.length" class="muted">Belum ada master niche. Tambahkan dari Settings.</p></div></section>
         <section class="panel"><h2>Raw text (asli, read-only)</h2><pre class="raw-pre">{{ product.raw_text }}</pre></section>
         <section class="panel"><h2>Data share</h2><div class="field"><label>Link affiliate Shopee</label><input v-model="shopeeLink" class="input" placeholder="https://s.shopee.co.id/..." /><button class="button-primary" style="margin-top:8px" :disabled="savingLink || !shopeeLink.trim()" @click="saveShopeeLink">{{ savingLink ? 'Menyimpan link...' : 'Simpan link' }}</button></div><div class="field"><label>Tambah image URL</label><input v-model="imageURL" class="input" placeholder="https://.../image.jpg" /></div><div class="field"><label>Tambah video URL</label><input v-model="videoURL" class="input" placeholder="https://.../video.mp4" /></div><button class="button" :disabled="saving || (!imageURL.trim() && !videoURL.trim())" @click="addMedia">Download & tambah media</button></section>
         <section class="panel reformat-panel">
@@ -211,5 +220,7 @@ onMounted(load)
     <div v-if="previewFile" class="media-modal" role="dialog" aria-modal="true" @click.self="closePreview"><button class="modal-close" type="button" @click="closePreview">×</button><img v-if="previewFile.media_type === 'image'" :src="mediaURL(previewFile)" :alt="previewFile.filename" /><video v-else :src="mediaURL(previewFile)" controls autoplay /></div>
   </template>
 </template>
+
+<style scoped>.niche-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.niche-option{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #d9e2d8;border-radius:8px;background:#f8fbf7;color:#52655a;font-size:13px}.niche-option input{accent-color:#1f6b4f}</style>
 
 <style scoped>.raw-pre{white-space:pre-wrap; max-height:320px; overflow:auto; color:#52655a; font:13px/1.6 'DM Mono'; background:#f9fbf8; padding:14px; border-radius:8px; border:1px solid #e1e8e0} .tracking-tag{display:flex;align-items:center;gap:8px;margin-top:10px;color:#6e7d72;font:12px 'DM Mono';flex-wrap:wrap}.tracking-tag b{color:#1f6b4f} .reformat-panel .mono{font:12px/1.5 'DM Mono'; min-height:420px} .muted{color:#78867c; font-size:13px} .action-hint{margin:10px 0 0}.section-heading{display:flex; justify-content:space-between; gap:10px; align-items:center} .reformat-actions{display:flex; gap:8px; align-items:end; margin:12px 0} .ai-loading{display:flex; align-items:center; gap:10px; margin:14px 0; padding:13px 16px; border-radius:8px; background:#e7f3eb; color:#176b4f; font-weight:600}.save-notice{margin:14px 0;padding:12px 16px;border-radius:8px;background:#e7f3eb;color:#176b4f;font-weight:600} .spinner{width:16px; height:16px; border:2px solid #b8d9c6;border-top-color:#176b4f;border-radius:50%;animation:spin .8s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:16px}.media-card{position:relative;overflow:hidden;border:1px solid #d9e2d8;border-radius:10px;background:#f8fbf7}.media-card.selected{border-color:#1f6b4f;box-shadow:0 0 0 2px #c6dfcf}.media-check{position:absolute;top:8px;left:8px;z-index:2;display:flex;width:25px;height:25px;align-items:center;justify-content:center;border-radius:6px;background:rgba(255,255,255,.9);cursor:pointer}.media-check input{width:17px;height:17px;accent-color:#1f6b4f}.media-preview{display:block;width:100%;height:150px;padding:0;border:0;background:#e8efe7;cursor:zoom-in}.media-preview img,.media-preview video{display:block;width:100%;height:100%;object-fit:cover}.media-card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px;font-size:11px}.media-card-footer span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.media-card-footer .button{padding:5px 8px;font-size:11px}.media-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:40px;background:rgba(15,24,18,.8)}.media-modal img,.media-modal video{max-width:min(92vw,1100px);max-height:88vh;object-fit:contain;border-radius:10px;background:#111}.modal-close{position:absolute;top:20px;right:24px;width:40px;height:40px;border:0;border-radius:50%;background:#fff;color:#1e2721;font-size:28px;cursor:pointer}</style>

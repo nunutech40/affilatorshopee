@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/nunutech40/affilatorshopee/internal/model"
@@ -71,6 +72,7 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		OriginalText   string              `json:"original_text"`
 		Media          []string            `json:"media"`
 		SourceQuery    string              `json:"source_query"`
+		PublishedAt    *time.Time          `json:"published_at"`
 		Status         string              `json:"status"`
 		NicheIDs       []string            `json:"niche_ids"`
 		ProductTypeIDs []string            `json:"product_type_ids"`
@@ -90,7 +92,7 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if b.Status == "" {
 		b.Status = "discovered"
 	}
-	item, err := h.repo.Create(r.Context(), model.ContentItem{Platform: b.Platform, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
+	item, err := h.repo.Create(r.Context(), model.ContentItem{Platform: b.Platform, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
 	if err != nil {
 		writeError(w, 400, "CREATE_ERROR", "Konten gagal disimpan: "+err.Error())
 		return

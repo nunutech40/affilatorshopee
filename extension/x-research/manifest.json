@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "AffiliatorShopee X Research",
+  "version": "0.1.0",
+  "description": "Tangkap post X yang sedang dibuka untuk bank konten AffiliatorShopee.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://x.com/*", "https://twitter.com/*", "http://localhost:8080/*", "http://127.0.0.1:8080/*"],
+  "action": {
+    "default_title": "X Research",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [{
+    "matches": ["https://x.com/*", "https://twitter.com/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}

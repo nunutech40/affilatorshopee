@@ -88,6 +88,22 @@ Jadi web app hanya membantu menyusun caption dan membuka tab posting. User tetap
 - Riwayat caption
 - Jumlah dan waktu posting terakhir per produk
 
+### 6. Bank Konten per Niche (Roadmap)
+
+Selain library produk, owner membutuhkan bank konten untuk riset dan distribusi ulang. Bank ini menyimpan konten populer per niche, bukan hanya produk affiliate.
+
+Niche awal:
+
+- Sukses & Kesuksesan
+- Fashion Pria
+- Hubungan / Relasi Pria Wanita
+- Gym, Lari & Exercise
+- Affiliate
+
+Owner dapat menambah niche baru. Satu niche berisi banyak konten, dan satu konten dapat memiliki banyak label `Jenis Barang` yang sama dengan produk. Konten asli, versi bersih, hasil reformat, statistik, dan varian per akun harus disimpan terpisah.
+
+Alur: riset konten populer per niche → simpan sumber dan statistik → bersihkan → reformat khusus kanal → buat varian akun → share manual. Tahap awal memakai halaman/session X dan seleksi owner; koneksi X API dapat ditambahkan kemudian.
+
 ## Data Produk yang Disimpan
 
 | Field | Keterangan |

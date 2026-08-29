@@ -323,6 +323,19 @@ Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Ca
 
 Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi caption berbeda yang bisa dipakai untuk posting ulang.
 
+### AC-7: Bank Konten X per Niche (Roadmap)
+
+Diberikan niche konten, user dapat menyimpan banyak konten X ke bank niche tersebut. Setiap item menyimpan URL/post ID, platform, konten asli, media, author bila terlihat, waktu publikasi, statistik saat ditemukan, waktu snapshot, sumber/query riset, dan status kurasi.
+
+- Niche konten adalah master terpisah dari master `Jenis barang` produk.
+- Niche awal: Sukses & Kesuksesan, Fashion Pria, Hubungan / Relasi Pria Wanita, Gym, Lari & Exercise, dan Affiliate.
+- User dapat menambah, mengubah, dan mengarsipkan niche.
+- Satu konten dapat diberi banyak label `Jenis barang`; satu label dapat dipakai oleh banyak konten.
+- Konten asli immutable. Versi bersih, reformat AI X, dan varian per akun disimpan sebagai versi terpisah.
+- Statistik popularitas disimpan sebagai snapshot agar perubahan angka tidak menimpa histori.
+- Riset MVP dapat dimulai dari pencarian X yang dibuka user dan dipilih melalui extension/manual capture; integrasi X API adalah tahap otomasi berikutnya.
+- Konten hanya dibagikan setelah user memilih versi dan menekan share/post manual.
+
 ## 16. Success Metrics
 
 - Waktu dari input produk sampai caption jadi berkurang
@@ -353,6 +366,10 @@ Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi 
 - Share atau bantu posting konten terkurasi ke Facebook melalui flow dan extension khusus Facebook
 - Opsi dijual sebagai SaaS
 - Support platform lain: TikTok, Instagram, Facebook
+
+### 18.1 Bank Konten dan Riset Niche
+
+Bank konten menjadi fondasi distribusi ulang lintas akun. Modul ini tidak mencampur data produk affiliate dengan konten riset, walaupun label `Jenis barang` dapat menghubungkan keduanya. Riset, prompt, parser, statistik, dan adapter share harus memiliki implementasi terpisah per platform (X, Threads, Facebook).
 
 ## 19. Catatan
 

@@ -737,6 +737,31 @@ Prompt wajib menginstruksikan AI untuk:
 - Dashboard menerima `niche_id`; nilai `uncategorized` berarti produk yang belum memiliki relasi pada `product_niches`.
 - UI menggunakan istilah “Jenis barang”; nama `niche` dipertahankan pada nama endpoint dan tabel untuk kompatibilitas internal.
 
+### 8.5 Bank Konten X per Niche (Roadmap)
+
+`content_niches` adalah master terpisah dari tabel `niches` yang saat ini dipakai sebagai master Jenis Barang produk. Jangan memakai `product_niches` untuk mengelompokkan niche konten.
+
+Model data yang direncanakan:
+
+- `content_niches`: `id`, `name`, `slug`, `description`, `status`, timestamps; unique pada `slug`.
+- `content_items`: `id`, `platform`, `external_post_id`, `canonical_url`, `author_handle`, `original_text`, `media`, `published_at`, `source_query`, `status`, timestamps; unique pada `(platform, external_post_id)` atau canonical URL.
+- `content_item_niches`: relasi many-to-many content ↔ content niche.
+- `content_item_product_types`: relasi many-to-many content ↔ master Jenis Barang (`niches`).
+- `content_stat_snapshots`: `content_item_id`, `captured_at`, `like_count`, `repost_count`, `reply_count`, `bookmark_count`, `view_count`, dan raw metrics JSON.
+- `content_clean_versions`, `content_reformats`, dan `content_reformat_variants`: versi turunan yang selalu menyimpan `content_item_id`; `original_text` tidak pernah ditimpa.
+
+Endpoint yang direncanakan:
+
+- `GET/POST/PATCH/DELETE /api/content-niches`
+- `GET/POST /api/content-items`
+- `GET /api/content-items?content_niche_id=&platform=x&status=`
+- `GET/POST /api/content-items/{id}/stats`
+- `POST /api/content-items/{id}/clean`
+- `POST /api/content-items/{id}/reformat`
+- `PUT /api/content-items/{id}/product-types` dengan `{ "niche_ids": ["..."] }`
+
+State content: `discovered → reviewed → cleaned → reformatted → ready_to_share`. Collector awal mengambil konten yang terlihat pada halaman pencarian/session X dan dipilih user melalui extension; tidak mengakses konten privat atau melewati pembatasan platform. Collector berbasis X API dapat ditambahkan kemudian. X Advanced Search mendukung filter kata, hashtag, akun, bahasa, lokasi, dan tanggal; Search Posts API menyediakan recent/full archive sesuai akses API dan dapat mengembalikan waktu publikasi serta public metrics. Lihat dokumentasi resmi [Advanced Search X](https://help.x.com/id/using-x/x-advanced-search) dan [Search Posts API](https://docs.x.com/x-api/posts/search/introduction).
+
 MVP tidak memiliki flow pemilihan akun; akun X yang digunakan mengikuti session login di browser user.
 
 ### 8.3 State
@@ -894,6 +919,8 @@ Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration haru
 - Riset konten Facebook populer per niche: collector, penyimpanan sumber, pengelompokan niche, dan pipeline reformat AI khusus Facebook.
 - Share atau bantu posting konten Facebook melalui adapter dan extension Facebook; jangan memakai parser/payload X secara langsung.
 - S3/CDN untuk media (menggantikan local storage).
+- Bank konten X per niche dengan niche master, capture, versi asli/bersih/reformat, snapshot statistik, dan varian akun.
+- Relasi many-to-many bank konten dengan master Jenis Barang produk.
 - Scheduling dan analytics.
 - Auth, multi-user, dan admin panel.
 

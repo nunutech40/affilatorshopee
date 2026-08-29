@@ -47,6 +47,22 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 
 Threads, riset konten populer per niche untuk X/Facebook, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Implementasinya harus dipisahkan per platform agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
 
+## Roadmap: Bank Konten X per Niche
+
+Bank konten adalah modul terpisah dari library produk. Konten disimpan per niche, dengan versi asli yang tidak diubah, versi bersih, hasil reformat AI khusus X, statistik snapshot, dan varian per akun.
+
+Niche awal:
+
+- Sukses & Kesuksesan
+- Fashion Pria
+- Hubungan / Relasi Pria Wanita
+- Gym, Lari & Exercise
+- Affiliate
+
+User dapat menambah atau mengubah master niche. Satu niche dapat memiliki banyak konten. Satu konten juga dapat memiliki banyak label `Jenis barang` yang sama dengan produk, dan satu label jenis barang dapat dipakai oleh banyak konten (many-to-many); niche konten dan jenis barang tetap dua master yang berbeda.
+
+Alur yang direncanakan: cari konten populer per niche → simpan URL, konten asli, media, dan statistik → bersihkan tanpa menghapus sumber asli → reformat dengan prompt X → buat varian per akun → share melalui helper X. Riset awal dapat memakai halaman pencarian/session X dan seleksi user; collector X API menjadi opsi tahap berikutnya.
+
 ## Tech Stack
 
 - Backend: Go

@@ -155,8 +155,16 @@ Dokumen sumber:
 ## Phase 8: Roadmap Setelah MVP
 
 - [ ] Share ke Threads melalui flow dan extension khusus Threads
-- [ ] Riset posting X yang populer berdasarkan niche, simpan dan kelompokkan hasilnya per niche
-- [ ] Reformat hasil riset X dengan AI memakai prompt/aturan khusus kanal X
+- [ ] Buat master niche konten terpisah dari Jenis Barang; isi niche awal: Sukses & Kesuksesan, Fashion Pria, Hubungan / Relasi Pria Wanita, Gym, Lari & Exercise, Affiliate
+- [ ] Tambahkan CRUD niche konten dan kemampuan user menambah niche baru
+- [ ] Buat bank konten X: simpan konten asli, URL/post ID, media, author, tanggal, query/sumber, dan status kurasi
+- [ ] Riset posting X yang populer berdasarkan niche, mulai dari capture halaman/session X melalui extension/manual selection
+- [ ] Simpan snapshot statistik konten dan sinyal kenapa konten dianggap populer
+- [ ] Bersihkan konten tanpa menimpa konten asli
+- [ ] Reformat hasil riset X dengan AI memakai prompt/parser khusus kanal X
+- [ ] Buat varian konten per akun dan share lewat helper X yang sudah ada
+- [ ] Hubungkan konten ke master Jenis Barang dengan relasi many-to-many; satu konten boleh punya banyak label
+- [ ] Tambahkan collector X API sebagai otomasi opsional setelah alur manual stabil
 - [ ] Riset konten Facebook yang populer berdasarkan niche, simpan dan kelompokkan hasilnya per niche
 - [ ] Reformat hasil riset Facebook dengan AI memakai prompt/aturan khusus Facebook
 - [ ] Share atau bantu posting konten terkurasi ke Facebook melalui flow/extension Facebook

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AffiliatorShopee X Research",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Tangkap post atau thread X yang sedang dibuka untuk bank konten AffiliatorShopee.",
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*", "http://localhost:8080/*", "http://127.0.0.1:8080/*"],

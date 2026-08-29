@@ -21,8 +21,12 @@
   function extractArticle(article) {
     const link = [...article.querySelectorAll('a[href*="/status/"]')].find((item) => /\/status\/\d+/.test(item.getAttribute('href') || ''))
     const href = link ? new URL(link.getAttribute('href'), location.origin).href : location.href
-    const text = article.querySelector('[data-testid="tweetText"]')?.innerText?.trim() || article.innerText.trim()
-    const author = [...article.querySelectorAll('a[href^="/"]')].map((item) => item.getAttribute('href')).find((value) => /^\/[A-Za-z0-9_]{1,15}$/.test(value || '')) || ''
+    // Jangan fallback ke article.innerText: pada halaman detail X, innerText
+    // dapat mencakup reply/nested reply yang dirender di dalam article.
+    const text = article.querySelector('[data-testid="tweetText"]')?.innerText?.trim() || ''
+    const authorLink = article.querySelector('[data-testid="User-Name"] a[href^="/"]') ||
+      [...article.querySelectorAll('a[href^="/"]')].find((item) => /^\/[A-Za-z0-9_]{1,15}$/.test(item.getAttribute('href') || ''))
+    const author = authorLink?.getAttribute('href') || ''
     const time = article.querySelector('time')?.dateTime || ''
     const socialContext = article.querySelector('[data-testid="socialContext"]')
     const replyingToHandles = [...(socialContext?.querySelectorAll('a[href^="/"]') || [])]
@@ -48,8 +52,12 @@
     if (!currentID) return { ...extracted[0], thread_post_count: 1, thread_posts: [extracted[0]] }
     const currentIndex = Math.max(0, extracted.findIndex((item) => item.external_post_id === currentID))
     const author = extracted[currentIndex]?.author_handle || extracted[0].author_handle
-    const isMainThreadPost = (item) => item.author_handle === author &&
-      (!item.replying_to_handles?.length || item.replying_to_handles.includes(author))
+    const normalizedAuthor = author.toLowerCase()
+    // Post lanjutan thread milik author yang sama selalu merupakan reply ke
+    // author tersebut. Reply user lain dan post author yang kebetulan tampil
+    // di timeline tidak boleh dianggap bagian dari thread.
+    const isMainThreadPost = (item) => item.author_handle.toLowerCase() === normalizedAuthor &&
+      item.replying_to_handles?.some((handle) => handle.toLowerCase() === normalizedAuthor)
     const posts = [extracted[currentIndex] || extracted[0]]
     for (let i = currentIndex - 1; i >= 0 && isMainThreadPost(extracted[i]); i--) posts.unshift(extracted[i])
     for (let i = currentIndex + 1; i < extracted.length && isMainThreadPost(extracted[i]); i++) posts.push(extracted[i])

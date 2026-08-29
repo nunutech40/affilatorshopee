@@ -63,7 +63,7 @@ User dapat menambah atau mengubah master niche. Satu niche dapat memiliki banyak
 
 Alur yang direncanakan: cari konten populer per niche → simpan URL, konten asli, media, dan statistik → bersihkan tanpa menghapus sumber asli → reformat dengan prompt X → buat varian per akun → share melalui helper X. Riset awal dapat memakai halaman pencarian/session X dan seleksi user; collector X API menjadi opsi tahap berikutnya.
 
-Implementasi awal tersedia di menu `Bank konten`: pengguna memilih niche, kategori konten (misalnya Edukasi, Tips Praktis, Kesalahan, Pengalaman, atau Opini), lalu keyword dari kategori tersebut. Aplikasi menyusun query dengan frasa, `lang:id`, dan pengecualian repost sebelum membuka pencarian X dengan filter Populer, Terbaru, atau Media. Query manual tetap bisa dipakai. Extension `extension/x-research` menangkap post yang sedang dibuka beserta URL, teks, author, media, tanggal, dan statistik yang terlihat untuk direview sebelum disimpan; X API dan ranking otomatis tetap menjadi tahap berikutnya.
+Implementasi awal tersedia di menu `Bank konten`: pengguna memilih niche, kategori konten, lalu preset keyword berbasis sinonim/OR. Aplikasi menyusun query dengan grouping, `lang:in` (kode bahasa Indonesia di X), pengecualian repost dan balasan, sebelum membuka pencarian X dengan filter Populer, Terbaru, atau Media. Query custom mengambil alih preset dan menonaktifkan pilihan bawaan sampai dibersihkan. Extension `extension/x-research` menangkap post yang sedang dibuka beserta URL, teks, author, media, tanggal, dan statistik yang terlihat untuk direview sebelum disimpan; X API dan ranking otomatis tetap menjadi tahap berikutnya.
 
 ## Tech Stack
 

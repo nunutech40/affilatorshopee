@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { apiRequest, useProductStore } from '@/stores/productStore'
 
 const products = useProductStore()
@@ -20,51 +20,67 @@ const form = ref({ canonical_url: '', original_text: '', author_handle: '', sour
 
 const researchCatalog = {
   'Sukses & Kesuksesan': {
-    Edukasi: ['kebiasaan orang sukses', 'mindset sukses', 'skill kerja'],
-    'Tips Praktis': ['cara sukses', 'produktivitas', 'mencapai target'],
-    'Cerita & Pengalaman': ['perjalanan sukses', 'gagal lalu bangkit', 'pelajaran hidup'],
-    'Opini & Debat': ['kerja keras vs kerja cerdas', 'karier dan uang', 'definisi sukses'],
+    Edukasi: ['kebiasaan orang sukses OR mindset sukses', 'skill kerja OR skill masa depan', 'financial freedom OR kebebasan finansial'],
+    'Tips Praktis': ['cara sukses OR cara berkembang', 'produktivitas OR manajemen waktu', 'mencapai target OR konsisten'],
+    'Cerita & Pengalaman': ['perjalanan sukses OR proses sukses', 'gagal lalu bangkit OR belajar dari kegagalan', 'pelajaran hidup OR pengalaman hidup'],
+    'Opini & Debat': ['kerja keras OR kerja cerdas', 'karier OR uang dan karier', 'definisi sukses OR arti sukses'],
   },
   'Fashion Pria': {
-    'Outfit & Styling': ['outfit pria', 'gaya pria', 'padu padan pria'],
-    'Tips Praktis': ['cara berpakaian pria', 'kesalahan berpakaian', 'fit baju pria'],
-    Rekomendasi: ['sepatu pria', 'celana pria', 'kaos pria'],
-    'Opini & Tren': ['tren fashion pria', 'fashion pria lokal', 'gaya pria minimalis'],
+    'Outfit & Styling': ['outfit pria OR outfit cowok', 'gaya pria OR style pria', 'padu padan pria OR mix and match pria'],
+    'Tips Praktis': ['cara berpakaian pria OR tips berpakaian pria', 'kesalahan berpakaian OR fashion mistakes', 'fit baju pria OR ukuran baju pria'],
+    Rekomendasi: ['sepatu pria OR sneakers pria', 'celana pria OR chino pria', 'kaos pria OR kemeja pria'],
+    'Opini & Tren': ['tren fashion pria OR trend fashion pria', 'fashion pria lokal OR brand lokal pria', 'gaya pria minimalis OR outfit minimalis pria'],
   },
   'Hubungan / Relasi Pria Wanita': {
-    Edukasi: ['komunikasi dalam hubungan', 'attachment style', 'bahasa cinta'],
-    'Tips Praktis': ['cara komunikasi pasangan', 'cara pdkt', 'hubungan sehat'],
-    'Masalah & Pain Point': ['red flags hubungan', 'pasangan menjauh', 'susah move on'],
-    'Opini & Debat': ['kencan dan relasi', 'standar pasangan', 'pria wanita zaman sekarang'],
+    Edukasi: ['komunikasi dalam hubungan OR komunikasi pasangan', 'attachment style OR gaya keterikatan', 'bahasa cinta OR love language'],
+    'Tips Praktis': ['cara komunikasi pasangan OR komunikasi yang sehat', 'cara pdkt OR tips pdkt', 'hubungan sehat OR relationship sehat'],
+    'Masalah & Pain Point': ['red flags hubungan OR tanda hubungan toxic', 'pasangan menjauh OR pasangan berubah', 'susah move on OR cara move on'],
+    'Opini & Debat': ['kencan dan relasi OR dating dan relasi', 'standar pasangan OR standar dalam hubungan', 'pria wanita zaman sekarang OR hubungan zaman sekarang'],
   },
   'Gym, Lari & Exercise': {
-    Edukasi: ['progressive overload', 'protein dan otot', 'recovery olahraga'],
-    'Tips Praktis': ['gym pemula', 'workout di rumah', 'lari untuk pemula'],
-    'Kesalahan & Cedera': ['kesalahan gym pemula', 'cedera gym', 'overtraining'],
-    'Cerita & Progress': ['progress gym', 'transformasi badan', 'lari 5k'],
+    Edukasi: ['progressive overload OR latihan beban', 'protein dan otot OR protein untuk otot', 'recovery olahraga OR pemulihan olahraga'],
+    'Tips Praktis': ['gym pemula OR latihan gym pemula', 'workout di rumah OR home workout', 'lari untuk pemula OR tips lari pemula'],
+    'Kesalahan & Cedera': ['kesalahan gym pemula OR kesalahan saat gym', 'cedera gym OR cedera olahraga', 'overtraining OR latihan berlebihan'],
+    'Cerita & Progress': ['progress gym OR progress latihan', 'transformasi badan OR body transformation', 'lari 5k OR latihan 5k'],
   },
   Affiliate: {
-    Edukasi: ['affiliate marketing', 'cara kerja affiliate', 'konten jualan'],
-    'Tips Praktis': ['tips jualan online', 'cara promosi produk', 'copywriting jualan'],
-    'Masalah & Pain Point': ['jualan sepi', 'susah closing', 'produk tidak laku'],
-    'Cerita & Studi Kasus': ['penghasilan affiliate', 'pengalaman jualan online', 'jualan dari rumah'],
+    Edukasi: ['affiliate marketing OR pemasaran affiliate', 'cara kerja affiliate OR cara jadi affiliate', 'konten jualan OR konten promosi'],
+    'Tips Praktis': ['tips jualan online OR cara jualan online', 'cara promosi produk OR strategi promosi', 'copywriting jualan OR caption jualan'],
+    'Masalah & Pain Point': ['jualan sepi OR toko sepi', 'susah closing OR susah jualan', 'produk tidak laku OR barang tidak laku'],
+    'Cerita & Studi Kasus': ['penghasilan affiliate OR hasil affiliate', 'pengalaman jualan online OR cerita jualan online', 'jualan dari rumah OR bisnis dari rumah'],
   },
 }
 
 const currentResearchNiche = () => niches.value.find((item) => item.id === researchNiche.value)
 const researchCategories = () => Object.keys(researchCatalog[currentResearchNiche()?.name] || {})
 const researchKeywords = () => researchCatalog[currentResearchNiche()?.name]?.[researchCategory.value] || []
+const customResearchQuery = computed(() => researchQuery.value.trim().length > 0)
 const suggestedQueries = () => {
   const niche = niches.value.find((item) => item.id === researchNiche.value)
   return niche ? Object.values(researchCatalog[niche.name] || {}).flat() : []
 }
 
 function buildResearchQuery() {
-  const keyword = researchKeyword.value.trim() || researchQuery.value.trim() || suggestedQueries()[0] || ''
+  const custom = researchQuery.value.trim()
+  const keyword = custom || researchKeyword.value.trim() || suggestedQueries()[0] || ''
   if (!keyword) return ''
+  if (custom) return appendResearchFilters(keyword)
   const terms = keyword.split(/\s+OR\s+/i).map((term) => term.trim()).filter(Boolean)
-  const base = terms.length > 1 ? `(${terms.join(' OR ')})` : (keyword.includes(' ') ? `"${keyword}"` : keyword)
-  return `${base} lang:id -is:retweet`
+  const base = terms.length > 1 ? `(${terms.map(formatResearchTerm).join(' OR ')})` : formatResearchTerm(keyword)
+  return appendResearchFilters(base)
+}
+
+function formatResearchTerm(term) {
+  if (/[#@:$()\"-]/.test(term) || !term.includes(' ')) return term
+  return `"${term}"`
+}
+
+function appendResearchFilters(query) {
+  const filters = []
+  if (!/\blang:/i.test(query)) filters.push('lang:in')
+  if (!/(?:^|\s)-is:retweet\b/i.test(query)) filters.push('-is:retweet')
+  if (!/(?:^|\s)-is:reply\b/i.test(query)) filters.push('-is:reply')
+  return [query, ...filters].join(' ')
 }
 
 async function load() {
@@ -129,11 +145,12 @@ onBeforeUnmount(() => window.removeEventListener('message', receiveCapture))
     <section class="hero-row"><div><h1>Bank konten</h1><p class="muted">Riset konten X per niche. Simpan sumber asli, lalu kurasi dan reformat nanti.</p></div><span class="roadmap-badge">X / RESEARCH</span></section>
     <section class="panel research-form">
       <div class="section-heading"><div><h2>1. Riset konten X</h2><p class="muted">Mulai dari niche dan demand. Cari posting populer dulu, lalu pilih konten yang layak masuk bank.</p></div></div>
-      <div class="form-grid"><select v-model="researchNiche" class="select"><option value="">Pilih niche konten</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><select v-model="researchCategory" class="select" :disabled="!researchCategories().length"><option value="">Pilih kategori konten</option><option v-for="category in researchCategories()" :key="category" :value="category">{{ category }}</option></select></div>
-      <div v-if="researchKeywords().length" class="query-options"><button v-for="keyword in researchKeywords()" :key="keyword" class="query-chip" type="button" :class="{ selected: researchKeyword === keyword }" @click="researchKeyword = keyword; researchQuery = ''">{{ keyword }}</button></div>
-      <input v-model="researchQuery" class="input" placeholder="Keyword/query manual (opsional)" @keyup.enter="openResearch" />
+      <div class="form-grid"><select v-model="researchNiche" class="select" :disabled="customResearchQuery"><option value="">Pilih niche konten</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><select v-model="researchCategory" class="select" :disabled="customResearchQuery || !researchCategories().length"><option value="">Pilih kategori konten</option><option v-for="category in researchCategories()" :key="category" :value="category">{{ category }}</option></select></div>
+      <div v-if="researchKeywords().length" class="query-options"><button v-for="keyword in researchKeywords()" :key="keyword" class="query-chip" type="button" :disabled="customResearchQuery" :class="{ selected: researchKeyword === keyword }" @click="researchKeyword = keyword; researchQuery = ''">{{ keyword }}</button></div>
+      <div class="custom-query-row"><input v-model="researchQuery" class="input" placeholder="Keyword/query custom (opsional — mengambil alih preset)" @keyup.enter="openResearch" /><button v-if="customResearchQuery" class="button-secondary" type="button" @click="researchQuery = ''">Pakai preset</button></div>
+      <p v-if="customResearchQuery" class="muted custom-query-note">Mode custom aktif: niche, kategori, dan keyword bawaan dinonaktifkan. Query custom akan dipakai sebagai dasar.</p>
       <p v-if="buildResearchQuery()" class="query-preview">Query: <code>{{ buildResearchQuery() }}</code></p>
-      <div class="research-actions"><button class="button-primary" :disabled="!buildResearchQuery()" @click="openResearch('top')">Buka Populer ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('live')">Buka Terbaru ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('images')">Buka Media ↗</button></div>
+      <div class="research-actions"><button class="button-primary" :disabled="!buildResearchQuery()" @click="openResearch('top')">Buka Populer ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('live')">Buka Terbaru ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('media')">Buka Media ↗</button></div>
       <p class="muted">Pilih post yang relevan di X, lalu klik extension <strong>X Research</strong> untuk menangkap URL, teks, media, waktu, dan statistik yang terlihat. Review dulu sebelum disimpan.</p>
     </section>
     <section class="panel content-form">
@@ -151,5 +168,5 @@ onBeforeUnmount(() => window.removeEventListener('message', receiveCapture))
 </template>
 
 <style scoped>
-.content-page{display:grid;gap:18px}.hero-row{display:flex;justify-content:space-between;align-items:end;gap:16px}.hero-row h1{font-size:48px;margin:0}.roadmap-badge,.status-pill{font:12px 'DM Mono';color:#1f6b4f;background:#e7f1e8;border-radius:999px;padding:7px 10px}.content-form,.research-form{display:grid;gap:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.textarea{width:100%;resize:vertical;border:1px solid #cedbd0;border-radius:8px;padding:12px;background:#fffdf9;font:14px 'DM Mono';box-sizing:border-box}.label-group{display:grid;gap:8px;color:#52655a}.tag-options,.query-options,.research-actions{display:flex;flex-wrap:wrap;gap:8px}.tag-option,.query-chip{padding:8px 10px;border:1px solid #d9e2d8;border-radius:8px;background:#f8fbf7}.tag-option input{accent-color:#1f6b4f}.query-chip{cursor:pointer;color:#1f6b4f}.query-chip.selected{border-color:#1f6b4f;background:#e7f1e8}.query-preview{margin:0;padding:10px 12px;border-radius:8px;background:#eef5ed;color:#52655a;overflow:auto}.query-preview code{font-family:'DM Mono';color:#1f6b4f}.filter-row{display:flex;gap:8px}.filter-row .input{width:180px}.content-list{display:grid;gap:10px}.content-card{border:1px solid #d9e2d8;border-radius:10px;padding:14px;background:#fbfcf8}.content-card-head{display:flex;justify-content:space-between;align-items:center}.content-card a{color:#1f6b4f}.content-card p{white-space:pre-wrap;line-height:1.5;max-height:130px;overflow:hidden}.content-card small{color:#78867c}.empty-state{padding:30px;text-align:center;color:#78867c}.error-box{padding:10px;background:#fff0ed;color:#a84f43}.save-notice{color:#176b4f;font-weight:600}@media(max-width:700px){.form-grid,.hero-row{grid-template-columns:1fr;display:grid}.filter-row{flex-direction:column}.filter-row .input{width:auto}}
+.content-page{display:grid;gap:18px}.hero-row{display:flex;justify-content:space-between;align-items:end;gap:16px}.hero-row h1{font-size:48px;margin:0}.roadmap-badge,.status-pill{font:12px 'DM Mono';color:#1f6b4f;background:#e7f1e8;border-radius:999px;padding:7px 10px}.content-form,.research-form{display:grid;gap:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.custom-query-row{display:flex;gap:8px;align-items:center}.custom-query-row .input{flex:1}.custom-query-note{margin:0}.textarea{width:100%;resize:vertical;border:1px solid #cedbd0;border-radius:8px;padding:12px;background:#fffdf9;font:14px 'DM Mono';box-sizing:border-box}.label-group{display:grid;gap:8px;color:#52655a}.tag-options,.query-options,.research-actions{display:flex;flex-wrap:wrap;gap:8px}.tag-option,.query-chip{padding:8px 10px;border:1px solid #d9e2d8;border-radius:8px;background:#f8fbf7}.tag-option input{accent-color:#1f6b4f}.query-chip{cursor:pointer;color:#1f6b4f}.query-chip.selected{border-color:#1f6b4f;background:#e7f1e8}.query-chip:disabled{cursor:not-allowed;opacity:.55}.query-preview{margin:0;padding:10px 12px;border-radius:8px;background:#eef5ed;color:#52655a;overflow:auto}.query-preview code{font-family:'DM Mono';color:#1f6b4f}.filter-row{display:flex;gap:8px}.filter-row .input{width:180px}.content-list{display:grid;gap:10px}.content-card{border:1px solid #d9e2d8;border-radius:10px;padding:14px;background:#fbfcf8}.content-card-head{display:flex;justify-content:space-between;align-items:center}.content-card a{color:#1f6b4f}.content-card p{white-space:pre-wrap;line-height:1.5;max-height:130px;overflow:hidden}.content-card small{color:#78867c}.empty-state{padding:30px;text-align:center;color:#78867c}.error-box{padding:10px;background:#fff0ed;color:#a84f43}.save-notice{color:#176b4f;font-weight:600}@media(max-width:700px){.form-grid,.hero-row{grid-template-columns:1fr;display:grid}.filter-row,.custom-query-row{flex-direction:column;align-items:stretch}.filter-row .input{width:auto}}
 </style>

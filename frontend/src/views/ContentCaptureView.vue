@@ -59,8 +59,9 @@ async function save() {
   if (!form.value.canonical_url.trim() || !form.value.original_text.trim()) return
   saving.value = true; error.value = ''; message.value = ''
   try {
-    await apiRequest('/api/content-items', { method: 'POST', body: JSON.stringify(form.value) })
+    const saved = await apiRequest('/api/content-items', { method: 'POST', body: JSON.stringify(form.value) })
     message.value = 'Konten dan media berhasil disimpan ke bank konten.'
+    if (saved?.id) router.push(`/content-bank/${saved.id}`)
   } catch (e) { error.value = e.message } finally { saving.value = false }
 }
 watch(researchNiche, () => { researchCategory.value = ''; researchKeyword.value = ''; researchQuery.value = '' })

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/nunutech40/affilatorshopee/internal/model"
 )
@@ -127,7 +128,15 @@ func (r *ContentRepository) List(ctx context.Context, nicheID, platform, status,
 		}
 		items = append(items, i)
 	}
-	return items, total, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for idx := range items {
+		if err := r.hydrate(ctx, &items[idx]); err != nil {
+			return nil, 0, err
+		}
+	}
+	return items, total, nil
 }
 
 func (r *ContentRepository) Get(ctx context.Context, id string) (*model.ContentItem, error) {
@@ -136,5 +145,160 @@ func (r *ContentRepository) Get(ctx context.Context, id string) (*model.ContentI
 	if err != nil {
 		return nil, err
 	}
+	if err := r.hydrate(ctx, &i); err != nil {
+		return nil, err
+	}
 	return &i, nil
+}
+
+func (r *ContentRepository) hydrate(ctx context.Context, item *model.ContentItem) error {
+	var media []byte
+	if err := r.db.QueryRowContext(ctx, `SELECT media FROM content_items WHERE id=$1`, item.ID).Scan(&media); err != nil {
+		return err
+	}
+	if len(media) > 0 && string(media) != "null" {
+		if err := json.Unmarshal(media, &item.Media); err != nil {
+			return err
+		}
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT cn.id,cn.name,cn.slug,cn.description,cn.status,cn.created_at,cn.updated_at FROM content_niches cn JOIN content_item_niches cin ON cin.content_niche_id=cn.id WHERE cin.content_item_id=$1 ORDER BY cn.name`, item.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var n model.ContentNiche
+		if err := rows.Scan(&n.ID, &n.Name, &n.Slug, &n.Description, &n.Status, &n.CreatedAt, &n.UpdatedAt); err != nil {
+			return err
+		}
+		item.Niches = append(item.Niches, n)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	rows, err = r.db.QueryContext(ctx, `SELECT n.id,n.name,n.created_at FROM niches n JOIN content_item_product_types cipt ON cipt.product_type_id=n.id WHERE cipt.content_item_id=$1 ORDER BY n.name`, item.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var n model.Niche
+		if err := rows.Scan(&n.ID, &n.Name, &n.CreatedAt); err != nil {
+			return err
+		}
+		item.ProductTypes = append(item.ProductTypes, n)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	var stats model.ContentStats
+	err = r.db.QueryRowContext(ctx, `SELECT like_count,repost_count,reply_count,bookmark_count,view_count,captured_at FROM content_stat_snapshots WHERE content_item_id=$1 ORDER BY captured_at DESC LIMIT 1`, item.ID).Scan(&stats.LikeCount, &stats.RepostCount, &stats.ReplyCount, &stats.BookmarkCount, &stats.ViewCount, &stats.CapturedAt)
+	if err == nil {
+		item.LatestStats = &stats
+	} else if err != sql.ErrNoRows {
+		return err
+	}
+	rows, err = r.db.QueryContext(ctx, `SELECT id,content_item_id,name,text,source,model,position,created_at,updated_at FROM content_item_variants WHERE content_item_id=$1 ORDER BY position,id`, item.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var v model.ContentVariant
+		if err := rows.Scan(&v.ID, &v.ContentItemID, &v.Name, &v.Text, &v.Source, &v.Model, &v.Position, &v.CreatedAt, &v.UpdatedAt); err != nil {
+			return err
+		}
+		item.Variants = append(item.Variants, v)
+	}
+	return rows.Err()
+}
+
+type ContentUpdate struct {
+	Platform       string
+	ExternalPostID string
+	CanonicalURL   string
+	AuthorHandle   string
+	OriginalText   string
+	Media          []string
+	PublishedAt    *time.Time
+	SourceQuery    string
+	Status         string
+}
+
+func (r *ContentRepository) Update(ctx context.Context, id string, item ContentUpdate, nicheIDs, productTypeIDs []string, stats *model.ContentStats) (*model.ContentItem, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	media, err := json.Marshal(item.Media)
+	if err != nil {
+		return nil, err
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE content_items SET platform=$1,external_post_id=$2,canonical_url=$3,author_handle=$4,original_text=$5,media=$6::jsonb,published_at=$7,source_query=$8,status=$9,updated_at=CURRENT_TIMESTAMP WHERE id=$10`, item.Platform, item.ExternalPostID, item.CanonicalURL, item.AuthorHandle, item.OriginalText, string(media), item.PublishedAt, item.SourceQuery, item.Status, id)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, sql.ErrNoRows
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM content_item_niches WHERE content_item_id=$1`, id); err != nil {
+		return nil, err
+	}
+	for _, nid := range nicheIDs {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO content_item_niches(content_item_id,content_niche_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, id, nid); err != nil {
+			return nil, err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM content_item_product_types WHERE content_item_id=$1`, id); err != nil {
+		return nil, err
+	}
+	for _, tid := range productTypeIDs {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO content_item_product_types(content_item_id,product_type_id) VALUES($1,$2) ON CONFLICT DO NOTHING`, id, tid); err != nil {
+			return nil, err
+		}
+	}
+	if stats != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO content_stat_snapshots(content_item_id,like_count,repost_count,reply_count,bookmark_count,view_count) VALUES($1,$2,$3,$4,$5,$6)`, id, stats.LikeCount, stats.RepostCount, stats.ReplyCount, stats.BookmarkCount, stats.ViewCount); err != nil {
+			return nil, err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return r.Get(ctx, id)
+}
+
+func (r *ContentRepository) Delete(ctx context.Context, id string) error {
+	res, err := r.db.ExecContext(ctx, `DELETE FROM content_items WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (r *ContentRepository) CreateVariant(ctx context.Context, itemID string, v model.ContentVariant) (*model.ContentVariant, error) {
+	var out model.ContentVariant
+	err := r.db.QueryRowContext(ctx, `INSERT INTO content_item_variants(content_item_id,name,text,source,model,position) VALUES($1,$2,$3,$4,$5,COALESCE($6,(SELECT COALESCE(MAX(position),0)+1 FROM content_item_variants WHERE content_item_id=$1))) RETURNING id,content_item_id,name,text,source,model,position,created_at,updated_at`, itemID, v.Name, v.Text, v.Source, v.Model, v.Position).Scan(&out.ID, &out.ContentItemID, &out.Name, &out.Text, &out.Source, &out.Model, &out.Position, &out.CreatedAt, &out.UpdatedAt)
+	return &out, err
+}
+func (r *ContentRepository) UpdateVariant(ctx context.Context, id string, v model.ContentVariant) (*model.ContentVariant, error) {
+	var out model.ContentVariant
+	err := r.db.QueryRowContext(ctx, `UPDATE content_item_variants SET name=$1,text=$2,source=$3,model=$4,position=$5,updated_at=CURRENT_TIMESTAMP WHERE id=$6 RETURNING id,content_item_id,name,text,source,model,position,created_at,updated_at`, v.Name, v.Text, v.Source, v.Model, v.Position, id).Scan(&out.ID, &out.ContentItemID, &out.Name, &out.Text, &out.Source, &out.Model, &out.Position, &out.CreatedAt, &out.UpdatedAt)
+	return &out, err
+}
+func (r *ContentRepository) DeleteVariant(ctx context.Context, id string) error {
+	res, err := r.db.ExecContext(ctx, `DELETE FROM content_item_variants WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

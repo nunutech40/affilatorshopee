@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,12 +11,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nunutech40/affilatorshopee/internal/model"
 	"github.com/nunutech40/affilatorshopee/internal/repository"
+	"github.com/nunutech40/affilatorshopee/internal/service"
 )
 
-type ContentHandler struct{ repo *repository.ContentRepository }
+type ContentHandler struct {
+	repo *repository.ContentRepository
+	ai   *service.AIService
+}
 
-func NewContentHandler(repo *repository.ContentRepository) *ContentHandler {
-	return &ContentHandler{repo: repo}
+func NewContentHandler(repo *repository.ContentRepository, ai ...*service.AIService) *ContentHandler {
+	h := &ContentHandler{repo: repo}
+	if len(ai) > 0 {
+		h.ai = ai[0]
+	}
+	return h
 }
 
 func (h *ContentHandler) ListNiches(w http.ResponseWriter, r *http.Request) {
@@ -98,4 +108,161 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 201, item)
+}
+
+type contentPayload struct {
+	Platform       string              `json:"platform"`
+	ExternalPostID string              `json:"external_post_id"`
+	CanonicalURL   string              `json:"canonical_url"`
+	AuthorHandle   string              `json:"author_handle"`
+	OriginalText   string              `json:"original_text"`
+	Media          []string            `json:"media"`
+	SourceQuery    string              `json:"source_query"`
+	PublishedAt    *time.Time          `json:"published_at"`
+	Status         string              `json:"status"`
+	NicheIDs       []string            `json:"niche_ids"`
+	ProductTypeIDs []string            `json:"product_type_ids"`
+	Stats          *model.ContentStats `json:"stats"`
+}
+
+func (h *ContentHandler) Get(w http.ResponseWriter, r *http.Request) {
+	item, err := h.repo.Get(r.Context(), chi.URLParam(r, "id"))
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, "DATABASE_ERROR", "Gagal mengambil detail konten")
+		return
+	}
+	writeJSON(w, 200, item)
+}
+
+func (h *ContentHandler) Patch(w http.ResponseWriter, r *http.Request) {
+	var b contentPayload
+	if err := decodeJSON(w, r, &b); err != nil {
+		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	if strings.TrimSpace(b.OriginalText) == "" || strings.TrimSpace(b.CanonicalURL) == "" {
+		writeError(w, 400, "VALIDATION_ERROR", "URL dan konten asli wajib diisi")
+		return
+	}
+	if b.Platform == "" {
+		b.Platform = "x"
+	}
+	if b.Status == "" {
+		b.Status = "discovered"
+	}
+	item, err := h.repo.Update(r.Context(), chi.URLParam(r, "id"), repository.ContentUpdate{Platform: b.Platform, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
+		return
+	}
+	if err != nil {
+		writeError(w, 400, "UPDATE_ERROR", "Konten gagal diperbarui: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, item)
+}
+
+func (h *ContentHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	err := h.repo.Delete(r.Context(), chi.URLParam(r, "id"))
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, "DELETE_ERROR", "Konten gagal dihapus")
+		return
+	}
+	w.WriteHeader(204)
+}
+
+type variantPayload struct {
+	Name     string `json:"name"`
+	Text     string `json:"text"`
+	Source   string `json:"source"`
+	Model    string `json:"model"`
+	Position int    `json:"position"`
+}
+
+func (h *ContentHandler) CreateVariant(w http.ResponseWriter, r *http.Request) {
+	var b variantPayload
+	if err := decodeJSON(w, r, &b); err != nil {
+		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	v, err := h.repo.CreateVariant(r.Context(), chi.URLParam(r, "id"), model.ContentVariant{Name: b.Name, Text: b.Text, Source: b.Source, Model: b.Model, Position: b.Position})
+	if err != nil {
+		writeError(w, 400, "CREATE_ERROR", "Varian gagal disimpan: "+err.Error())
+		return
+	}
+	writeJSON(w, 201, v)
+}
+func (h *ContentHandler) PatchVariant(w http.ResponseWriter, r *http.Request) {
+	var b variantPayload
+	if err := decodeJSON(w, r, &b); err != nil {
+		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	v, err := h.repo.UpdateVariant(r.Context(), chi.URLParam(r, "variantID"), model.ContentVariant{Name: b.Name, Text: b.Text, Source: b.Source, Model: b.Model, Position: b.Position})
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "NOT_FOUND", "Varian tidak ditemukan")
+		return
+	}
+	if err != nil {
+		writeError(w, 400, "UPDATE_ERROR", "Varian gagal diperbarui: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
+}
+func (h *ContentHandler) DeleteVariant(w http.ResponseWriter, r *http.Request) {
+	err := h.repo.DeleteVariant(r.Context(), chi.URLParam(r, "variantID"))
+	if errors.Is(err, sql.ErrNoRows) {
+		writeError(w, 404, "NOT_FOUND", "Varian tidak ditemukan")
+		return
+	}
+	if err != nil {
+		writeError(w, 500, "DELETE_ERROR", "Varian gagal dihapus")
+		return
+	}
+	w.WriteHeader(204)
+}
+
+func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request) {
+	if h.ai == nil {
+		writeError(w, 503, "AI_UNAVAILABLE", "AI belum dikonfigurasi")
+		return
+	}
+	var b struct {
+		Model string `json:"model"`
+		Name  string `json:"name"`
+	}
+	if err := decodeJSON(w, r, &b); err != nil {
+		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	item, err := h.repo.Get(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
+		return
+	}
+	cm := "trending"
+	p := model.Product{ID: item.ID, RawText: item.OriginalText, ContentModel: &cm}
+	results, err := h.ai.Reformat(r.Context(), []model.Product{p}, b.Model, true)
+	if err != nil {
+		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())
+		return
+	}
+	if len(results) == 0 || strings.TrimSpace(results[0].PromoText) == "" {
+		writeError(w, 502, "AI_EMPTY", "AI tidak mengembalikan varian")
+		return
+	}
+	v, err := h.repo.CreateVariant(r.Context(), item.ID, model.ContentVariant{Name: b.Name, Text: results[0].PromoText, Source: "ai", Model: b.Model})
+	if err != nil {
+		writeError(w, 500, "CREATE_ERROR", "Varian AI gagal disimpan")
+		return
+	}
+	writeJSON(w, 201, v)
 }

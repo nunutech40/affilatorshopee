@@ -14,6 +14,7 @@ const saving = ref(false)
 const message = ref('')
 const error = ref('')
 const form = ref({ canonical_url: '', original_text: '', author_handle: '', source_query: '', published_at: null, stats: null, media: [], niche_ids: [], product_type_ids: [] })
+const threadPostCount = ref(1)
 
 const researchCatalog = {
   'Sukses & Kesuksesan': { Edukasi: ['kebiasaan orang sukses OR mindset sukses', 'skill kerja OR skill masa depan', 'financial freedom OR kebebasan finansial'], 'Tips Praktis': ['cara sukses OR cara berkembang', 'produktivitas OR manajemen waktu', 'mencapai target OR konsisten'], 'Cerita & Pengalaman': ['perjalanan sukses OR proses sukses', 'gagal lalu bangkit OR belajar dari kegagalan', 'pelajaran hidup OR pengalaman hidup'], 'Opini & Debat': ['kerja keras OR kerja cerdas', 'karier OR uang dan karier', 'definisi sukses OR arti sukses'] },
@@ -51,7 +52,8 @@ function receiveCapture(event) {
   form.value.published_at = item.published_at || null
   form.value.stats = item.stats || null
   form.value.media = [...new Set(item.media || [])]
-  message.value = `Post ditangkap · ${form.value.media.length} media. Review sebelum disimpan.`
+  threadPostCount.value = item.thread_post_count || 1
+  message.value = `${threadPostCount.value > 1 ? `Thread ${threadPostCount.value} post` : 'Post'} ditangkap · ${form.value.media.length} media. Review sebelum disimpan.`
   error.value = ''
 }
 function removeMedia(index) { form.value.media.splice(index, 1) }

@@ -18,26 +18,101 @@
     return match ? parseMetricValue(match[0]) : 0
   }
 
-  function extract(article) {
+  function extractArticle(article) {
     const link = [...article.querySelectorAll('a[href*="/status/"]')].find((item) => /\/status\/\d+/.test(item.getAttribute('href') || ''))
     const href = link ? new URL(link.getAttribute('href'), location.origin).href : location.href
     const text = article.querySelector('[data-testid="tweetText"]')?.innerText?.trim() || article.innerText.trim()
     const author = [...article.querySelectorAll('a[href^="/"]')].map((item) => item.getAttribute('href')).find((value) => /^\/[A-Za-z0-9_]{1,15}$/.test(value || '')) || ''
     const time = article.querySelector('time')?.dateTime || ''
+    const socialContext = article.querySelector('[data-testid="socialContext"]')
+    const replyingToHandles = [...(socialContext?.querySelectorAll('a[href^="/"]') || [])]
+      .map((item) => item.getAttribute('href') || '')
+      .map((value) => value.replace(/^\//, '').split('/')[0])
+      .filter((value) => /^[A-Za-z0-9_]{1,15}$/.test(value))
     const media = [...article.querySelectorAll('img, video')]
       .map((item) => item.currentSrc || item.src || item.querySelector('source')?.src)
       .filter((src) => src && !/profile_images|emoji|abs-0\.twimg\.com\/emoji/i.test(src))
     return {
       platform: 'x', canonical_url: href, external_post_id: href.match(/\/status\/(\d+)/)?.[1] || '',
-      author_handle: author.replace(/^\//, ''), original_text: text, media: [...new Set(media)],
+      author_handle: author.replace(/^\//, ''), replying_to_handles: [...new Set(replyingToHandles)], original_text: text, media: [...new Set(media)],
       published_at: time, stats: { like_count: metric(article, 'like'), repost_count: metric(article, 'repost|retweet'), reply_count: metric(article, 'repl'), view_count: metric(article, 'view') },
     }
   }
 
+  function composeThread(extracted) {
+    if (!extracted.length) return null
+
+    // Pada halaman detail X, post dalam thread tampil sebagai article berurutan.
+    // Gunakan author post utama sebagai pagar agar reply akun lain tidak ikut.
+    const currentID = location.pathname.match(/\/status\/(\d+)/)?.[1] || ''
+    if (!currentID) return { ...extracted[0], thread_post_count: 1, thread_posts: [extracted[0]] }
+    const currentIndex = Math.max(0, extracted.findIndex((item) => item.external_post_id === currentID))
+    const author = extracted[currentIndex]?.author_handle || extracted[0].author_handle
+    const isMainThreadPost = (item) => item.author_handle === author &&
+      (!item.replying_to_handles?.length || item.replying_to_handles.includes(author))
+    const posts = [extracted[currentIndex] || extracted[0]]
+    for (let i = currentIndex - 1; i >= 0 && isMainThreadPost(extracted[i]); i--) posts.unshift(extracted[i])
+    for (let i = currentIndex + 1; i < extracted.length && isMainThreadPost(extracted[i]); i++) posts.push(extracted[i])
+    const ordered = [...new Map(posts.map((item) => [item.external_post_id, item])).values()]
+    const primary = ordered[0]
+    const primaryMedia = [...new Set(primary.media || [])]
+    return {
+      ...primary,
+      original_text: ordered.length === 1 ? primary.original_text : ordered.map((item, index) => `Post ${index + 1}\n${item.original_text}`).join('\n\n'),
+      media: primaryMedia,
+      thread_post_count: ordered.length,
+      thread_posts: ordered.map(({ external_post_id, canonical_url, original_text, published_at }, index) => ({ external_post_id, canonical_url, original_text, media: index === 0 ? primaryMedia : [], published_at })),
+    }
+  }
+
+  function extractThread(articles) {
+    return composeThread(articles.map((article) => extractArticle(article)).filter((item) => item.external_post_id && item.original_text))
+  }
+
+  async function captureThread() {
+    const initial = [...document.querySelectorAll('article[data-testid="tweet"]')]
+    if (!initial.length) return null
+    if (!location.pathname.match(/\/status\/\d+/)) return extractThread(initial)
+
+    // X melakukan virtualisasi DOM. Kumpulkan snapshot per viewport agar post
+    // thread yang keluar-masuk DOM tetap ikut, lalu kembalikan posisi scroll.
+    const previousY = window.scrollY
+    const seen = new Map()
+    window.scrollTo(0, 0)
+    await new Promise((resolve) => setTimeout(resolve, 700))
+    let stableRounds = 0
+    for (let round = 0; round < 48; round++) {
+      for (const article of [...document.querySelectorAll('article[data-testid="tweet"]')]) {
+        const item = extractArticle(article)
+        if (item.external_post_id && !seen.has(item.external_post_id)) seen.set(item.external_post_id, item)
+      }
+      const before = seen.size
+      const beforeHeight = document.documentElement.scrollHeight
+      window.scrollBy(0, Math.max(300, Math.floor(window.innerHeight * 0.65)))
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24
+      const loadedNewPost = seen.size > before
+      const pageChanged = document.documentElement.scrollHeight > beforeHeight
+      if (atBottom && !loadedNewPost && !pageChanged) {
+        stableRounds++
+        await new Promise((resolve) => setTimeout(resolve, 700))
+        if (stableRounds >= 3) break
+      } else {
+        stableRounds = 0
+      }
+    }
+    window.scrollTo(0, previousY)
+    await new Promise((resolve) => setTimeout(resolve, 250))
+    return composeThread([...seen.values()])
+  }
+
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type !== 'AFFILIATOR_CAPTURE_X') return
-    const article = document.querySelector('article[data-testid="tweet"]')
-    if (!article) { sendResponse({ ok: false, error: 'Buka satu halaman detail post X atau pastikan post terlihat.' }); return }
-    sendResponse({ ok: true, item: extract(article) })
+    (async () => {
+      const item = await captureThread()
+      if (!item) { sendResponse({ ok: false, error: 'Data post X belum terbaca. Tunggu halaman selesai dimuat lalu coba lagi.' }); return }
+      sendResponse({ ok: true, item })
+    })().catch((error) => sendResponse({ ok: false, error: error.message || 'Gagal membaca thread X.' }))
+    return true
   })
 })()

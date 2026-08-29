@@ -134,6 +134,7 @@ Dokumen sumber:
 - [x] Tampilkan dan edit jenis barang produk dari detail; tampilkan label pada list
 - [x] Setup base URL API
 - [x] Tampilkan loading, success, dan error state
+- [x] Rapikan list Bank Konten dengan judul/excerpt terpotong, metadata ringkas, dan detail responsive
 - [ ] Verifikasi alur input sampai share melalui browser
 
 ## Phase 7: Integration dan Release MVP
@@ -160,7 +161,7 @@ Dokumen sumber:
 - [x] Buat bank konten X: simpan konten asli, URL/post ID, media, author, tanggal, query/sumber, dan status kurasi
 - [x] Sediakan flow riset-first: pilih niche, gunakan query awal, lalu buka hasil Top X sebelum menyimpan konten
 - [x] Breakdown riset manual menjadi kategori konten dan keyword per niche, lalu susun query dengan filter dasar
-- [x] Tambahkan extension X Research untuk menangkap post yang dipilih secara manual sebelum disimpan
+- [x] Tambahkan extension X Research untuk menangkap post/thread yang dipilih secara manual sebelum disimpan
 - [ ] Riset posting X yang populer berdasarkan niche secara otomatis; MVP saat ini membuka pencarian Top X dan tetap memakai seleksi manual
 - [ ] Simpan snapshot statistik konten dan sinyal kenapa konten dianggap populer
 - [ ] Bersihkan konten tanpa menimpa konten asli

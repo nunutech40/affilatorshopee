@@ -336,6 +336,12 @@ Diberikan niche konten, user dapat menyimpan banyak konten X ke bank niche terse
 - Riset MVP dapat dimulai dari pencarian X yang dibuka user dan dipilih melalui extension/manual capture; integrasi X API adalah tahap otomasi berikutnya.
 - Konten hanya dibagikan setelah user memilih versi dan menekan share/post manual.
 
+### AC-7a: Tampilan Bank Konten
+
+- List menampilkan kartu ringkas dengan status, platform, niche, excerpt, statistik popularitas, author, dan waktu publikasi.
+- Judul/excerpt yang panjang dipotong dengan ellipsis agar kartu konsisten; konten lengkap tersedia di halaman detail.
+- Detail menyediakan raw konten yang tetap dapat diedit, metadata/statistik, niche, jenis barang, serta varian konten dalam layout responsive.
+
 ## 16. Success Metrics
 
 - Waktu dari input produk sampai caption jadi berkurang

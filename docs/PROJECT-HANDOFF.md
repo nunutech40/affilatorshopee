@@ -64,6 +64,12 @@ Codex bridge lokal sudah dites dari dalam container pada `http://host.docker.int
 - Share ke X mengirim promo text dan media lokal.
 - Jika promo text kosong setelah reset/gagal, tombol `Reformat AI` aktif kembali; `Save promo text` hanya aktif jika ada teks.
 
+### Bank Konten UI
+
+- List Bank Konten sengaja memakai judul maksimal dua baris dan excerpt ringkas dengan ellipsis agar kartu konsisten; detail tetap menjadi tempat membaca dan mengedit isi lengkap.
+- Detail Bank Konten mempertahankan raw konten, varian, metadata, statistik popularitas, niche, dan jenis barang; textarea raw dibatasi tingginya agar panel tidak mendorong layout terlalu panjang.
+- Sidebar detail sticky pada desktop dan tidak sticky pada mobile. Perapian ini tidak mengubah data atau alur capture/reformat.
+
 ### Chrome Extension
 
 Folder: `extension/x-helper/` dan `extension/shopee-scraper/`.

@@ -764,6 +764,8 @@ State content: `discovered → reviewed → cleaned → reformatted → ready_to
 
 MVP tidak memiliki flow pemilihan akun; akun X yang digunakan mengikuti session login di browser user.
 
+Implementasi UI list/detail: `ContentBankView.vue` menampilkan judul maksimum dua baris dan excerpt ringkas dengan ellipsis, ditambah chip status/source/niche serta statistik popularitas. `ContentItemDetailView.vue` mempertahankan raw konten lengkap, membatasi tinggi textarea, dan memakai sidebar sticky pada desktop yang kembali normal pada layar kecil. `X Research` menangkap post tunggal atau thread yang terlihat pada halaman detail; thread disimpan sebagai satu `original_text` berurutan dan media dideduplikasi. Perubahan ini tidak membutuhkan migrasi karena memakai field raw/media yang sudah ada.
+
 ### 8.3 State
 
 - `productStore` - list, filter, CRUD, dan AI reformat.

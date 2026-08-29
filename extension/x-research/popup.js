@@ -13,7 +13,7 @@ async function waitForTab(tabId) {
   })
 }
 async function capture() {
-  button.disabled = true; statusEl.textContent = 'Mengambil post...'
+  button.disabled = true; statusEl.textContent = 'Mengambil thread X (auto-scroll)...'
   try {
     const tab = await activeTab()
     let result
@@ -27,7 +27,9 @@ async function capture() {
     const target = app?.url?.includes('/content-bank/capture') ? app : await chrome.tabs.create({ url: 'http://localhost:8080/content-bank/capture', active: true })
     await waitForTab(target.id)
     await chrome.scripting.executeScript({ target: { tabId: target.id }, func: (item) => window.postMessage({ type: 'AFFILIATOR_X_RESEARCH_CAPTURE', item }, '*'), args: [result.item] })
-    statusEl.textContent = 'Post ditangkap. Review lalu simpan di Bank konten.'
+    statusEl.textContent = result.item.thread_post_count > 1
+      ? `Thread ${result.item.thread_post_count} post ditangkap. Review lalu simpan di Bank konten.`
+      : 'Post ditangkap. Review lalu simpan di Bank konten.'
   } catch (error) { statusEl.textContent = `Gagal: ${error.message}` } finally { button.disabled = false }
 }
 button.addEventListener('click', capture)

@@ -44,6 +44,8 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Jenis barang bersifat multi-label: dapat dikelola dari Settings, diubah dari detail produk, ditampilkan di list, dan dipakai untuk filter dashboard. Produk tanpa label tersedia melalui filter `Uncategorized`.
 - Master jenis barang saat ini memisahkan `Buku` dan `Pengembangan Diri` (sebelumnya satu label gabungan).
 - Dashboard juga dapat memfilter sumber input: `X`, `Shopee`, atau `Copas`.
+- Tampilan Bank Konten diringkas agar list tetap rapi: judul dan excerpt panjang memakai ellipsis, sementara raw konten lengkap tetap tersedia di detail.
+- Detail Bank Konten memakai layout responsive dengan textarea raw yang dibatasi tingginya serta metadata, popularitas, niche, dan jenis barang di sidebar.
 
 Threads, riset konten populer per niche untuk X/Facebook, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Implementasinya harus dipisahkan per platform agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
 
@@ -61,7 +63,7 @@ Niche awal:
 
 User dapat menambah atau mengubah master niche. Satu niche dapat memiliki banyak konten. Satu konten juga dapat memiliki banyak label `Jenis barang` yang sama dengan produk, dan satu label jenis barang dapat dipakai oleh banyak konten (many-to-many); niche konten dan jenis barang tetap dua master yang berbeda.
 
-Alur yang direncanakan: cari konten populer per niche → simpan URL, konten asli, media, dan statistik → bersihkan tanpa menghapus sumber asli → reformat dengan prompt X → buat varian per akun → share melalui helper X. Riset awal dapat memakai halaman pencarian/session X dan seleksi user; collector X API menjadi opsi tahap berikutnya.
+Alur yang direncanakan: cari konten populer per niche → simpan URL, konten asli, media, dan statistik → bersihkan tanpa menghapus sumber asli → reformat dengan prompt X → buat varian per akun → share melalui helper X. Extension X Research dapat menangkap satu post atau thread yang terlihat pada halaman detail X; thread digabung berurutan dengan media unik. Riset awal dapat memakai halaman pencarian/session X dan seleksi user; collector X API menjadi opsi tahap berikutnya.
 
 Implementasi awal tersedia di menu `Bank konten`: pengguna memilih niche, kategori konten, lalu preset keyword berbasis sinonim/OR. Aplikasi menyusun query dengan grouping, `lang:in` (kode bahasa Indonesia di X), pengecualian repost dan balasan, sebelum membuka pencarian X dengan filter Populer, Terbaru, atau Media. Query custom mengambil alih preset dan menonaktifkan pilihan bawaan sampai dibersihkan. Extension `extension/x-research` menangkap post yang sedang dibuka beserta URL, teks, author, media, tanggal, dan statistik yang terlihat untuk direview sebelum disimpan; X API dan ranking otomatis tetap menjadi tahap berikutnya.
 

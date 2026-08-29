@@ -71,8 +71,10 @@ function buildResearchQuery() {
 }
 
 function formatResearchTerm(term) {
-  if (/[#@:$()\"-]/.test(term) || !term.includes(' ')) return term
-  return `"${term}"`
+  // Preset terms are intentionally broad: exact phrases often return zero
+  // results in X when the wording differs slightly. Users can still enter
+  // an exact phrase in custom mode by typing quotation marks themselves.
+  return term
 }
 
 function appendResearchFilters(query) {

@@ -13,9 +13,13 @@ async function waitForTab(tabId) {
   })
 }
 async function capture() {
-  button.disabled = true; statusEl.textContent = 'Mengambil thread X (auto-scroll)...'
+  button.disabled = true
   try {
     const tab = await activeTab()
+    const isPostDetail = /https?:\/\/(?:www\.)?(?:x|twitter)\.com\/[^/]+\/status\/\d+/.test(tab.url || '')
+    statusEl.textContent = isPostDetail
+      ? 'Mengambil thread X (auto-scroll)...'
+      : 'Mengambil post dari halaman ini (tanpa auto-scroll)...'
     let result
     try { result = await chrome.tabs.sendMessage(tab.id, { type: 'AFFILIATOR_CAPTURE_X' }) } catch {
       await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })
@@ -29,7 +33,9 @@ async function capture() {
     await chrome.scripting.executeScript({ target: { tabId: target.id }, func: (item) => window.postMessage({ type: 'AFFILIATOR_X_RESEARCH_CAPTURE', item }, '*'), args: [result.item] })
     statusEl.textContent = result.item.thread_post_count > 1
       ? `Thread ${result.item.thread_post_count} post ditangkap. Review lalu simpan di Bank konten.`
-      : 'Post ditangkap. Review lalu simpan di Bank konten.'
+      : isPostDetail
+        ? 'Post ditangkap. Review lalu simpan di Bank konten.'
+        : 'Post dari halaman pencarian ditangkap. Untuk auto-scroll thread, buka post sampai URL /status/... lalu coba lagi.'
   } catch (error) { statusEl.textContent = `Gagal: ${error.message}` } finally { button.disabled = false }
 }
 button.addEventListener('click', capture)

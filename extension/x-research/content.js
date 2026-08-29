@@ -89,11 +89,30 @@
     window.scrollTo(0, 0)
     await new Promise((resolve) => setTimeout(resolve, 700))
     let stableRounds = 0
+    let threadBoundarySeen = false
     for (let round = 0; round < 48; round++) {
-      for (const article of [...document.querySelectorAll('article[data-testid="tweet"]')]) {
+      const articles = [...document.querySelectorAll('article[data-testid="tweet"]')]
+      for (const article of articles) {
         const item = extractArticle(article)
         if (item.external_post_id && !seen.has(item.external_post_id)) seen.set(item.external_post_id, item)
       }
+      // Setelah post yang dibuka, X menampilkan reply. Begitu reply pertama
+      // terlihat, jangan terus scroll ke bawah: rangkaian thread utama sudah
+      // selesai. Hasil akhir tetap memakai composeThread sebagai pagar kedua.
+      const currentIndex = articles.findIndex((article) =>
+        article.querySelector(`a[href*="/status/${location.pathname.match(/\/status\/(\d+)/)?.[1] || ''}"]`),
+      )
+      if (currentIndex >= 0) {
+        const currentItem = extractArticle(articles[currentIndex])
+        const mainAuthor = currentItem.author_handle.toLowerCase()
+        const following = articles.slice(currentIndex + 1).map(extractArticle).filter((item) => item.external_post_id)
+        const hasReplyBoundary = following.some((item) =>
+          item.author_handle.toLowerCase() !== mainAuthor ||
+          !item.replying_to_handles?.some((handle) => handle.toLowerCase() === mainAuthor),
+        )
+        if (hasReplyBoundary) threadBoundarySeen = true
+      }
+      if (threadBoundarySeen) break
       const before = seen.size
       const beforeHeight = document.documentElement.scrollHeight
       window.scrollBy(0, Math.max(300, Math.floor(window.innerHeight * 0.65)))

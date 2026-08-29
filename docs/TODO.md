@@ -157,8 +157,9 @@ Dokumen sumber:
 - [ ] Share ke Threads melalui flow dan extension khusus Threads
 - [ ] Buat master niche konten terpisah dari Jenis Barang; isi niche awal: Sukses & Kesuksesan, Fashion Pria, Hubungan / Relasi Pria Wanita, Gym, Lari & Exercise, Affiliate
 - [ ] Tambahkan CRUD niche konten dan kemampuan user menambah niche baru
-- [ ] Buat bank konten X: simpan konten asli, URL/post ID, media, author, tanggal, query/sumber, dan status kurasi
-- [ ] Riset posting X yang populer berdasarkan niche, mulai dari capture halaman/session X melalui extension/manual selection
+- [x] Buat bank konten X: simpan konten asli, URL/post ID, media, author, tanggal, query/sumber, dan status kurasi
+- [x] Sediakan flow riset-first: pilih niche, gunakan query awal, lalu buka hasil Top X sebelum menyimpan konten
+- [ ] Riset posting X yang populer berdasarkan niche secara otomatis; MVP saat ini membuka pencarian Top X dan tetap memakai seleksi manual
 - [ ] Simpan snapshot statistik konten dan sinyal kenapa konten dianggap populer
 - [ ] Bersihkan konten tanpa menimpa konten asli
 - [ ] Reformat hasil riset X dengan AI memakai prompt/parser khusus kanal X

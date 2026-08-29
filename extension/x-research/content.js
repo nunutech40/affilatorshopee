@@ -83,13 +83,14 @@
     if (!location.pathname.match(/\/status\/\d+/)) return extractThread(initial)
 
     // X melakukan virtualisasi DOM. Kumpulkan snapshot per viewport agar post
-    // thread yang keluar-masuk DOM tetap ikut, lalu kembalikan posisi scroll.
-    const previousY = window.scrollY
+    // thread yang keluar-masuk DOM tetap ikut. Posisi akhir dibiarkan di titik
+    // pembacaan supaya pengguna bisa melihat proses auto-scroll memang selesai.
     const seen = new Map()
     window.scrollTo(0, 0)
     await new Promise((resolve) => setTimeout(resolve, 700))
     let stableRounds = 0
-    let threadBoundarySeen = false
+    let threadContinuationSeen = false
+    const currentID = location.pathname.match(/\/status\/(\d+)/)?.[1] || ''
     for (let round = 0; round < 48; round++) {
       const articles = [...document.querySelectorAll('article[data-testid="tweet"]')]
       for (const article of articles) {
@@ -100,19 +101,21 @@
       // terlihat, jangan terus scroll ke bawah: rangkaian thread utama sudah
       // selesai. Hasil akhir tetap memakai composeThread sebagai pagar kedua.
       const currentIndex = articles.findIndex((article) =>
-        article.querySelector(`a[href*="/status/${location.pathname.match(/\/status\/(\d+)/)?.[1] || ''}"]`),
+        article.querySelector(`a[href*="/status/${currentID}"]`),
       )
       if (currentIndex >= 0) {
         const currentItem = extractArticle(articles[currentIndex])
         const mainAuthor = currentItem.author_handle.toLowerCase()
         const following = articles.slice(currentIndex + 1).map(extractArticle).filter((item) => item.external_post_id)
-        const hasReplyBoundary = following.some((item) =>
-          item.author_handle.toLowerCase() !== mainAuthor ||
-          !item.replying_to_handles?.some((handle) => handle.toLowerCase() === mainAuthor),
-        )
-        if (hasReplyBoundary) threadBoundarySeen = true
+        const isContinuation = (item) => item.author_handle.toLowerCase() === mainAuthor &&
+          item.replying_to_handles?.some((handle) => handle.toLowerCase() === mainAuthor)
+        const continuationIndex = following.findIndex(isContinuation)
+        if (continuationIndex >= 0) threadContinuationSeen = true
+        // Komentar bisa sudah terlihat di viewport awal. Jangan berhenti hanya
+        // karena itu; tunggu sampai lanjutan thread utama ditemukan, lalu
+        // berhenti pada reply pertama setelah rangkaian lanjutan tersebut.
+        if (threadContinuationSeen && continuationIndex >= 0 && following.slice(continuationIndex + 1).some((item) => !isContinuation(item))) break
       }
-      if (threadBoundarySeen) break
       const before = seen.size
       const beforeHeight = document.documentElement.scrollHeight
       window.scrollBy(0, Math.max(300, Math.floor(window.innerHeight * 0.65)))
@@ -128,8 +131,6 @@
         stableRounds = 0
       }
     }
-    window.scrollTo(0, previousY)
-    await new Promise((resolve) => setTimeout(resolve, 250))
     return composeThread([...seen.values()])
   }
 

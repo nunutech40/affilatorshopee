@@ -53,11 +53,10 @@
     const currentIndex = Math.max(0, extracted.findIndex((item) => item.external_post_id === currentID))
     const author = extracted[currentIndex]?.author_handle || extracted[0].author_handle
     const normalizedAuthor = author.toLowerCase()
-    // Post lanjutan thread milik author yang sama selalu merupakan reply ke
-    // author tersebut. Reply user lain dan post author yang kebetulan tampil
-    // di timeline tidak boleh dianggap bagian dari thread.
-    const isMainThreadPost = (item) => item.author_handle.toLowerCase() === normalizedAuthor &&
-      item.replying_to_handles?.some((handle) => handle.toLowerCase() === normalizedAuthor)
+    // X tidak selalu merender label "Replying to" secara konsisten. Pada
+    // halaman detail, rangkaian thread adalah post berurutan dari author
+    // utama; reply orang lain menjadi batas akhir thread.
+    const isMainThreadPost = (item) => item.author_handle.toLowerCase() === normalizedAuthor
     const posts = [extracted[currentIndex] || extracted[0]]
     for (let i = currentIndex - 1; i >= 0 && isMainThreadPost(extracted[i]); i--) posts.unshift(extracted[i])
     for (let i = currentIndex + 1; i < extracted.length && isMainThreadPost(extracted[i]); i++) posts.push(extracted[i])
@@ -89,32 +88,25 @@
     window.scrollTo(0, 0)
     await new Promise((resolve) => setTimeout(resolve, 700))
     let stableRounds = 0
-    let threadContinuationSeen = false
     const currentID = location.pathname.match(/\/status\/(\d+)/)?.[1] || ''
-    for (let round = 0; round < 48; round++) {
+    for (let round = 0; round < 20; round++) {
       const articles = [...document.querySelectorAll('article[data-testid="tweet"]')]
       for (const article of articles) {
         const item = extractArticle(article)
         if (item.external_post_id && !seen.has(item.external_post_id)) seen.set(item.external_post_id, item)
       }
-      // Setelah post yang dibuka, X menampilkan reply. Begitu reply pertama
-      // terlihat, jangan terus scroll ke bawah: rangkaian thread utama sudah
-      // selesai. Hasil akhir tetap memakai composeThread sebagai pagar kedua.
-      const currentIndex = articles.findIndex((article) =>
-        article.querySelector(`a[href*="/status/${currentID}"]`),
-      )
+      // Setelah post yang dibuka, X menampilkan lanjutan thread atau reply.
+      // Begitu artikel pertama setelah post utama bukan lanjutan dari author
+      // yang sama, berhenti sebelum masuk ke komentar. Jika belum ada artikel
+      // setelah post utama, scroll satu viewport untuk memuat lanjutannya.
+      const currentIndex = articles.findIndex((article) => extractArticle(article).external_post_id === currentID)
+      if (currentIndex < 0) break
       if (currentIndex >= 0) {
         const currentItem = extractArticle(articles[currentIndex])
         const mainAuthor = currentItem.author_handle.toLowerCase()
         const following = articles.slice(currentIndex + 1).map(extractArticle).filter((item) => item.external_post_id)
-        const isContinuation = (item) => item.author_handle.toLowerCase() === mainAuthor &&
-          item.replying_to_handles?.some((handle) => handle.toLowerCase() === mainAuthor)
-        const continuationIndex = following.findIndex(isContinuation)
-        if (continuationIndex >= 0) threadContinuationSeen = true
-        // Komentar bisa sudah terlihat di viewport awal. Jangan berhenti hanya
-        // karena itu; tunggu sampai lanjutan thread utama ditemukan, lalu
-        // berhenti pada reply pertama setelah rangkaian lanjutan tersebut.
-        if (threadContinuationSeen && continuationIndex >= 0 && following.slice(continuationIndex + 1).some((item) => !isContinuation(item))) break
+        const isThreadAuthorPost = (item) => item.author_handle.toLowerCase() === mainAuthor
+        if (following.length && !isThreadAuthorPost(following[0])) break
       }
       const before = seen.size
       const beforeHeight = document.documentElement.scrollHeight

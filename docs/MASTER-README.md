@@ -41,6 +41,9 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Riwayat posting sederhana tanpa menyimpan identitas akun X
 - Lihat metadata media dan download ZIP
 - Media detail tampil sebagai grid preview; bisa dipilih massal untuk dihapus. Scraper memfilter icon/logo/avatar kecil dan URL duplikat.
+- Jenis barang bersifat multi-label: dapat dikelola dari Settings, diubah dari detail produk, ditampilkan di list, dan dipakai untuk filter dashboard. Produk tanpa label tersedia melalui filter `Uncategorized`.
+- Master jenis barang saat ini memisahkan `Buku` dan `Pengembangan Diri` (sebelumnya satu label gabungan).
+- Dashboard juga dapat memfilter sumber input: `X`, `Shopee`, atau `Copas`.
 
 Threads, riset konten populer per niche untuk X/Facebook, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Implementasinya harus dipisahkan per platform agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
 

@@ -56,6 +56,8 @@ Dokumen sumber:
 - [x] Enforce transisi status `raw -> reformatted`, `raw -> ready`, dan `reformatted -> ready`
 - [x] Validasi field minimum sebelum status `ready`
 - [x] Simpan image/video URL dan download file ke local storage (`STORAGE_PATH`) saat create produk
+- [x] Tambahkan master jenis barang multi-label dan relasi `product_niches`
+- [x] Pisahkan jenis barang `Buku` dan `Pengembangan Diri`, lalu petakan produk existing
 - [x] Implementasikan `MediaRepository` dan `MediaService` dengan validasi private IP dan batas ukuran
 - [x] Implementasikan endpoint `GET /api/products/{id}/media`, `POST /api/products/{id}/media`, `DELETE /api/products/{id}/media/{mediaID}`, dan `GET /api/products/{id}/media/download` (ZIP)
 - [x] Setup router HTTP dan CORS localhost
@@ -77,7 +79,6 @@ Dokumen sumber:
 - [x] Simpan hasil AI langsung dan ubah status menjadi `reformatted`
 - [x] Laporkan partial failure per produk
 - [x] Reformat otomatis satu kali saat save produk yang memiliki raw text; gagal tetap tersimpan raw dan bisa di-retry dari detail
-- [x] Validasi angka caption terhadap raw text dan normalisasi harga bersufiks
 - [ ] Test response valid, invalid, timeout, dan partial failure dengan mock server
 
 ## Phase 4: Caption Generator
@@ -116,6 +117,7 @@ Dokumen sumber:
 - [x] Buat Pinia `productStore`
 - [x] Buat Pinia `captionStore`
 - [x] Buat `HomeView.vue` dengan filter status, cluster, model, dan search
+- [x] Tambahkan filter sumber data dan jenis barang, termasuk `Uncategorized`
 - [x] Buat `ProductList.vue`
 - [x] Buat `ProductParser.vue` untuk paste raw text
 - [x] Buat `ProductForm.vue` untuk edit produk
@@ -129,6 +131,7 @@ Dokumen sumber:
 - [x] Buat `ShareButton.vue`
 - [x] Buat `PostLogForm.vue`
 - [x] Buat `PostLogsView.vue`
+- [x] Tampilkan dan edit jenis barang produk dari detail; tampilkan label pada list
 - [x] Setup base URL API
 - [x] Tampilkan loading, success, dan error state
 - [ ] Verifikasi alur input sampai share melalui browser

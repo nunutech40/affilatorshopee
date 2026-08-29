@@ -727,6 +727,15 @@ Prompt wajib menginstruksikan AI untuk:
 - `HashtagSelector.vue` - pilih 0-3 hashtag.
 - `ShareButton.vue` - copy clipboard dan buka X.
 - `PostLogForm.vue` - catat posting setelah user selesai posting di X.
+- `SettingsView.vue` - kelola master jenis barang.
+
+### 8.4 Jenis Barang
+
+- Produk dapat memiliki beberapa jenis barang melalui tabel relasi `product_niches`.
+- Master jenis barang dikelola melalui `GET/POST /api/niches` dan `DELETE /api/niches/{id}`.
+- Relasi produk diganti sekaligus melalui `PUT /api/products/{id}/niches` dengan payload `{ "niche_ids": ["..."] }`.
+- Dashboard menerima `niche_id`; nilai `uncategorized` berarti produk yang belum memiliki relasi pada `product_niches`.
+- UI menggunakan istilah “Jenis barang”; nama `niche` dipertahankan pada nama endpoint dan tabel untuk kompatibilitas internal.
 
 MVP tidak memiliki flow pemilihan akun; akun X yang digunakan mengikuti session login di browser user.
 
@@ -873,6 +882,8 @@ Test minimum:
 - `002_create_post_logs.up.sql` / `002_create_post_logs.down.sql`
 - `003_create_caption_variations.up.sql` / `003_create_caption_variations.down.sql`
 - `004_create_product_media.up.sql` / `004_create_product_media.down.sql`
+- `015_add_niches.up.sql` / `015_add_niches.down.sql`
+- `016_split_book_niche.up.sql` / `016_split_book_niche.down.sql`
 
 Gunakan `golang-migrate/migrate` untuk menjalankan migration SQL. Migration harus memiliki version tracking, dijalankan sebelum app menerima traffic, dan membuat startup gagal bila migration tidak berhasil.
 

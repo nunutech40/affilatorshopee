@@ -53,6 +53,7 @@ Web app dengan fitur:
 5. Tombol share ke X yang membuka composer dengan caption dan media lokal
 6. Download beberapa URL gambar dan URL video ke local storage agar mudah di-upload manual ke X
 7. Catat riwayat posting tanpa menyimpan identitas akun X
+8. Kelola jenis barang multi-label untuk kurasi dan filter produk, termasuk filter `Uncategorized` untuk produk tanpa label
 
 ## 7. Flowchart Bisnis
 

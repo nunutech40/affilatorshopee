@@ -84,9 +84,13 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		argPos++
 	}
 	if filter.NicheID != "" {
-		where = append(where, fmt.Sprintf("EXISTS (SELECT 1 FROM product_niches pn WHERE pn.product_id = p.id AND pn.niche_id = $%d)", argPos))
-		args = append(args, filter.NicheID)
-		argPos++
+		if filter.NicheID == "uncategorized" {
+			where = append(where, "NOT EXISTS (SELECT 1 FROM product_niches pn WHERE pn.product_id = p.id)")
+		} else {
+			where = append(where, fmt.Sprintf("EXISTS (SELECT 1 FROM product_niches pn WHERE pn.product_id = p.id AND pn.niche_id = $%d)", argPos))
+			args = append(args, filter.NicheID)
+			argPos++
+		}
 	}
 	if filter.ContentModel != "" {
 		where = append(where, fmt.Sprintf("p.content_model = $%d", argPos))

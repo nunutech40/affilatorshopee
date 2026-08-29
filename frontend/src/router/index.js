@@ -5,6 +5,7 @@ import ProductDetailView from '@/views/ProductDetailView.vue'
 import PostLogsView from '@/views/PostLogsView.vue'
 import SoldProductsView from '@/views/SoldProductsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import ContentBankView from '@/views/ContentBankView.vue'
 
 export default createRouter({
   history: createWebHistory(),
@@ -15,5 +16,6 @@ export default createRouter({
     { path: '/post-logs', component: PostLogsView },
     { path: '/sold', component: SoldProductsView },
     { path: '/settings', component: SettingsView },
+    { path: '/content-bank', component: ContentBankView },
   ],
 })

@@ -24,7 +24,7 @@ async function capture() {
     if (!result?.ok) throw new Error(result?.error || 'Post tidak ditemukan')
     const appTabs = await chrome.tabs.query({ url: ['http://localhost:8080/*', 'http://127.0.0.1:8080/*'] })
     const app = appTabs[0]
-    const target = app?.url?.includes('/content-bank') ? app : await chrome.tabs.create({ url: 'http://localhost:8080/content-bank', active: true })
+    const target = app?.url?.includes('/content-bank/capture') ? app : await chrome.tabs.create({ url: 'http://localhost:8080/content-bank/capture', active: true })
     await waitForTab(target.id)
     await chrome.scripting.executeScript({ target: { tabId: target.id }, func: (item) => window.postMessage({ type: 'AFFILIATOR_X_RESEARCH_CAPTURE', item }, '*'), args: [result.item] })
     statusEl.textContent = 'Post ditangkap. Review lalu simpan di Bank konten.'

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import { apiRequest, useProductStore } from '@/stores/productStore'
 
 const products = useProductStore()
@@ -144,8 +145,8 @@ onBeforeUnmount(() => window.removeEventListener('message', receiveCapture))
 
 <template>
   <div class="content-page">
-    <section class="hero-row"><div><h1>Bank konten</h1><p class="muted">Riset konten X per niche. Simpan sumber asli, lalu kurasi dan reformat nanti.</p></div><span class="roadmap-badge">X / RESEARCH</span></section>
-    <section class="panel research-form">
+    <section class="hero-row"><div><h1>Bank konten</h1><p class="muted">Semua konten riset tersimpan di sini. Filter berdasarkan niche atau cari teks asli.</p></div><RouterLink class="button-primary" to="/content-bank/capture">+ Tangkap konten</RouterLink></section>
+    <section v-if="false" class="panel research-form">
       <div class="section-heading"><div><h2>1. Riset konten X</h2><p class="muted">Mulai dari niche dan demand. Cari posting populer dulu, lalu pilih konten yang layak masuk bank.</p></div></div>
       <div class="form-grid"><select v-model="researchNiche" class="select" :disabled="customResearchQuery"><option value="">Pilih niche konten</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><select v-model="researchCategory" class="select" :disabled="customResearchQuery || !researchCategories().length"><option value="">Pilih kategori konten</option><option v-for="category in researchCategories()" :key="category" :value="category">{{ category }}</option></select></div>
       <div v-if="researchKeywords().length" class="query-options"><button v-for="keyword in researchKeywords()" :key="keyword" class="query-chip" type="button" :disabled="customResearchQuery" :class="{ selected: researchKeyword === keyword }" @click="researchKeyword = keyword; researchQuery = ''">{{ keyword }}</button></div>
@@ -155,7 +156,7 @@ onBeforeUnmount(() => window.removeEventListener('message', receiveCapture))
       <div class="research-actions"><button class="button-primary" :disabled="!buildResearchQuery()" @click="openResearch('top')">Buka Populer ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('live')">Buka Terbaru ↗</button><button class="button-secondary" :disabled="!buildResearchQuery()" @click="openResearch('media')">Buka Media ↗</button></div>
       <p class="muted">Pilih post yang relevan di X, lalu klik extension <strong>X Research</strong> untuk menangkap URL, teks, media, waktu, dan statistik yang terlihat. Review dulu sebelum disimpan.</p>
     </section>
-    <section class="panel content-form">
+    <section v-if="false" class="panel content-form">
       <div class="section-heading"><div><h2>2. Simpan hasil riset</h2><p class="muted">Konten asli tidak diubah. Niche konten dan Jenis Barang dapat dipilih lebih dari satu.</p></div></div>
       <input v-model="form.canonical_url" class="input" placeholder="URL post X" />
       <div class="form-grid"><input v-model="form.author_handle" class="input" placeholder="@author (opsional)" /><input v-model="form.source_query" class="input" placeholder="Query riset (opsional)" /></div>
@@ -165,7 +166,7 @@ onBeforeUnmount(() => window.removeEventListener('message', receiveCapture))
       <button class="button-primary" :disabled="saving || !form.canonical_url.trim() || !form.original_text.trim()" @click="save">{{ saving ? 'Menyimpan...' : 'Simpan ke bank konten' }}</button>
       <p v-if="message" class="save-notice">✓ {{ message }}</p><p v-if="error" class="error-box">{{ error }}</p>
     </section>
-    <section class="panel"><div class="section-heading"><div><h2>Konten tersimpan</h2><p class="muted">{{ items.length }} konten pada tampilan ini</p></div><div class="filter-row"><select v-model="selectedNiche" class="select"><option value="">Semua niche</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><input v-model="search" class="input" placeholder="Cari konten..." /></div></div><p v-if="loading" class="muted">Memuat bank konten...</p><div v-else-if="items.length" class="content-list"><article v-for="item in items" :key="item.id" class="content-card"><div class="content-card-head"><span class="status-pill">{{ item.status }}</span><a :href="item.canonical_url" target="_blank" rel="noreferrer">Buka sumber ↗</a></div><p>{{ item.original_text }}</p><small>{{ item.author_handle || 'Author tidak dicatat' }} · {{ new Date(item.created_at).toLocaleString('id-ID') }}</small></article></div><p v-else class="empty-state">Belum ada konten. Simpan post pertama dari hasil riset.</p></section>
+    <section class="panel"><div class="section-heading"><div><h2>Konten tersimpan</h2><p class="muted">{{ items.length }} konten pada tampilan ini</p></div><div class="filter-row"><select v-model="selectedNiche" class="select"><option value="">Semua niche</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><input v-model="search" class="input" placeholder="Cari konten..." /></div></div><p v-if="loading" class="muted">Memuat bank konten...</p><p v-if="error" class="error-box">{{ error }}</p><div v-else-if="items.length" class="content-list"><article v-for="item in items" :key="item.id" class="content-card"><div class="content-card-head"><span class="status-pill">{{ item.status }}</span><a :href="item.canonical_url" target="_blank" rel="noreferrer">Buka sumber ↗</a></div><p>{{ item.original_text }}</p><small>{{ item.author_handle || 'Author tidak dicatat' }} · {{ new Date(item.created_at).toLocaleString('id-ID') }}<span v-if="item.media?.length"> · {{ item.media.length }} media</span></small></article></div><p v-else-if="!loading" class="empty-state">Belum ada konten. Mulai dari halaman tangkap konten.</p></section>
   </div>
 </template>
 

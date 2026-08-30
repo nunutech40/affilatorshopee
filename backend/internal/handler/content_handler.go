@@ -249,7 +249,11 @@ func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	cm := "trending"
-	p := model.Product{ID: item.ID, RawText: item.OriginalText, ContentModel: &cm}
+	raw := item.OriginalText
+	if item.CleanedOriginalText != "" {
+		raw = item.CleanedOriginalText
+	}
+	p := model.Product{ID: item.ID, RawText: raw, ContentModel: &cm}
 	results, err := h.ai.Reformat(r.Context(), []model.Product{p}, b.Model, true)
 	if err != nil {
 		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())
@@ -265,4 +269,47 @@ func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, 201, v)
+}
+
+func (h *ContentHandler) CleanRaw(w http.ResponseWriter, r *http.Request) {
+	if h.ai == nil {
+		writeError(w, 503, "AI_UNAVAILABLE", "AI belum dikonfigurasi")
+		return
+	}
+	var b struct {
+		Model string `json:"model"`
+	}
+	if err := decodeJSON(w, r, &b); err != nil {
+		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	item, err := h.repo.Get(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
+		return
+	}
+	cm := "trending"
+	results, err := h.ai.CleanRaw(r.Context(), []model.Product{{ID: item.ID, RawText: item.OriginalText, ContentModel: &cm}}, b.Model)
+	if err != nil {
+		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())
+		return
+	}
+	if len(results) == 0 || strings.TrimSpace(results[0].CleanedRawText) == "" {
+		writeError(w, 502, "AI_EMPTY", "AI tidak mengembalikan raw bersih")
+		return
+	}
+	nicheIDs := make([]string, 0, len(item.Niches))
+	for _, n := range item.Niches {
+		nicheIDs = append(nicheIDs, n.ID)
+	}
+	typeIDs := make([]string, 0, len(item.ProductTypes))
+	for _, n := range item.ProductTypes {
+		typeIDs = append(typeIDs, n.ID)
+	}
+	updated, err := h.repo.Update(r.Context(), item.ID, repository.ContentUpdate{Platform: item.Platform, ExternalPostID: item.ExternalPostID, CanonicalURL: item.CanonicalURL, AuthorHandle: item.AuthorHandle, OriginalText: item.OriginalText, CleanedOriginalText: results[0].CleanedRawText, Media: item.Media, PublishedAt: item.PublishedAt, SourceQuery: item.SourceQuery, Status: item.Status}, nicheIDs, typeIDs, nil)
+	if err != nil {
+		writeError(w, 500, "UPDATE_ERROR", "Raw bersih gagal disimpan: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, updated)
 }

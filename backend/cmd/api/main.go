@@ -103,6 +103,7 @@ func main() {
 		api.Delete("/content-items/{id}", content.Delete)
 		api.Post("/content-items/{id}/variants", content.CreateVariant)
 		api.Post("/content-items/{id}/variants/reformat", content.ReformatVariant)
+		api.Post("/content-items/{id}/clean-raw", content.CleanRaw)
 		api.Patch("/content-variants/{variantID}", content.PatchVariant)
 		api.Delete("/content-variants/{variantID}", content.DeleteVariant)
 		api.Get("/products", products.List)

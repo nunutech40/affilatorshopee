@@ -22,22 +22,23 @@ type ContentStats struct {
 }
 
 type ContentItem struct {
-	ID             string           `json:"id"`
-	Platform       string           `json:"platform"`
-	ExternalPostID string           `json:"external_post_id"`
-	CanonicalURL   string           `json:"canonical_url"`
-	AuthorHandle   string           `json:"author_handle"`
-	OriginalText   string           `json:"original_text"`
-	Media          []string         `json:"media"`
-	PublishedAt    *time.Time       `json:"published_at"`
-	SourceQuery    string           `json:"source_query"`
-	Status         string           `json:"status"`
-	Niches         []ContentNiche   `json:"niches"`
-	ProductTypes   []Niche          `json:"product_types"`
-	LatestStats    *ContentStats    `json:"latest_stats,omitempty"`
-	CreatedAt      time.Time        `json:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at"`
-	Variants       []ContentVariant `json:"variants,omitempty"`
+	ID                  string           `json:"id"`
+	Platform            string           `json:"platform"`
+	ExternalPostID      string           `json:"external_post_id"`
+	CanonicalURL        string           `json:"canonical_url"`
+	AuthorHandle        string           `json:"author_handle"`
+	OriginalText        string           `json:"original_text"`
+	CleanedOriginalText string           `json:"cleaned_original_text,omitempty"`
+	Media               []string         `json:"media"`
+	PublishedAt         *time.Time       `json:"published_at"`
+	SourceQuery         string           `json:"source_query"`
+	Status              string           `json:"status"`
+	Niches              []ContentNiche   `json:"niches"`
+	ProductTypes        []Niche          `json:"product_types"`
+	LatestStats         *ContentStats    `json:"latest_stats,omitempty"`
+	CreatedAt           time.Time        `json:"created_at"`
+	UpdatedAt           time.Time        `json:"updated_at"`
+	Variants            []ContentVariant `json:"variants,omitempty"`
 }
 
 type ContentVariant struct {

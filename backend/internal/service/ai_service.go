@@ -114,6 +114,7 @@ PERTAHANKAN BENTUK SUMBER:
 - Jika sumber adalah satu post pendek (maksimal sekitar 280 karakter), hasil harus tetap satu post.
 - Jika sumber adalah thread/postingan beruntun atau materinya panjang, hasil harus tetap berupa thread panjang dengan beberapa post berurutan. Pecah hasil memakai penanda POST 1, POST 2, POST 3, dan seterusnya, masing-masing maksimal 280 karakter termasuk spasi. Jangan memadatkan 10+ post menjadi 1-3 paragraf dan jangan berhenti setelah POST 1. Untuk sumber sepanjang beberapa bagian seperti ini, hasil harus mencakup seluruh bagian utama dan biasanya membutuhkan 8-15 post. Pertahankan insight, contoh, penjelasan, angka, dan kesimpulan penting dari sumber.
 - Setiap post thread harus punya satu gagasan jelas, transisi yang mengalir, dan mudah dibaca sendiri. Maksimalkan ruang sampai mendekati 280 karakter tanpa mengorbankan kejelasan.
+- Input akan menyertakan OUTPUT_MODE. Jika nilainya FULL_THREAD, WAJIB keluarkan thread lengkap: minimal 1 POST untuk setiap bagian/argumen utama sumber dan jangan pernah mengembalikan hanya POST 1. Panjang output harus sebanding dengan materi sumber, bukan ringkasan satu paragraf.
 
 FOKUS MATERI UTAMA:
 - Identifikasi dulu topik utama yang benar-benar dibahas sumber, lalu repackaging materi itu secara utuh.
@@ -137,7 +138,15 @@ func (s *AIService) ReformatContent(ctx context.Context, items []model.Product, 
 	}
 	var input strings.Builder
 	for _, item := range items {
-		fmt.Fprintf(&input, "PRODUCT_ID: %s\nCONTENT_FORMAT: %s\nRAW_START\n%s\nRAW_END\n\n", item.ID, item.ContentFormat, item.RawText)
+		format := strings.ToLower(strings.TrimSpace(item.ContentFormat))
+		if format == "" {
+			format = "post"
+		}
+		mode := "ONE_POST"
+		if format == "thread" || len([]rune(item.RawText)) > 700 {
+			format, mode = "thread", "FULL_THREAD"
+		}
+		fmt.Fprintf(&input, "PRODUCT_ID: %s\nCONTENT_FORMAT: %s\nOUTPUT_MODE: %s\nSOURCE_CHAR_COUNT: %d\nRAW_START\n%s\nRAW_END\n\n", item.ID, format, mode, len([]rune(item.RawText)), item.RawText)
 	}
 	cleanModel := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(selected, "opencode/"), "9router/"), "openrouter/"), "codex/")
 	endpoint, key := s.endpoint, s.apiKey
@@ -189,9 +198,9 @@ func (s *AIService) ReformatContent(ctx context.Context, items []model.Product, 
 	var body []byte
 	var err error
 	if isCodexModel(selected) {
-		body, err = json.Marshal(responsesRequest{Model: cleanModel, Instructions: contentReformatPrompt, Input: input.String(), MaxOutputTokens: 4096})
+		body, err = json.Marshal(responsesRequest{Model: cleanModel, Instructions: contentReformatPrompt, Input: input.String(), MaxOutputTokens: 8192})
 	} else {
-		body, err = json.Marshal(openRouterRequest{Model: cleanModel, Messages: []openRouterMessage{{Role: "system", Content: contentReformatPrompt}, {Role: "user", Content: input.String()}}, MaxTokens: 4096, Temperature: .7})
+		body, err = json.Marshal(openRouterRequest{Model: cleanModel, Messages: []openRouterMessage{{Role: "system", Content: contentReformatPrompt}, {Role: "user", Content: input.String()}}, MaxTokens: 8192, Temperature: .7})
 	}
 	if err != nil {
 		return nil, err

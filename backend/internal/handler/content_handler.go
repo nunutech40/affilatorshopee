@@ -254,16 +254,16 @@ func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request)
 		raw = item.CleanedOriginalText
 	}
 	p := model.Product{ID: item.ID, RawText: raw, ContentModel: &cm}
-	results, err := h.ai.Reformat(r.Context(), []model.Product{p}, b.Model, true)
+	results, err := h.ai.ReformatContent(r.Context(), []model.Product{p}, b.Model)
 	if err != nil {
 		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())
 		return
 	}
-	if len(results) == 0 || strings.TrimSpace(results[0].PromoText) == "" {
+	if len(results) == 0 || strings.TrimSpace(results[0].ContentText) == "" {
 		writeError(w, 502, "AI_EMPTY", "AI tidak mengembalikan varian")
 		return
 	}
-	v, err := h.repo.CreateVariant(r.Context(), item.ID, model.ContentVariant{Name: b.Name, Text: results[0].PromoText, Source: "ai", Model: b.Model})
+	v, err := h.repo.CreateVariant(r.Context(), item.ID, model.ContentVariant{Name: b.Name, Text: results[0].ContentText, Source: "ai", Model: b.Model})
 	if err != nil {
 		writeError(w, 500, "CREATE_ERROR", "Varian AI gagal disimpan")
 		return

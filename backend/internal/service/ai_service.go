@@ -101,6 +101,130 @@ type AICleanRawResult struct {
 	CleanedRawText string `json:"cleaned_raw_text"`
 }
 
+type AIContentResult struct {
+	ProductID   string `json:"product_id"`
+	ContentText string `json:"content_text"`
+}
+
+const contentReformatPrompt = `Kamu editor konten X berbahasa Indonesia. Buat SATU VARIAN dari konten sumber di antara RAW_START dan RAW_END.
+Pertahankan topik, sudut pandang, inti argumen, angka, dan fakta sumber. Jangan mengubah thread edukasi/opini menjadi iklan produk, webinar, affiliate caption, atau CTA jualan. Jangan mengarang brand, harga, produk, statistik, klaim, atau sumber baru. Jangan memasukkan balasan/komentar karena hanya RAW yang diberikan.
+Boleh merapikan typo, repetisi, transisi, dan urutan agar lebih enak dibaca. Varian harus tetap terdengar natural untuk X, memakai paragraf pendek dan jeda baris. Jangan menambahkan pembuka meta seperti "ini versi...". Output HANYA JSON array [{"product_id":"...","content_text":"..."}].`
+
+func (s *AIService) ReformatContent(ctx context.Context, items []model.Product, modelOverride string) ([]AIContentResult, error) {
+	if len(items) == 0 || len(items) > 10 {
+		return nil, fmt.Errorf("%w: jumlah konten AI harus 1-10", ErrValidation)
+	}
+	selected := strings.TrimSpace(modelOverride)
+	if selected == "" {
+		selected = strings.TrimSpace(s.model)
+	}
+	if selected == "" {
+		return nil, fmt.Errorf("model AI wajib dipilih untuk fitur AI")
+	}
+	var input strings.Builder
+	for _, item := range items {
+		fmt.Fprintf(&input, "PRODUCT_ID: %s\nRAW_START\n%s\nRAW_END\n\n", item.ID, item.RawText)
+	}
+	cleanModel := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(selected, "opencode/"), "9router/"), "openrouter/"), "codex/")
+	endpoint, key := s.endpoint, s.apiKey
+	if strings.HasPrefix(selected, "opencode/") {
+		endpoint, key = "https://opencode.ai/zen/v1/chat/completions", s.openCodeAPIKey
+	} else if isNineRouterModel(selected) {
+		endpoint, key = s.nineRouterEndpoint, s.nineRouterAPIKey
+	}
+	if isCodexModel(selected) {
+		endpoint = strings.TrimSuffix(endpoint, "/chat/completions") + "/responses"
+	}
+	if isLocalCodexModel(selected) {
+		if strings.TrimSpace(s.codexBridgeURL) == "" {
+			return nil, fmt.Errorf("Codex CLI bridge belum dikonfigurasi")
+		}
+		body, err := json.Marshal(codexBridgeRequest{Model: cleanModel, Instructions: contentReformatPrompt, Input: input.String()})
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.codexBridgeURL+"/v1/execute", bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if s.codexBridgeToken != "" {
+			req.Header.Set("Authorization", "Bearer "+s.codexBridgeToken)
+		}
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("Codex CLI bridge tidak dapat dihubungi: %w", err)
+		}
+		defer resp.Body.Close()
+		data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("Codex CLI bridge gagal (status %d): %s", resp.StatusCode, strings.TrimSpace(string(data)))
+		}
+		text, err := parseCodexCLIContent(data)
+		if err != nil {
+			return nil, err
+		}
+		return parseContentResults(text, items)
+	}
+	if strings.TrimSpace(key) == "" {
+		return nil, fmt.Errorf("API key provider untuk model %s belum dikonfigurasi", selected)
+	}
+	var body []byte
+	var err error
+	if isCodexModel(selected) {
+		body, err = json.Marshal(responsesRequest{Model: cleanModel, Instructions: contentReformatPrompt, Input: input.String(), MaxOutputTokens: 4096})
+	} else {
+		body, err = json.Marshal(openRouterRequest{Model: cleanModel, Messages: []openRouterMessage{{Role: "system", Content: contentReformatPrompt}, {Role: "user", Content: input.String()}}, MaxTokens: 4096, Temperature: .7})
+	}
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("provider AI gagal untuk model %s (status %d): %s", selected, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+	text, err := parseProviderContent(data)
+	if err != nil {
+		return nil, err
+	}
+	return parseContentResults(text, items)
+}
+
+func parseContentResults(content string, items []model.Product) ([]AIContentResult, error) {
+	content = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(content, "```json"), "```"), "```"))
+	var out []AIContentResult
+	if err := json.Unmarshal([]byte(content), &out); err != nil {
+		return nil, fmt.Errorf("parse AI content JSON: %w", err)
+	}
+	valid := map[string]bool{}
+	for _, item := range items {
+		valid[item.ID] = true
+	}
+	for _, result := range out {
+		if !valid[result.ProductID] || strings.TrimSpace(result.ContentText) == "" {
+			return nil, fmt.Errorf("AI content mengembalikan hasil tidak valid")
+		}
+	}
+	return out, nil
+}
+
 const cleanRawSystemPrompt = `Kamu editor data produk. Bersihkan RAW menjadi teks sumber produk yang ringkas dan faktual.
 
 SIMPAN: nama produk, fitur/spesifikasi yang relevan, rating, jumlah penilaian, jumlah terjual, harga, diskon/voucher, dan deskripsi produk.

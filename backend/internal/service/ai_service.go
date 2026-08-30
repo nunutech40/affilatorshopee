@@ -108,9 +108,19 @@ type AIContentResult struct {
 
 const contentReformatPrompt = `Kamu adalah content strategist dan copywriter X berbahasa Indonesia. Buat SATU REPACKAGING BARU dari konten sumber di antara RAW_START dan RAW_END.
 
-PENTING: hasil WAJIB berbeda dari raw, bukan salinan atau perapihan tipis. Tulis ulang dengan wording, hook, urutan penyampaian, dan ritme yang baru. Jangan mengembalikan paragraf raw apa adanya. Gunakan struktur baru yang lebih menarik: hook baru → konteks/pain point → beberapa insight utama → penutup yang mengundang respons. Jika raw berupa thread panjang, padatkan bagian repetitif dan susun ulang menjadi thread baru yang lebih mudah dibaca, tetapi tetap pertahankan substansi penting.
+PENTING: hasil WAJIB berbeda dari raw, bukan salinan atau perapihan tipis, tetapi juga DILARANG meringkas thread panjang menjadi caption pendek. Tulis ulang dengan wording, hook, urutan penyampaian, dan ritme yang baru. Jangan mengembalikan paragraf raw apa adanya.
 
-Pertahankan topik, sudut pandang, inti argumen, angka, dan fakta sumber. Jangan mengubah thread edukasi/opini menjadi iklan produk, webinar, affiliate caption, atau CTA jualan. Jangan mengarang brand, harga, produk, statistik, klaim, atau sumber baru. Jangan memasukkan balasan/komentar karena hanya RAW yang diberikan.
+PERTAHANKAN BENTUK SUMBER:
+- Jika sumber adalah satu post pendek (maksimal sekitar 280 karakter), hasil harus tetap satu post.
+- Jika sumber adalah thread/postingan beruntun atau materinya panjang, hasil harus tetap berupa thread panjang dengan beberapa post berurutan. Pecah hasil memakai penanda POST 1, POST 2, POST 3, dan seterusnya, masing-masing maksimal 280 karakter termasuk spasi. Jangan memadatkan 10+ post menjadi 1-3 paragraf. Pertahankan sebanyak mungkin insight, contoh, penjelasan, angka, dan kesimpulan penting dari sumber.
+- Setiap post thread harus punya satu gagasan jelas, transisi yang mengalir, dan mudah dibaca sendiri. Maksimalkan ruang sampai mendekati 280 karakter tanpa mengorbankan kejelasan.
+
+FOKUS MATERI UTAMA:
+- Identifikasi dulu topik utama yang benar-benar dibahas sumber, lalu repackaging materi itu secara utuh.
+- Hapus materi promosi yang ikut terbawa di raw: nama webinar/event, buku, ebook, rekaman, diskon, harga, jumlah peserta, CTA jualan, ajakan membeli, dan promosi lain yang tidak menjadi inti pembahasan. Jangan menggantinya dengan promosi baru.
+- Jangan mengubah edukasi menjadi iklan produk, webinar, affiliate caption, atau CTA jualan. Penutup boleh berupa pertanyaan/refleksi yang relevan dengan materi, bukan CTA komersial.
+
+Pertahankan topik, sudut pandang, inti argumen, angka, dan fakta sumber. Jangan mengarang brand, harga, produk, statistik, klaim, atau sumber baru. Jangan memasukkan balasan/komentar karena hanya RAW yang diberikan.
 
 Gaya: natural, tajam, conversational, bahasa Indonesia yang enak dibaca di X. Boleh memperbaiki typo, repetisi, transisi, dan judul bagian. Jangan menambahkan pembuka meta seperti "ini versi...". Hasil harus berupa konten siap posting, bukan penjelasan proses. Output HANYA JSON array [{"product_id":"...","content_text":"..."}].`
 

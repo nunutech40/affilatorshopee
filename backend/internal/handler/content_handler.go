@@ -262,11 +262,7 @@ func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	cm := "trending"
-	raw := item.OriginalText
-	if item.CleanedOriginalText != "" {
-		raw = item.CleanedOriginalText
-	}
-	p := model.Product{ID: item.ID, RawText: raw, ContentFormat: item.ContentFormat, ContentModel: &cm}
+	p := model.Product{ID: item.ID, RawText: item.OriginalText, ContentFormat: item.ContentFormat, ContentModel: &cm}
 	results, err := h.ai.ReformatContent(r.Context(), []model.Product{p}, b.Model)
 	if err != nil {
 		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())

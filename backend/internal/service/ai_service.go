@@ -112,7 +112,7 @@ PENTING: hasil WAJIB berbeda dari raw, bukan salinan atau perapihan tipis, tetap
 
 PERTAHANKAN BENTUK SUMBER:
 - Jika sumber adalah satu post pendek (maksimal sekitar 280 karakter), hasil harus tetap satu post.
-- Jika sumber adalah thread/postingan beruntun atau materinya panjang, hasil harus tetap berupa thread panjang dengan beberapa post berurutan. Pecah hasil memakai penanda POST 1, POST 2, POST 3, dan seterusnya, masing-masing maksimal 280 karakter termasuk spasi. Jangan memadatkan 10+ post menjadi 1-3 paragraf. Pertahankan sebanyak mungkin insight, contoh, penjelasan, angka, dan kesimpulan penting dari sumber.
+- Jika sumber adalah thread/postingan beruntun atau materinya panjang, hasil harus tetap berupa thread panjang dengan beberapa post berurutan. Pecah hasil memakai penanda POST 1, POST 2, POST 3, dan seterusnya, masing-masing maksimal 280 karakter termasuk spasi. Jangan memadatkan 10+ post menjadi 1-3 paragraf dan jangan berhenti setelah POST 1. Untuk sumber sepanjang beberapa bagian seperti ini, hasil harus mencakup seluruh bagian utama dan biasanya membutuhkan 8-15 post. Pertahankan insight, contoh, penjelasan, angka, dan kesimpulan penting dari sumber.
 - Setiap post thread harus punya satu gagasan jelas, transisi yang mengalir, dan mudah dibaca sendiri. Maksimalkan ruang sampai mendekati 280 karakter tanpa mengorbankan kejelasan.
 
 FOKUS MATERI UTAMA:

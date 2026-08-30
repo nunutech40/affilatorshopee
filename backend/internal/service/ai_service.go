@@ -106,9 +106,13 @@ type AIContentResult struct {
 	ContentText string `json:"content_text"`
 }
 
-const contentReformatPrompt = `Kamu editor konten X berbahasa Indonesia. Buat SATU VARIAN dari konten sumber di antara RAW_START dan RAW_END.
+const contentReformatPrompt = `Kamu adalah content strategist dan copywriter X berbahasa Indonesia. Buat SATU REPACKAGING BARU dari konten sumber di antara RAW_START dan RAW_END.
+
+PENTING: hasil WAJIB berbeda dari raw, bukan salinan atau perapihan tipis. Tulis ulang dengan wording, hook, urutan penyampaian, dan ritme yang baru. Jangan mengembalikan paragraf raw apa adanya. Gunakan struktur baru yang lebih menarik: hook baru → konteks/pain point → beberapa insight utama → penutup yang mengundang respons. Jika raw berupa thread panjang, padatkan bagian repetitif dan susun ulang menjadi thread baru yang lebih mudah dibaca, tetapi tetap pertahankan substansi penting.
+
 Pertahankan topik, sudut pandang, inti argumen, angka, dan fakta sumber. Jangan mengubah thread edukasi/opini menjadi iklan produk, webinar, affiliate caption, atau CTA jualan. Jangan mengarang brand, harga, produk, statistik, klaim, atau sumber baru. Jangan memasukkan balasan/komentar karena hanya RAW yang diberikan.
-Boleh merapikan typo, repetisi, transisi, dan urutan agar lebih enak dibaca. Varian harus tetap terdengar natural untuk X, memakai paragraf pendek dan jeda baris. Jangan menambahkan pembuka meta seperti "ini versi...". Output HANYA JSON array [{"product_id":"...","content_text":"..."}].`
+
+Gaya: natural, tajam, conversational, bahasa Indonesia yang enak dibaca di X. Boleh memperbaiki typo, repetisi, transisi, dan judul bagian. Jangan menambahkan pembuka meta seperti "ini versi...". Hasil harus berupa konten siap posting, bukan penjelasan proses. Output HANYA JSON array [{"product_id":"...","content_text":"..."}].`
 
 func (s *AIService) ReformatContent(ctx context.Context, items []model.Product, modelOverride string) ([]AIContentResult, error) {
 	if len(items) == 0 || len(items) > 10 {

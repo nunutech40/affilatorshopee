@@ -319,6 +319,55 @@ func (s *ProductService) Reformat(ctx context.Context, ids []string, ai *AIServi
 	return summary, nil
 }
 
+func (s *ProductService) CleanRaw(ctx context.Context, ids []string, ai *AIService, modelOverride string) (ReformatSummary, error) {
+	if len(ids) < 1 || len(ids) > 10 {
+		return ReformatSummary{}, fmt.Errorf("%w: product_ids harus berisi 1-10 ID", ErrValidation)
+	}
+	products := make([]model.Product, 0, len(ids))
+	seen := map[string]bool{}
+	summary := ReformatSummary{}
+	for _, id := range ids {
+		if seen[id] {
+			return ReformatSummary{}, fmt.Errorf("%w: product_id duplikat", ErrValidation)
+		}
+		seen[id] = true
+		p, err := s.GetByID(ctx, id)
+		if err == ErrNotFound {
+			summary.Failed = append(summary.Failed, ReformatFailure{ProductID: id, Code: "PRODUCT_NOT_FOUND", Message: "Produk tidak ditemukan"})
+			continue
+		}
+		if err != nil {
+			return ReformatSummary{}, err
+		}
+		products = append(products, *p)
+	}
+	if len(products) == 0 {
+		return summary, nil
+	}
+	results, err := ai.CleanRaw(ctx, products, modelOverride)
+	if err != nil {
+		return ReformatSummary{}, err
+	}
+	byID := map[string]string{}
+	for _, result := range results {
+		byID[result.ProductID] = result.CleanedRawText
+	}
+	for _, p := range products {
+		text, ok := byID[p.ID]
+		if !ok {
+			summary.Failed = append(summary.Failed, ReformatFailure{ProductID: p.ID, Code: "AI_MISSING_RESULT", Message: "AI tidak mengembalikan hasil untuk produk"})
+			continue
+		}
+		text = strings.TrimSpace(text)
+		p.CleanedRawText = &text
+		if err := s.repo.Update(ctx, &p); err != nil {
+			return ReformatSummary{}, err
+		}
+		summary.Processed = append(summary.Processed, p)
+	}
+	return summary, nil
+}
+
 func applyAIResult(product *model.Product, result AIReformatResult) {
 	if strings.TrimSpace(result.PromoText) != "" {
 		txt := strings.TrimSpace(result.PromoText)

@@ -29,6 +29,7 @@
     const author = authorLink?.getAttribute('href') || ''
     const time = article.querySelector('time')?.dateTime || ''
     const socialContext = article.querySelector('[data-testid="socialContext"]')
+    const socialContextText = socialContext?.innerText || ''
     const replyingToHandles = [...(socialContext?.querySelectorAll('a[href^="/"]') || [])]
       .map((item) => item.getAttribute('href') || '')
       .map((value) => value.replace(/^\//, '').split('/')[0])
@@ -39,8 +40,21 @@
     return {
       platform: 'x', canonical_url: href, external_post_id: href.match(/\/status\/(\d+)/)?.[1] || '',
       author_handle: author.replace(/^\//, ''), replying_to_handles: [...new Set(replyingToHandles)], original_text: text, media: [...new Set(media)],
+      is_reply: /replying to|membalas/i.test(socialContextText),
       published_at: time, stats: { like_count: metric(article, 'like'), repost_count: metric(article, 'repost|retweet'), reply_count: metric(article, 'repl'), view_count: metric(article, 'view') },
     }
+  }
+
+  function normalizeHandle(value) {
+    return String(value || '').replace(/^@/, '').toLowerCase()
+  }
+
+  function isThreadContinuation(item, rootAuthor) {
+    if (normalizeHandle(item.author_handle) !== normalizeHandle(rootAuthor)) return false
+    if ((item.replying_to_handles || []).length) {
+      return (item.replying_to_handles || []).some((handle) => normalizeHandle(handle) === normalizeHandle(rootAuthor))
+    }
+    return !item.is_reply
   }
 
   function composeThread(extracted) {
@@ -52,14 +66,17 @@
     if (!currentID) return { ...extracted[0], thread_post_count: 1, thread_posts: [extracted[0]] }
     const currentIndex = Math.max(0, extracted.findIndex((item) => item.external_post_id === currentID))
     const author = extracted[currentIndex]?.author_handle || extracted[0].author_handle
-    const normalizedAuthor = author.toLowerCase()
-    // X tidak selalu merender label "Replying to" secara konsisten. Pada
-    // halaman detail, rangkaian thread adalah post berurutan dari author
-    // utama; reply orang lain menjadi batas akhir thread.
-    const isMainThreadPost = (item) => item.author_handle.toLowerCase() === normalizedAuthor
-    const posts = [extracted[currentIndex] || extracted[0]]
-    for (let i = currentIndex - 1; i >= 0 && isMainThreadPost(extracted[i]); i--) posts.unshift(extracted[i])
-    for (let i = currentIndex + 1; i < extracted.length && isMainThreadPost(extracted[i]); i++) posts.push(extracted[i])
+    // Reply akun lain boleh menyelip di antara post utama. Hanya post dari
+    // author utama yang bukan reply, atau yang jelas self-reply, yang diambil.
+    const isMainThreadPost = (item) => isThreadContinuation(item, author)
+    const root = extracted[currentIndex] || extracted[0]
+    const posts = [root]
+    const seenIDs = new Set([root.external_post_id])
+    for (const item of extracted) {
+      if (seenIDs.has(item.external_post_id) || !isMainThreadPost(item)) continue
+      seenIDs.add(item.external_post_id)
+      posts.push(item)
+    }
     const ordered = [...new Map(posts.map((item) => [item.external_post_id, item])).values()]
     const primary = ordered[0]
     const primaryMedia = [...new Set(primary.media || [])]
@@ -88,26 +105,35 @@
     window.scrollTo(0, 0)
     await new Promise((resolve) => setTimeout(resolve, 700))
     let stableRounds = 0
+    let idleThreadRounds = 0
+    const mainThreadIDs = new Set()
     const currentID = location.pathname.match(/\/status\/(\d+)/)?.[1] || ''
-    for (let round = 0; round < 20; round++) {
+    for (let round = 0; round < 120; round++) {
       const articles = [...document.querySelectorAll('article[data-testid="tweet"]')]
       for (const article of articles) {
         const item = extractArticle(article)
-        if (item.external_post_id && !seen.has(item.external_post_id)) seen.set(item.external_post_id, item)
+        if (item.external_post_id) {
+          if (!seen.has(item.external_post_id)) seen.set(item.external_post_id, item)
+        }
       }
-      // Setelah post yang dibuka, X menampilkan lanjutan thread atau reply.
-      // Begitu artikel pertama setelah post utama bukan lanjutan dari author
-      // yang sama, berhenti sebelum masuk ke komentar. Jika belum ada artikel
-      // setelah post utama, scroll satu viewport untuk memuat lanjutannya.
-      const currentIndex = articles.findIndex((article) => extractArticle(article).external_post_id === currentID)
-      if (currentIndex < 0) break
-      if (currentIndex >= 0) {
-        const currentItem = extractArticle(articles[currentIndex])
-        const mainAuthor = currentItem.author_handle.toLowerCase()
-        const following = articles.slice(currentIndex + 1).map(extractArticle).filter((item) => item.external_post_id)
-        const isThreadAuthorPost = (item) => item.author_handle.toLowerCase() === mainAuthor
-        if (following.length && !isThreadAuthorPost(following[0])) break
+      const collectedItems = [...seen.values()]
+      const beforeMainThreadCount = mainThreadIDs.size
+      const rootIndex = collectedItems.findIndex((item) => item.external_post_id === currentID)
+      if (rootIndex >= 0) {
+        const rootItem = collectedItems[rootIndex]
+        for (const item of collectedItems.slice(rootIndex + 1)) {
+          if (
+            item.external_post_id !== currentID &&
+            isThreadContinuation(item, rootItem.author_handle)
+          ) {
+            mainThreadIDs.add(item.external_post_id)
+          }
+        }
       }
+      const loadedNewMain = mainThreadIDs.size > beforeMainThreadCount
+      if (loadedNewMain) idleThreadRounds = 0
+      else if (mainThreadIDs.size > 0) idleThreadRounds++
+      if (mainThreadIDs.size > 0 && idleThreadRounds >= 12) break
       const before = seen.size
       const beforeHeight = document.documentElement.scrollHeight
       window.scrollBy(0, Math.max(300, Math.floor(window.innerHeight * 0.65)))

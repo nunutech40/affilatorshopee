@@ -96,6 +96,132 @@ type AIReformatResult struct {
 	HashtagPool     []string `json:"hashtag_pool,omitempty"`
 }
 
+type AICleanRawResult struct {
+	ProductID      string `json:"product_id"`
+	CleanedRawText string `json:"cleaned_raw_text"`
+}
+
+const cleanRawSystemPrompt = `Kamu editor data produk. Bersihkan RAW menjadi teks sumber produk yang ringkas dan faktual.
+
+SIMPAN: nama produk, fitur/spesifikasi yang relevan, rating, jumlah penilaian, jumlah terjual, harga, diskon/voucher, dan deskripsi produk.
+HAPUS: sapaan penjual, promosi toko, ancaman/blokir, instruksi checkout, COD, pengiriman, retur/komplain, garansi toko, disclaimer operasional, pengulangan, dan metadata halaman yang bukan isi produk.
+JANGAN mengubah wording atau angka faktual, jangan meringkas angka, dan jangan mengarang. Pertahankan bahasa asli seperlunya. Output HANYA JSON array dengan format [{"product_id":"...","cleaned_raw_text":"..."}].`
+
+func (s *AIService) CleanRaw(ctx context.Context, products []model.Product, modelOverride string) ([]AICleanRawResult, error) {
+	if len(products) == 0 || len(products) > 10 {
+		return nil, fmt.Errorf("%w: jumlah produk AI harus 1-10", ErrValidation)
+	}
+	selected := strings.TrimSpace(modelOverride)
+	if selected == "" {
+		selected = strings.TrimSpace(s.model)
+	}
+	if selected == "" {
+		return nil, fmt.Errorf("model AI wajib dipilih untuk fitur AI")
+	}
+	var input strings.Builder
+	for _, p := range products {
+		fmt.Fprintf(&input, "PRODUCT_ID: %s\nRAW_START\n%s\nRAW_END\n\n", p.ID, p.RawText)
+	}
+	cleanModel := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(selected, "opencode/"), "9router/"), "openrouter/"), "codex/")
+	endpoint, key := s.endpoint, s.apiKey
+	if strings.HasPrefix(selected, "opencode/") {
+		endpoint, key = "https://opencode.ai/zen/v1/chat/completions", s.openCodeAPIKey
+	} else if isNineRouterModel(selected) {
+		endpoint, key = s.nineRouterEndpoint, s.nineRouterAPIKey
+	}
+	if isCodexModel(selected) {
+		endpoint = strings.TrimSuffix(endpoint, "/chat/completions") + "/responses"
+	}
+	if isLocalCodexModel(selected) {
+		if strings.TrimSpace(s.codexBridgeURL) == "" {
+			return nil, fmt.Errorf("Codex CLI bridge belum dikonfigurasi")
+		}
+		body, err := json.Marshal(codexBridgeRequest{Model: cleanModel, Instructions: cleanRawSystemPrompt, Input: input.String()})
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.codexBridgeURL+"/v1/execute", bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if s.codexBridgeToken != "" {
+			req.Header.Set("Authorization", "Bearer "+s.codexBridgeToken)
+		}
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("Codex CLI bridge tidak dapat dihubungi: %w", err)
+		}
+		defer resp.Body.Close()
+		data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("Codex CLI bridge gagal (status %d): %s", resp.StatusCode, strings.TrimSpace(string(data)))
+		}
+		content, err := parseCodexCLIContent(data)
+		if err != nil {
+			return nil, err
+		}
+		return parseCleanRawResults(content, products)
+	}
+	if strings.TrimSpace(key) == "" {
+		return nil, fmt.Errorf("API key provider untuk model %s belum dikonfigurasi", selected)
+	}
+	var body []byte
+	var err error
+	if isCodexModel(selected) {
+		body, err = json.Marshal(responsesRequest{Model: cleanModel, Instructions: cleanRawSystemPrompt, Input: input.String(), MaxOutputTokens: 4096})
+	} else {
+		body, err = json.Marshal(openRouterRequest{Model: cleanModel, Messages: []openRouterMessage{{Role: "system", Content: cleanRawSystemPrompt}, {Role: "user", Content: input.String()}}, MaxTokens: 4096, Temperature: 0.1})
+	}
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("provider %s request untuk model %s: %w", providerName(endpoint, selected), selected, err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("provider %s AI gagal untuk model %s (status %d): %s", providerName(endpoint, selected), selected, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+	content, err := parseProviderContent(data)
+	if err != nil {
+		return nil, err
+	}
+	return parseCleanRawResults(content, products)
+}
+
+func parseCleanRawResults(content string, products []model.Product) ([]AICleanRawResult, error) {
+	content = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimPrefix(content, "```json"), "```"), "```"))
+	var results []AICleanRawResult
+	if err := json.Unmarshal([]byte(content), &results); err != nil {
+		return nil, fmt.Errorf("parse AI clean raw JSON: %w", err)
+	}
+	valid := make(map[string]bool, len(products))
+	for _, p := range products {
+		valid[p.ID] = true
+	}
+	for _, result := range results {
+		if !valid[result.ProductID] || strings.TrimSpace(result.CleanedRawText) == "" {
+			return nil, fmt.Errorf("AI clean raw mengembalikan hasil tidak valid")
+		}
+	}
+	return results, nil
+}
+
 type openRouterRequest struct {
 	Model       string              `json:"model"`
 	Messages    []openRouterMessage `json:"messages"`
@@ -176,6 +302,10 @@ func (s *AIService) Reformat(ctx context.Context, products []model.Product, mode
 
 	input := make([]string, 0, len(products))
 	for _, product := range products {
+		rawText := product.RawText
+		if product.CleanedRawText != nil && strings.TrimSpace(*product.CleanedRawText) != "" {
+			rawText = *product.CleanedRawText
+		}
 		existing := ""
 		if product.ReformattedText != nil {
 			existing = strings.TrimSpace(*product.ReformattedText)
@@ -188,9 +318,9 @@ func (s *AIService) Reformat(ctx context.Context, products []model.Product, mode
 			contentModel = "trending"
 		}
 		if isVariant && existing != "" {
-			input = append(input, fmt.Sprintf("PRODUCT_ID: %s\nCONTENT_MODEL: %s\nSHOPEE_LINK: %s\nRAW_START\n%s\nRAW_END\nCURRENT_PROMO_START\n%s\nCURRENT_PROMO_END", product.ID, contentModel, product.ShopeeLink, product.RawText, existing))
+			input = append(input, fmt.Sprintf("PRODUCT_ID: %s\nCONTENT_MODEL: %s\nSHOPEE_LINK: %s\nRAW_START\n%s\nRAW_END\nCURRENT_PROMO_START\n%s\nCURRENT_PROMO_END", product.ID, contentModel, product.ShopeeLink, rawText, existing))
 		} else {
-			input = append(input, fmt.Sprintf("PRODUCT_ID: %s\nCONTENT_MODEL: %s\nSHOPEE_LINK: %s\nRAW_START\n%s\nRAW_END", product.ID, contentModel, product.ShopeeLink, product.RawText))
+			input = append(input, fmt.Sprintf("PRODUCT_ID: %s\nCONTENT_MODEL: %s\nSHOPEE_LINK: %s\nRAW_START\n%s\nRAW_END", product.ID, contentModel, product.ShopeeLink, rawText))
 		}
 	}
 	variantRule := "MODE REFORMAT UTAMA: CURRENT_PROMO tidak dikirim dan tidak boleh dijadikan sumber. Buat ulang hanya dari RAW_START dan wajib menghasilkan hook sales + benefit konkret + proof + harga termurah + CTA."

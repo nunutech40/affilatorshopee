@@ -14,7 +14,7 @@ async function save(payload) {
   let created = null
   try {
     created = await products.createProduct(payload)
-    const model = localStorage.getItem('ai_model') || 'stealth/ox-alpha'
+    const model = localStorage.getItem('ai_model') || ''
     try {
       await products.reformat([created.product.id], model, false)
     } catch (e) {

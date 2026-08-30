@@ -161,7 +161,7 @@ async function reformatVariant() {
   error.value = ''
   try {
     await products.updateProduct(route.params.id, { content_model: selectedContentModel.value })
-    await products.reformat([route.params.id], localStorage.getItem('ai_model') || 'stealth/ox-alpha', true)
+    await products.reformat([route.params.id], localStorage.getItem('ai_model') || '', true)
     await load()
   } catch (e) { error.value = e.message } finally { saving.value = false; aiAction.value = '' }
 }
@@ -172,9 +172,20 @@ async function reformatAI() {
   error.value = ''
   try {
     await products.updateProduct(route.params.id, { content_model: selectedContentModel.value })
-    await products.reformat([route.params.id], localStorage.getItem('ai_model') || 'stealth/ox-alpha', false)
+    await products.reformat([route.params.id], localStorage.getItem('ai_model') || '', false)
     await load()
   } catch (e) { error.value = `Reformat AI gagal. Produk tetap tersimpan sebagai raw text: ${e.message}` } finally { saving.value = false; aiAction.value = '' }
+}
+
+async function cleanRaw() {
+  saving.value = true
+  aiAction.value = 'AI sedang membersihkan raw text...'
+  error.value = ''
+  try {
+    await products.cleanRaw([route.params.id], localStorage.getItem('ai_model') || '')
+    await load()
+    saveNotice.value = 'Raw bersih berhasil dibuat. Raw asli tetap aman dan tidak ditimpa.'
+  } catch (e) { error.value = `Bersihkan raw gagal: ${e.message}` } finally { saving.value = false; aiAction.value = '' }
 }
 
 async function remove() {
@@ -204,7 +215,7 @@ onMounted(load)
     <div class="stats"><div class="stat"><strong>{{ product.click_count || 0 }}</strong><span>Klik affiliate</span></div><div class="stat"><strong>{{ product.post_count || 0 }}</strong><span>Posting</span></div></div>
     <div class="form-layout">
       <div>
-        <section class="panel"><h2>Raw text (asli, read-only)</h2><pre class="raw-pre">{{ product.raw_text }}</pre></section>
+        <section class="panel"><div class="section-heading"><div><h2>Raw text (asli, read-only)</h2><p class="muted">Sumber asli tidak pernah ditimpa. Reformat memakai raw bersih jika tersedia.</p></div><button class="button" :disabled="saving" @click="cleanRaw">{{ product.cleaned_raw_text ? 'Bersihkan ulang dengan AI' : 'Bersihkan raw dengan AI' }}</button></div><pre class="raw-pre">{{ product.raw_text }}</pre><div v-if="product.cleaned_raw_text" class="cleaned-raw"><h3>Raw bersih (hasil AI)</h3><pre class="raw-pre">{{ product.cleaned_raw_text }}</pre></div></section>
         <section class="panel"><h2>Data share</h2><div class="field"><label>Link affiliate Shopee</label><input v-model="shopeeLink" class="input" placeholder="https://s.shopee.co.id/..." /><button class="button-primary" style="margin-top:8px" :disabled="savingLink || !shopeeLink.trim()" @click="saveShopeeLink">{{ savingLink ? 'Menyimpan link...' : 'Simpan link' }}</button></div><div class="field"><label>Tambah image URL</label><input v-model="imageURL" class="input" placeholder="https://.../image.jpg" /></div><div class="field"><label>Tambah video URL</label><input v-model="videoURL" class="input" placeholder="https://.../video.mp4" /></div><button class="button" :disabled="saving || (!imageURL.trim() && !videoURL.trim())" @click="addMedia">Download & tambah media</button></section>
         <section class="panel reformat-panel">
           <div class="section-heading"><div><h2>Promo text (editable)</h2><p class="muted">{{ modelLabel(product.content_model) }} menentukan prompt yang dipakai.</p></div><span class="counter">{{ editText.length }} karakter</span></div>

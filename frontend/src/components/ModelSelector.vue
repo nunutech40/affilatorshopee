@@ -7,7 +7,7 @@ const props = defineProps({ modelValue: String })
 const products = useProductStore()
 const models = ref([])
 const searchQuery = ref('')
-const selected = ref(props.modelValue || localStorage.getItem('ai_model') || 'stealth/ox-alpha')
+const selected = ref(props.modelValue || localStorage.getItem('ai_model') || '')
 const filteredModels = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   if (!query) return models.value
@@ -19,10 +19,10 @@ const providerLabel = (provider) => provider === '9router' ? '9router' : provide
 onMounted(async () => {
   try {
     models.value = await products.fetchModels()
-    if (!models.value.find(m => m.id === selected.value)) {
+    if (!selected.value && models.value.length) {
       selected.value = models.value[0]?.id || selected.value
     }
-  } catch { models.value = [{ id: 'stealth/ox-alpha', name: 'Ox Alpha (OpenRouter)', free: false, note: 'OpenRouter' }] }
+  } catch { models.value = [] }
 })
 watch(selected, v => { localStorage.setItem('ai_model', v); emit('update:modelValue', v) }, { immediate: true })
 watch(() => props.modelValue, v => {

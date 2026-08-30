@@ -116,6 +116,7 @@ func main() {
 		api.Post("/analytics/reset", analytics.Reset)
 		api.Post("/products/import/x", xHandler.Import)
 		api.Post("/ai/reformat", ai.Reformat)
+		api.Post("/ai/clean-raw", ai.CleanRaw)
 		api.Post("/captions/generate", captions.Generate)
 		api.Post("/captions/variations", captions.GenerateVariations)
 		api.Get("/share/x", share.X)

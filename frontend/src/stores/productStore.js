@@ -68,6 +68,10 @@ export const useProductStore = defineStore('products', {
         this.loading = false
       }
     },
+    async cleanRaw(ids, model) {
+      this.loading = true
+      try { return await request('/api/ai/clean-raw', { method: 'POST', body: JSON.stringify({ product_ids: ids, model }) }) } finally { this.loading = false }
+    },
     async fetchModels() {
       return request('/api/ai/models')
     },

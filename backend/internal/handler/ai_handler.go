@@ -55,3 +55,32 @@ func (h *AIHandler) Reformat(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, summary)
 }
+
+func (h *AIHandler) CleanRaw(w http.ResponseWriter, r *http.Request) {
+	select {
+	case h.semaphore <- struct{}{}:
+		defer func() { <-h.semaphore }()
+	default:
+		writeError(w, http.StatusTooManyRequests, "AI_BUSY", "Request AI lain sedang diproses")
+		return
+	}
+	var request reformatRequest
+	if err := decodeJSON(w, r, &request); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Body JSON tidak valid")
+		return
+	}
+	selected := ""
+	if request.Model != nil {
+		selected = *request.Model
+	}
+	summary, err := h.products.CleanRaw(r.Context(), request.ProductIDs, h.ai, selected)
+	if err != nil {
+		if errors.Is(err, service.ErrValidation) {
+			writeError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		writeError(w, http.StatusBadGateway, "AI_PROVIDER_ERROR", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, summary)
+}

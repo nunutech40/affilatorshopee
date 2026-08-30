@@ -1,5 +1,5 @@
 (() => {
-  const scraperVersion = '1.2.9'
+  const scraperVersion = '1.3.0'
   if (window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ === scraperVersion) return
   window.__AFFILIATOR_SHOPEE_SCRAPER_VERSION__ = scraperVersion
 
@@ -103,6 +103,29 @@
     // judul atau panel harga dirender oleh layout Shopee yang berbeda.
     const match = lines.map((line) => line.match(pricePattern)).find(Boolean)
     return clean(match?.[0] || '')
+  }
+
+  function visibleProductNormalPrice() {
+    const pricePattern = /Rp\s*[\d]+(?:[.,]\d+)*/ig
+    const lines = pageLines().filter((line) => /(?:%|diskon|hemat|harga)/i.test(line))
+    for (const line of lines) {
+      const prices = [...line.matchAll(pricePattern)].map((match) => clean(match[0]))
+      if (prices.length >= 3 && /(?:[-−]\s*\d{1,2}\s*%|diskon|hemat)/i.test(line)) return prices.slice(2).join(' - ')
+    }
+    return ''
+  }
+
+  function visibleProductDiscount() {
+    const lines = pageLines()
+    for (const line of lines) {
+      const match = line.match(/(?:diskon|hemat|potongan)[^%\n]{0,24}(\d{1,2})\s*%/i) || line.match(/(?:^|\s)[-−]\s*(\d{1,2})\s*%(?:\s|$)/)
+      if (match) return `${match[1]}%`
+    }
+    for (const data of networkData) {
+      const value = findNetworkValues(data, ['discount', 'discount_percent', 'discountPercent', 'discount_rate', 'discountRate']).find((item) => /^\d{1,2}(?:\.\d+)?%?$/.test(clean(item)))
+      if (value) return `${clean(value).replace(/%$/, '')}%`
+    }
+    return ''
   }
 
   function normalizeShopeePrice(value) {
@@ -221,7 +244,8 @@
     const sold = visibleSold ? `${visibleSold} terjual` : (api.sold ? `${api.sold} terjual` : '')
     const visiblePrice = visibleProductPrice()
     const price = visiblePrice || normalizeShopeePrice(api.price || productJson.offers?.price)
-    const discount = findText(/\b\d{1,2}%\b/)
+    const normalPrice = visibleProductNormalPrice()
+    const discount = visibleProductDiscount()
     const images = imageCandidates()
     const video = videoCandidate()
     const raw = [
@@ -231,6 +255,7 @@
       rating || reviews ? `⭐️ Rating ${rating}${reviews ? ` · ${reviews} penilaian` : ''}` : '',
       sold ? `🔥 ${sold}` : '',
       price ? `💸 Harga ${clean(price)}` : '',
+      normalPrice ? `🏷️ Harga normal ${normalPrice}` : '',
       discount ? `⚡️ Diskon ${discount}` : '',
       'SPESIFIKASI PRODUK',
       specification || (networkSpecs ? networkSpecs : ''),

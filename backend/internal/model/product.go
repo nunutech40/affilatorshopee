@@ -11,6 +11,7 @@ type Niche struct {
 type Product struct {
 	ID                string     `json:"id"`
 	RawText           string     `json:"raw_text"`
+	ContentFormat     string     `json:"content_format,omitempty"`
 	CleanedRawText    *string    `json:"cleaned_raw_text"`
 	ProductName       *string    `json:"product_name"`
 	ShopeeLink        string     `json:"shopee_link"`

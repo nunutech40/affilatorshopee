@@ -13,7 +13,7 @@ const researchQuery = ref('')
 const saving = ref(false)
 const message = ref('')
 const error = ref('')
-const form = ref({ canonical_url: '', original_text: '', author_handle: '', source_query: '', published_at: null, stats: null, media: [], niche_ids: [], product_type_ids: [] })
+const form = ref({ canonical_url: '', original_text: '', author_handle: '', source_query: '', published_at: null, stats: null, media: [], niche_ids: [], product_type_ids: [], content_format: 'post', thread_post_count: 1 })
 const threadPostCount = ref(1)
 
 const researchCatalog = {
@@ -53,6 +53,8 @@ function receiveCapture(event) {
   form.value.stats = item.stats || null
   form.value.media = [...new Set(item.media || [])]
   threadPostCount.value = item.thread_post_count || 1
+  form.value.thread_post_count = threadPostCount.value
+  form.value.content_format = threadPostCount.value > 1 ? 'thread' : 'post'
   message.value = `${threadPostCount.value > 1 ? `Thread ${threadPostCount.value} post` : 'Post'} ditangkap · ${form.value.media.length} media. Review sebelum disimpan.`
   error.value = ''
 }

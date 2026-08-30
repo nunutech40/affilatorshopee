@@ -24,6 +24,7 @@ type ContentStats struct {
 type ContentItem struct {
 	ID                  string           `json:"id"`
 	Platform            string           `json:"platform"`
+	ContentFormat       string           `json:"content_format"`
 	ExternalPostID      string           `json:"external_post_id"`
 	CanonicalURL        string           `json:"canonical_url"`
 	AuthorHandle        string           `json:"author_handle"`

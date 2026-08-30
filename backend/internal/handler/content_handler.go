@@ -75,18 +75,20 @@ func (h *ContentHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var b struct {
-		Platform       string              `json:"platform"`
-		ExternalPostID string              `json:"external_post_id"`
-		CanonicalURL   string              `json:"canonical_url"`
-		AuthorHandle   string              `json:"author_handle"`
-		OriginalText   string              `json:"original_text"`
-		Media          []string            `json:"media"`
-		SourceQuery    string              `json:"source_query"`
-		PublishedAt    *time.Time          `json:"published_at"`
-		Status         string              `json:"status"`
-		NicheIDs       []string            `json:"niche_ids"`
-		ProductTypeIDs []string            `json:"product_type_ids"`
-		Stats          *model.ContentStats `json:"stats"`
+		Platform        string              `json:"platform"`
+		ContentFormat   string              `json:"content_format"`
+		ThreadPostCount int                 `json:"thread_post_count"`
+		ExternalPostID  string              `json:"external_post_id"`
+		CanonicalURL    string              `json:"canonical_url"`
+		AuthorHandle    string              `json:"author_handle"`
+		OriginalText    string              `json:"original_text"`
+		Media           []string            `json:"media"`
+		SourceQuery     string              `json:"source_query"`
+		PublishedAt     *time.Time          `json:"published_at"`
+		Status          string              `json:"status"`
+		NicheIDs        []string            `json:"niche_ids"`
+		ProductTypeIDs  []string            `json:"product_type_ids"`
+		Stats           *model.ContentStats `json:"stats"`
 	}
 	if err := decodeJSON(w, r, &b); err != nil {
 		writeError(w, 400, "INVALID_JSON", "Body JSON tidak valid")
@@ -99,10 +101,17 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if b.Platform == "" {
 		b.Platform = "x"
 	}
+	if b.ContentFormat == "" {
+		if b.ThreadPostCount > 1 {
+			b.ContentFormat = "thread"
+		} else {
+			b.ContentFormat = "post"
+		}
+	}
 	if b.Status == "" {
 		b.Status = "discovered"
 	}
-	item, err := h.repo.Create(r.Context(), model.ContentItem{Platform: b.Platform, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
+	item, err := h.repo.Create(r.Context(), model.ContentItem{Platform: b.Platform, ContentFormat: b.ContentFormat, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
 	if err != nil {
 		writeError(w, 400, "CREATE_ERROR", "Konten gagal disimpan: "+err.Error())
 		return
@@ -112,6 +121,7 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 type contentPayload struct {
 	Platform       string              `json:"platform"`
+	ContentFormat  string              `json:"content_format"`
 	ExternalPostID string              `json:"external_post_id"`
 	CanonicalURL   string              `json:"canonical_url"`
 	AuthorHandle   string              `json:"author_handle"`
@@ -154,7 +164,10 @@ func (h *ContentHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	if b.Status == "" {
 		b.Status = "discovered"
 	}
-	item, err := h.repo.Update(r.Context(), chi.URLParam(r, "id"), repository.ContentUpdate{Platform: b.Platform, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
+	if b.ContentFormat == "" {
+		b.ContentFormat = "post"
+	}
+	item, err := h.repo.Update(r.Context(), chi.URLParam(r, "id"), repository.ContentUpdate{Platform: b.Platform, ContentFormat: b.ContentFormat, ExternalPostID: b.ExternalPostID, CanonicalURL: b.CanonicalURL, AuthorHandle: b.AuthorHandle, OriginalText: b.OriginalText, Media: b.Media, PublishedAt: b.PublishedAt, SourceQuery: b.SourceQuery, Status: b.Status}, b.NicheIDs, b.ProductTypeIDs, b.Stats)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeError(w, 404, "NOT_FOUND", "Konten tidak ditemukan")
 		return
@@ -253,7 +266,7 @@ func (h *ContentHandler) ReformatVariant(w http.ResponseWriter, r *http.Request)
 	if item.CleanedOriginalText != "" {
 		raw = item.CleanedOriginalText
 	}
-	p := model.Product{ID: item.ID, RawText: raw, ContentModel: &cm}
+	p := model.Product{ID: item.ID, RawText: raw, ContentFormat: item.ContentFormat, ContentModel: &cm}
 	results, err := h.ai.ReformatContent(r.Context(), []model.Product{p}, b.Model)
 	if err != nil {
 		writeError(w, 502, "AI_PROVIDER_ERROR", err.Error())

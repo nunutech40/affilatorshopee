@@ -60,7 +60,7 @@ func (r *ContentRepository) Create(ctx context.Context, item model.ContentItem, 
 		return nil, err
 	}
 	media := string(mediaBytes)
-	err = tx.QueryRowContext(ctx, `INSERT INTO content_items (platform,external_post_id,canonical_url,author_handle,original_text,media,published_at,source_query,status) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9) RETURNING id,platform,external_post_id,canonical_url,author_handle,original_text,created_at,updated_at`, item.Platform, item.ExternalPostID, item.CanonicalURL, item.AuthorHandle, item.OriginalText, media, item.PublishedAt, item.SourceQuery, item.Status).Scan(&created.ID, &created.Platform, &created.ExternalPostID, &created.CanonicalURL, &created.AuthorHandle, &created.OriginalText, &created.CreatedAt, &created.UpdatedAt)
+	err = tx.QueryRowContext(ctx, `INSERT INTO content_items (platform,content_format,external_post_id,canonical_url,author_handle,original_text,media,published_at,source_query,status) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10) RETURNING id,platform,content_format,external_post_id,canonical_url,author_handle,original_text,created_at,updated_at`, item.Platform, item.ContentFormat, item.ExternalPostID, item.CanonicalURL, item.AuthorHandle, item.OriginalText, media, item.PublishedAt, item.SourceQuery, item.Status).Scan(&created.ID, &created.Platform, &created.ContentFormat, &created.ExternalPostID, &created.CanonicalURL, &created.AuthorHandle, &created.OriginalText, &created.CreatedAt, &created.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (r *ContentRepository) List(ctx context.Context, nicheID, platform, status,
 		return nil, 0, err
 	}
 	args = append(args, limit, (page-1)*limit)
-	rows, err := r.db.QueryContext(ctx, `SELECT ci.id,ci.platform,ci.external_post_id,ci.canonical_url,ci.author_handle,ci.original_text,ci.cleaned_original_text,ci.published_at,ci.source_query,ci.status,ci.created_at,ci.updated_at FROM content_items ci WHERE `+strings.Join(where, " AND ")+fmt.Sprintf(" ORDER BY ci.created_at DESC LIMIT $%d OFFSET $%d", n, n+1), args...)
+	rows, err := r.db.QueryContext(ctx, `SELECT ci.id,ci.platform,ci.content_format,ci.external_post_id,ci.canonical_url,ci.author_handle,ci.original_text,ci.cleaned_original_text,ci.published_at,ci.source_query,ci.status,ci.created_at,ci.updated_at FROM content_items ci WHERE `+strings.Join(where, " AND ")+fmt.Sprintf(" ORDER BY ci.created_at DESC LIMIT $%d OFFSET $%d", n, n+1), args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -123,7 +123,7 @@ func (r *ContentRepository) List(ctx context.Context, nicheID, platform, status,
 	items := []model.ContentItem{}
 	for rows.Next() {
 		var i model.ContentItem
-		if err := rows.Scan(&i.ID, &i.Platform, &i.ExternalPostID, &i.CanonicalURL, &i.AuthorHandle, &i.OriginalText, &i.CleanedOriginalText, &i.PublishedAt, &i.SourceQuery, &i.Status, &i.CreatedAt, &i.UpdatedAt); err != nil {
+		if err := rows.Scan(&i.ID, &i.Platform, &i.ContentFormat, &i.ExternalPostID, &i.CanonicalURL, &i.AuthorHandle, &i.OriginalText, &i.CleanedOriginalText, &i.PublishedAt, &i.SourceQuery, &i.Status, &i.CreatedAt, &i.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, i)
@@ -141,7 +141,7 @@ func (r *ContentRepository) List(ctx context.Context, nicheID, platform, status,
 
 func (r *ContentRepository) Get(ctx context.Context, id string) (*model.ContentItem, error) {
 	var i model.ContentItem
-	err := r.db.QueryRowContext(ctx, `SELECT id,platform,external_post_id,canonical_url,author_handle,original_text,cleaned_original_text,published_at,source_query,status,created_at,updated_at FROM content_items WHERE id=$1`, id).Scan(&i.ID, &i.Platform, &i.ExternalPostID, &i.CanonicalURL, &i.AuthorHandle, &i.OriginalText, &i.CleanedOriginalText, &i.PublishedAt, &i.SourceQuery, &i.Status, &i.CreatedAt, &i.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, `SELECT id,platform,content_format,external_post_id,canonical_url,author_handle,original_text,cleaned_original_text,published_at,source_query,status,created_at,updated_at FROM content_items WHERE id=$1`, id).Scan(&i.ID, &i.Platform, &i.ContentFormat, &i.ExternalPostID, &i.CanonicalURL, &i.AuthorHandle, &i.OriginalText, &i.CleanedOriginalText, &i.PublishedAt, &i.SourceQuery, &i.Status, &i.CreatedAt, &i.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +215,7 @@ func (r *ContentRepository) hydrate(ctx context.Context, item *model.ContentItem
 
 type ContentUpdate struct {
 	Platform            string
+	ContentFormat       string
 	ExternalPostID      string
 	CanonicalURL        string
 	AuthorHandle        string
@@ -236,7 +237,7 @@ func (r *ContentRepository) Update(ctx context.Context, id string, item ContentU
 	if err != nil {
 		return nil, err
 	}
-	res, err := tx.ExecContext(ctx, `UPDATE content_items SET platform=$1,external_post_id=$2,canonical_url=$3,author_handle=$4,original_text=$5,cleaned_original_text=COALESCE(NULLIF($6,''),cleaned_original_text),media=$7::jsonb,published_at=$8,source_query=$9,status=$10,updated_at=CURRENT_TIMESTAMP WHERE id=$11`, item.Platform, item.ExternalPostID, item.CanonicalURL, item.AuthorHandle, item.OriginalText, item.CleanedOriginalText, string(media), item.PublishedAt, item.SourceQuery, item.Status, id)
+	res, err := tx.ExecContext(ctx, `UPDATE content_items SET platform=$1,content_format=$2,external_post_id=$3,canonical_url=$4,author_handle=$5,original_text=$6,cleaned_original_text=COALESCE(NULLIF($7,''),cleaned_original_text),media=$8::jsonb,published_at=$9,source_query=$10,status=$11,updated_at=CURRENT_TIMESTAMP WHERE id=$12`, item.Platform, item.ContentFormat, item.ExternalPostID, item.CanonicalURL, item.AuthorHandle, item.OriginalText, item.CleanedOriginalText, string(media), item.PublishedAt, item.SourceQuery, item.Status, id)
 	if err != nil {
 		return nil, err
 	}

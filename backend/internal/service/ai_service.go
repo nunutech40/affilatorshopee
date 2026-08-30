@@ -137,7 +137,7 @@ func (s *AIService) ReformatContent(ctx context.Context, items []model.Product, 
 	}
 	var input strings.Builder
 	for _, item := range items {
-		fmt.Fprintf(&input, "PRODUCT_ID: %s\nRAW_START\n%s\nRAW_END\n\n", item.ID, item.RawText)
+		fmt.Fprintf(&input, "PRODUCT_ID: %s\nCONTENT_FORMAT: %s\nRAW_START\n%s\nRAW_END\n\n", item.ID, item.ContentFormat, item.RawText)
 	}
 	cleanModel := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(selected, "opencode/"), "9router/"), "openrouter/"), "codex/")
 	endpoint, key := s.endpoint, s.apiKey

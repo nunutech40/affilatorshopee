@@ -73,7 +73,7 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	items, total, err := h.products.List(r.Context(), repository.ProductListFilter{
 		Cluster: query.Get("cluster"), NicheID: query.Get("niche_id"), ContentModel: query.Get("content_model"), SourceCategory: query.Get("source_category"),
-		Status: query.Get("status"), Search: query.Get("search"), Page: page, Limit: limit,
+		Status: query.Get("status"), Search: query.Get("search"), Clicked: query.Get("clicked"), Page: page, Limit: limit,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil produk")

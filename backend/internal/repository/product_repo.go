@@ -25,6 +25,7 @@ type ProductListFilter struct {
 	SourceCategory string
 	Status         string
 	Search         string
+	Clicked        string
 	Page           int
 	Limit          int
 }
@@ -111,6 +112,11 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		where = append(where, fmt.Sprintf("(p.product_name ILIKE $%d OR p.keyword ILIKE $%d OR p.cluster ILIKE $%d OR p.raw_text ILIKE $%d)", argPos, argPos, argPos, argPos))
 		args = append(args, "%"+filter.Search+"%")
 		argPos++
+	}
+	if filter.Clicked == "yes" {
+		where = append(where, "p.click_count > 0")
+	} else if filter.Clicked == "no" {
+		where = append(where, "p.click_count = 0")
 	}
 
 	whereClause := strings.Join(where, " AND ")

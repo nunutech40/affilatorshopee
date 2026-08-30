@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: AffiliatorShopee API
+  version: 1.0.0
+  description: |
+    API internal untuk library produk affiliate Shopee, bank konten X,
+    reformat AI, media lokal, posting log, dan sinkronisasi analytics.
+    Semua response JSON memakai envelope success/data/error, kecuali file download.
+servers:
+  - url: http://localhost:8080
+    description: Local Docker deployment
+tags:
+  - name: System
+  - name: Products
+  - name: Content Bank
+  - name: AI & Captions
+  - name: Media
+  - name: Taxonomy
+  - name: Analytics
+  - name: Posting & Share
+paths:
+  /healthz:
+    get:
+      tags: [System]
+      summary: Health check
+      responses: { '200': { description: Service is healthy } }
+  /api/ai/models:
+    get:
+      tags: [AI & Captions]
+      summary: List available AI models
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/niches:
+    get:
+      tags: [Taxonomy]
+      summary: List product-type masters
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Taxonomy]
+      summary: Create product type
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/niches/{id}:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    delete:
+      tags: [Taxonomy]
+      summary: Archive product type
+      responses: { '204': { description: Archived } }
+  /api/content-niches:
+    get:
+      tags: [Taxonomy]
+      summary: List content-bank niche masters
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Taxonomy]
+      summary: Create content-bank niche
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/content-niches/{id}:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    delete:
+      tags: [Taxonomy]
+      summary: Archive content-bank niche
+      responses: { '204': { description: Archived } }
+  /api/products:
+    get:
+      tags: [Products]
+      summary: List products
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [raw, reformatted, ready] } }
+        - { name: content_model, in: query, schema: { type: string, enum: [trending, branded, cheap, capture] } }
+        - { name: source_category, in: query, schema: { type: string, enum: [raw_text, import_x, scrape_shopee] } }
+        - { name: niche_id, in: query, schema: { type: string } }
+        - { name: cluster, in: query, schema: { type: string } }
+        - { name: clicked, in: query, description: Filter by synced click count, schema: { type: string, enum: [yes, no] } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Products]
+      summary: Create product from raw data
+      description: Stores raw data, downloads supplied media when possible, and may run the product AI flow once.
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/products/{id}:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    get:
+      tags: [Products]
+      summary: Get product detail
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    patch:
+      tags: [Products]
+      summary: Update product fields
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    delete:
+      tags: [Products]
+      summary: Delete product and dependent data
+      responses: { '204': { description: Deleted } }
+  /api/products/{id}/niches:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    put:
+      tags: [Taxonomy]
+      summary: Replace product type labels
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/products/import/x:
+    post:
+      tags: [Products]
+      summary: Import product data from X
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/ai/reformat:
+    post:
+      tags: [AI & Captions]
+      summary: Reformat products with the configured product prompt
+      description: Separate from Content Bank reformat. Maximum 10 products per request.
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/ai/clean-raw:
+    post:
+      tags: [AI & Captions]
+      summary: Clean product raw text with AI
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/captions/generate:
+    post:
+      tags: [AI & Captions]
+      summary: Generate caption from product data
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/captions/variations:
+    post:
+      tags: [AI & Captions]
+      summary: Generate product caption variations
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/products/{id}/caption-variations:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    get:
+      tags: [AI & Captions]
+      summary: List product caption variations
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/caption-variations/{variationID}:
+    parameters: [{ $ref: '#/components/parameters/VariationID' }]
+    patch:
+      tags: [AI & Captions]
+      summary: Edit product caption variation
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    delete:
+      tags: [AI & Captions]
+      summary: Delete product caption variation
+      responses: { '204': { description: Deleted } }
+  /api/products/{id}/media:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    get:
+      tags: [Media]
+      summary: List local product media
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Media]
+      summary: Download and add image/video media
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/products/{id}/media/download:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    get:
+      tags: [Media]
+      summary: Download all product media as ZIP
+      responses: { '200': { description: ZIP archive, content: { application/zip: { schema: { type: string, format: binary } } } } }
+  /api/products/{id}/media/{mediaID}/file:
+    parameters: [{ $ref: '#/components/parameters/ID' }, { $ref: '#/components/parameters/MediaID' }]
+    get:
+      tags: [Media]
+      summary: Stream one local media file
+      responses: { '200': { description: Media file, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /api/products/{id}/media/{mediaID}:
+    parameters: [{ $ref: '#/components/parameters/ID' }, { $ref: '#/components/parameters/MediaID' }]
+    delete:
+      tags: [Media]
+      summary: Delete one local media file
+      responses: { '204': { description: Deleted } }
+  /api/content-items:
+    get:
+      tags: [Content Bank]
+      summary: List content-bank items
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: content_niche_id, in: query, schema: { type: string } }
+        - { name: platform, in: query, schema: { type: string, enum: [x, threads, facebook] } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Content Bank]
+      summary: Save captured raw post/thread
+      description: User reviews the extension capture first; this endpoint is the actual DB insert. content_format is post or thread.
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/content-items/{id}:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    get:
+      tags: [Content Bank]
+      summary: Get content detail, labels, stats, media, and variants
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    patch:
+      tags: [Content Bank]
+      summary: Update raw content and metadata manually
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    delete:
+      tags: [Content Bank]
+      summary: Delete content item and variants
+      responses: { '204': { description: Deleted } }
+  /api/content-items/{id}/variants:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    post:
+      tags: [Content Bank]
+      summary: Add an empty/manual content variant
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/content-items/{id}/variants/reformat:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    post:
+      tags: [Content Bank]
+      summary: Legacy AI reformat endpoint for a content variant
+      description: Kept for API compatibility; the current UI uses manual variants and does not call it.
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/content-items/{id}/clean-raw:
+    parameters: [{ $ref: '#/components/parameters/ID' }]
+    post:
+      tags: [Content Bank]
+      summary: Legacy AI raw-cleaning endpoint
+      description: Kept for compatibility; current content flow edits raw text manually.
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/content-variants/{variantID}:
+    parameters: [{ $ref: '#/components/parameters/VariantID' }]
+    patch:
+      tags: [Content Bank]
+      summary: Save one manual content variant
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    delete:
+      tags: [Content Bank]
+      summary: Delete one content variant
+      responses: { '204': { description: Deleted } }
+  /api/analytics/clicks/import:
+    post:
+      tags: [Analytics]
+      summary: Import Shopee click CSV
+      description: Idempotent by click_id; matching tracking tags increment products.click_count.
+      requestBody: { $ref: '#/components/requestBodies/CSV' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/analytics/commissions/import:
+    post:
+      tags: [Analytics]
+      summary: Import Shopee commission CSV
+      requestBody: { $ref: '#/components/requestBodies/CSV' }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/analytics/commissions/sold:
+    get:
+      tags: [Analytics]
+      summary: List sold products from synced commissions
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/analytics/commissions/events:
+    get:
+      tags: [Analytics]
+      summary: List commission events
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' }]
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/analytics/commissions/summary:
+    get:
+      tags: [Analytics]
+      summary: Get commission summary
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/analytics/reset:
+    post:
+      tags: [Analytics]
+      summary: Reset click and commission analytics
+      description: Destructive local operation; truncates imported analytics and resets product counters.
+      responses: { '204': { description: Reset completed } }
+  /api/share/x:
+    get:
+      tags: [Posting & Share]
+      summary: Build X web-intent share URL
+      parameters: [{ name: text, in: query, schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+  /api/post-logs:
+    get:
+      tags: [Posting & Share]
+      summary: List all posting logs
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [Posting & Share]
+      summary: Record a manual X post
+      requestBody: { $ref: '#/components/requestBodies/JSON' }
+      responses: { '201': { $ref: '#/components/responses/Success' } }
+  /api/post-logs/{productID}:
+    parameters: [{ $ref: '#/components/parameters/ProductID' }]
+    get:
+      tags: [Posting & Share]
+      summary: List posting logs for a product
+      responses: { '200': { $ref: '#/components/responses/Success' } }
+components:
+  parameters:
+    ID: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    ProductID: { name: productID, in: path, required: true, schema: { type: string, format: uuid } }
+    VariationID: { name: variationID, in: path, required: true, schema: { type: string, format: uuid } }
+    VariantID: { name: variantID, in: path, required: true, schema: { type: string, format: uuid } }
+    MediaID: { name: mediaID, in: path, required: true, schema: { type: string, format: uuid } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+  requestBodies:
+    JSON:
+      required: true
+      content: { application/json: { schema: { type: object, additionalProperties: true } } }
+    CSV:
+      required: true
+      content: { multipart/form-data: { schema: { type: object, properties: { file: { type: string, format: binary } } } } }
+  responses:
+    Success:
+      description: Successful response envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Envelope'
+  schemas:
+    Envelope:
+      type: object
+      required: [success, data, error]
+      properties:
+        success: { type: boolean, example: true }
+        data: { nullable: true, description: Endpoint-specific payload }
+        error: { nullable: true, $ref: '#/components/schemas/APIError' }
+    APIError:
+      type: object
+      properties:
+        code: { type: string, example: VALIDATION_ERROR }
+        message: { type: string, example: Request tidak valid }

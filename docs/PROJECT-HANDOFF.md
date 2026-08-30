@@ -2,6 +2,10 @@
 
 Dokumen ini adalah titik mulai untuk AI/developer berikutnya. Jika ada konflik dengan dokumen lama, gunakan kondisi source code dan dokumen ini sebagai referensi implementasi terbaru.
 
+## API contract
+
+Daftar endpoint, parameter filter, response envelope, dan operasi untuk produk, bank konten, AI, media, posting log, taxonomy, serta analytics dipelihara di [openapi.yaml](openapi.yaml). Gunakan file tersebut sebagai referensi implementasi dan review perubahan API.
+
 ## Kondisi saat ini
 
 - Backend Go dan frontend Vue/Vite berjalan dalam Docker Compose di OrbStack.
@@ -76,7 +80,7 @@ Folder: `extension/x-helper/` dan `extension/shopee-scraper/`.
 
 - Load masing-masing folder secara terpisah melalui `chrome://extensions`.
 - `x-helper` membaca payload share dari halaman X dan membantu paste caption/media. Versi extension saat ini `1.8.3`.
-- `shopee-scraper` membaca DOM, metadata, dan response network halaman detail Shopee yang sedang terbuka, mengambil raw text + media produk, lalu meng-insertkannya ke web app. Versi extension saat ini `1.2.9`; icon/logo/avatar kecil dan URL duplikat difilter.
+- `shopee-scraper` membaca DOM, metadata, dan response network halaman detail Shopee yang sedang terbuka, mengambil raw text + media produk, harga aktif, harga normal/coret, dan diskon, lalu meng-insertkannya ke web app. Versi extension saat ini `1.3.0`; icon/logo/avatar kecil dan URL duplikat difilter.
 - `x-helper` dan `shopee-scraper` adalah dua extension unpacked terpisah. Klik Reload di `chrome://extensions` setelah mengganti source extension.
 - Untuk bridge Codex di macOS, double-click `tools/codex-bridge/start-codex-bridge.command`. Script membaca token dari `.env`, build binary jika perlu, dan menjalankan listener pada port `8787`; tutup Terminal atau tekan `Ctrl+C` untuk menghentikannya.
 - Posting tetap harus dikonfirmasi manual oleh user di composer X.

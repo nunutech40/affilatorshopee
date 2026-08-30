@@ -1,5 +1,7 @@
 # AffiliatorShopee
 
+> API contract lengkap tersedia di [openapi.yaml](openapi.yaml) dan dapat dibuka langsung di Swagger Editor/Swagger UI.
+
 Web app pribadi untuk menyimpan produk curated affiliate Shopee, merapikan data dengan AI, membuat caption, dan membantu posting manual ke X.
 
 ## Dokumen
@@ -46,8 +48,11 @@ Tidak ada auto-posting penuh untuk menghindari deteksi bot.
 - Dashboard juga dapat memfilter sumber input: `X`, `Shopee`, atau `Copas`.
 - Tampilan Bank Konten diringkas agar list tetap rapi: judul dan excerpt panjang memakai ellipsis, sementara raw konten lengkap tetap tersedia di detail.
 - Detail Bank Konten memakai layout responsive dengan textarea raw yang dibatasi tingginya serta metadata, popularitas, niche, dan jenis barang di sidebar.
+- Bank Konten membedakan `Thread` dan `Post biasa`, menyimpan raw sebagai sumber asli, serta menyediakan varian manual dengan tombol copy dan save per varian.
+- Library Produk memiliki filter `Sudah diklik` dan `Belum diklik` berdasarkan `click_count` hasil sync CSV Shopee.
+- Scraper Shopee versi `1.3.0` menangkap harga aktif, harga normal/coret, dan persentase diskon dari blok harga; angka bunga cicilan tidak dipakai sebagai diskon.
 
-Threads, riset konten populer per niche untuk X/Facebook, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Implementasinya harus dipisahkan per platform agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
+Threads sebagai platform lain, reformat AI per kanal, dan share ke Facebook adalah roadmap lanjutan. Riset konten populer per niche untuk X sudah tersedia secara manual melalui query dan extension X Research. Implementasi lintas platform harus dipisahkan agar flow, prompt, parser, dan extension tidak saling bertabrakan. S3/CDN adalah pengganti local storage di masa depan.
 
 ## Roadmap: Bank Konten X per Niche
 

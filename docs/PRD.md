@@ -55,6 +55,14 @@ Web app dengan fitur:
 7. Catat riwayat posting tanpa menyimpan identitas akun X
 8. Kelola jenis barang multi-label untuk kurasi dan filter produk, termasuk filter `Uncategorized` untuk produk tanpa label
 
+### 6.1 Sinkronisasi fitur terbaru
+
+- Bank Konten adalah modul terpisah dari alur produk affiliate. Raw konten X disimpan apa adanya, dengan format otomatis `post` atau `thread`.
+- Detail Bank Konten menyediakan varian manual tanpa AI: user menambah editor kosong, menulis/copas sendiri, menyalin raw atau varian, dan menyimpan setiap varian secara terpisah.
+- Riset X menggunakan extension untuk menangkap post/thread utama beserta media utama; user tetap mereview sebelum insert ke database.
+- Library Produk dapat difilter berdasarkan produk yang sudah atau belum mendapat klik dari hasil sync CSV Shopee.
+- Scraper Shopee menangkap harga aktif, harga normal/coret, dan diskon dari blok harga agar prompt branded dapat memakai deal faktual.
+
 ## 7. Flowchart Bisnis
 
 ### 7.1 Flow Bisnis Utama
@@ -323,7 +331,7 @@ Diberikan user sudah posting produk, ketika user kembali ke web app dan klik "Ca
 
 Diberikan satu produk, ketika user klik "Buat Variasi", maka muncul 2–3 versi caption berbeda yang bisa dipakai untuk posting ulang.
 
-### AC-7: Bank Konten X per Niche (Roadmap)
+### AC-7: Bank Konten X per Niche (Implemented)
 
 Diberikan niche konten, user dapat menyimpan banyak konten X ke bank niche tersebut. Setiap item menyimpan URL/post ID, platform, konten asli, media, author bila terlihat, waktu publikasi, statistik saat ditemukan, waktu snapshot, sumber/query riset, dan status kurasi.
 

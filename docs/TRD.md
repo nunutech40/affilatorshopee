@@ -8,6 +8,8 @@ status: aligned-with-prd
 
 # Technical Requirements Document - AffiliatorShopee
 
+> Kontrak API normatif dan daftar endpoint lengkap berada di [openapi.yaml](openapi.yaml). Perubahan endpoint wajib memperbarui file tersebut.
+
 ## 1. Keputusan Teknis
 
 | Layer | Teknologi |
@@ -737,7 +739,7 @@ Prompt wajib menginstruksikan AI untuk:
 - Dashboard menerima `niche_id`; nilai `uncategorized` berarti produk yang belum memiliki relasi pada `product_niches`.
 - UI menggunakan istilah “Jenis barang”; nama `niche` dipertahankan pada nama endpoint dan tabel untuk kompatibilitas internal.
 
-### 8.5 Bank Konten X per Niche (Roadmap)
+### 8.5 Bank Konten X per Niche (Implemented)
 
 `content_niches` adalah master terpisah dari tabel `niches` yang saat ini dipakai sebagai master Jenis Barang produk. Jangan memakai `product_niches` untuk mengelompokkan niche konten.
 

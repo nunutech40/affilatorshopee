@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiRequest } from '@/stores/productStore'
+import { kpopResearchCatalog } from '@/data/contentResearchCatalog'
 
 const router = useRouter()
 const niches = ref([])
@@ -22,6 +23,7 @@ const researchCatalog = {
   'Hubungan / Relasi Pria Wanita': { Edukasi: ['komunikasi dalam hubungan OR komunikasi pasangan', 'attachment style OR gaya keterikatan', 'bahasa cinta OR love language'], 'Tips Praktis': ['cara komunikasi pasangan OR komunikasi yang sehat', 'cara pdkt OR tips pdkt', 'hubungan sehat OR relationship sehat'], 'Masalah & Pain Point': ['red flags hubungan OR tanda hubungan toxic', 'pasangan menjauh OR pasangan berubah', 'susah move on OR cara move on'], 'Opini & Debat': ['kencan dan relasi OR dating dan relasi', 'standar pasangan OR standar dalam hubungan', 'pria wanita zaman sekarang OR hubungan zaman sekarang'] },
   'Gym, Lari & Exercise': { Edukasi: ['progressive overload OR latihan beban', 'protein dan otot OR protein untuk otot', 'recovery olahraga OR pemulihan olahraga'], 'Tips Praktis': ['gym pemula OR latihan gym pemula', 'workout di rumah OR home workout', 'lari untuk pemula OR tips lari pemula'], 'Kesalahan & Cedera': ['kesalahan gym pemula OR kesalahan saat gym', 'cedera gym OR cedera olahraga', 'overtraining OR latihan berlebihan'], 'Cerita & Progress': ['progress gym OR progress latihan', 'transformasi badan OR body transformation', 'lari 5k OR latihan 5k'] },
   Affiliate: { Edukasi: ['affiliate marketing OR pemasaran affiliate', 'cara kerja affiliate OR cara jadi affiliate', 'konten jualan OR konten promosi'], 'Tips Praktis': ['tips jualan online OR cara jualan online', 'cara promosi produk OR strategi promosi', 'copywriting jualan OR caption jualan'], 'Masalah & Pain Point': ['jualan sepi OR toko sepi', 'susah closing OR susah jualan', 'produk tidak laku OR barang tidak laku'], 'Cerita & Studi Kasus': ['penghasilan affiliate OR hasil affiliate', 'pengalaman jualan online OR cerita jualan online', 'jualan dari rumah OR bisnis dari rumah'] },
+  'K-Pop & Fandom Korea': kpopResearchCatalog,
 }
 
 const currentNiche = () => niches.value.find((item) => item.id === researchNiche.value)

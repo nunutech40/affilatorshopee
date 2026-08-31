@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { apiRequest, useProductStore } from '@/stores/productStore'
+import { kpopResearchCatalog } from '@/data/contentResearchCatalog'
 
 const products = useProductStore()
 const items = ref([])
@@ -51,6 +52,7 @@ const researchCatalog = {
     'Masalah & Pain Point': ['jualan sepi OR toko sepi', 'susah closing OR susah jualan', 'produk tidak laku OR barang tidak laku'],
     'Cerita & Studi Kasus': ['penghasilan affiliate OR hasil affiliate', 'pengalaman jualan online OR cerita jualan online', 'jualan dari rumah OR bisnis dari rumah'],
   },
+  'K-Pop & Fandom Korea': kpopResearchCatalog,
 }
 
 const currentResearchNiche = () => niches.value.find((item) => item.id === researchNiche.value)

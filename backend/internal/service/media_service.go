@@ -127,6 +127,14 @@ func (s *MediaService) Remove(ctx context.Context, productID, mediaID string) er
 	return nil
 }
 
+func (s *MediaService) DeleteLocalPaths(paths []string) {
+	for _, path := range paths {
+		if err := s.storage.Delete(path); err != nil && !os.IsNotExist(err) {
+			continue
+		}
+	}
+}
+
 func (s *MediaService) Zip(ctx context.Context, productID string) (*bytes.Buffer, error) {
 	items, err := s.List(ctx, productID)
 	if err != nil {

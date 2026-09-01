@@ -26,7 +26,7 @@ export const useProductStore = defineStore('products', {
     limit: 20,
     loading: false,
     error: '',
-    filters: { search: '', status: '', content_model: '', source_category: '', cluster: '', niche_id: '', clicked: '' },
+    filters: { search: '', status: '', content_model: '', source_category: '', cluster: '', niche_id: '', clicked: '', sort: 'newest' },
   }),
   actions: {
     async fetchProducts() {
@@ -77,6 +77,9 @@ export const useProductStore = defineStore('products', {
     },
     async deleteProduct(id) {
       return request(`/api/products/${id}`, { method: 'DELETE' })
+    },
+    async purgeTesting(models, ids) {
+      return request('/api/products/purge-testing', { method: 'POST', body: JSON.stringify({ models, ids }) })
     },
     async importClicks(file) {
       const body = new FormData()

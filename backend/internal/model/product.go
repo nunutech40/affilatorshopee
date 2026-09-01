@@ -51,3 +51,17 @@ type Product struct {
 	UpdatedAt         time.Time  `json:"updated_at"`
 	Niches            []Niche    `json:"niches"`
 }
+
+type ProductTrackingArchive struct {
+	ProductID         string     `json:"product_id"`
+	ShopeeLink        string     `json:"shopee_link"`
+	TrackingTag       string     `json:"tracking_tag"`
+	ProductName       *string    `json:"product_name"`
+	ContentModel      *string    `json:"content_model"`
+	DeletedAt         time.Time  `json:"deleted_at"`
+	ClickCount        int        `json:"click_count"`
+	LastClickedAt     *time.Time `json:"last_clicked_at"`
+	SalesCount        int        `json:"sales_count"`
+	PendingSalesCount int        `json:"pending_sales_count"`
+	CommissionTotal   int64      `json:"commission_total"`
+}

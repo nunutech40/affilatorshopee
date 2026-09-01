@@ -12,21 +12,36 @@ const commissionFile = ref(null)
 const commissionSyncing = ref(false)
 const commissionMessage = ref('')
 const niches = ref([])
+const selectedProductIds = ref([])
 const totalPages = computed(() => Math.max(1, Math.ceil((products.total || 0) / (products.limit || 20))))
+const purgeableModel = computed(() => ['trending', 'cheap'].includes(products.filters.content_model) ? products.filters.content_model : '')
+const purgeLabel = computed(() => !purgeableModel.value ? 'Pilih Trending/Murah' : !selectedProductIds.value.length ? 'Pilih produk dulu' : `Purge ${selectedProductIds.value.length} ${purgeableModel.value === 'trending' ? 'Trending' : 'Murah'}`)
 async function updateModel(id, contentModel) {
   try {
-    const updated = await products.updateProduct(id, { content_model: contentModel })
-    const item = products.items.find((product) => product.id === id)
-    if (item) item.content_model = updated.content_model
+    await products.updateProduct(id, { content_model: contentModel })
+    selectedProductIds.value = selectedProductIds.value.filter((productId) => productId !== id)
+    await products.fetchProducts()
   } catch (e) { products.error = e.message }
 }
 async function remove(id) {
   if (!confirm('Hapus produk ini? Tindakan tidak bisa di-undo.')) return
   try { await products.deleteProduct(id); await products.fetchProducts() } catch (e) { products.error = e.message }
 }
+async function purgeTesting() {
+  if (!purgeableModel.value || !selectedProductIds.value.length) return
+  const label = purgeableModel.value === 'trending' ? 'Trending' : 'Murah'
+  if (!confirm(`Purge ${selectedProductIds.value.length} produk ${label} yang dipilih? Raw, caption, dan media lokal akan dihapus. ID, link, tag, klik, dan komisi tetap disimpan.`)) return
+  try {
+    const result = await products.purgeTesting([purgeableModel.value], selectedProductIds.value)
+    selectedProductIds.value = []
+    products.error = ''
+    clickMessage.value = `Purge selesai: ${result.purged} produk dan ${result.media_deleted} media dibersihkan. Tracking tetap disimpan.`
+    await products.fetchProducts()
+  } catch (e) { products.error = e.message }
+}
 let timer
-watch(() => [products.filters.status, products.filters.content_model, products.filters.source_category, products.filters.cluster, products.filters.niche_id, products.filters.clicked], () => { products.page = 1; products.fetchProducts() })
-watch(() => products.page, () => products.fetchProducts())
+watch(() => [products.filters.status, products.filters.content_model, products.filters.source_category, products.filters.cluster, products.filters.niche_id, products.filters.clicked, products.filters.sort], () => { selectedProductIds.value = []; products.page = 1; products.fetchProducts() })
+watch(() => products.page, () => { selectedProductIds.value = []; products.fetchProducts() })
 watch(() => products.limit, () => { products.page = 1; products.fetchProducts() })
 function search() { clearTimeout(timer); timer = setTimeout(() => { products.page = 1; products.fetchProducts() }, 250) }
 function prev() { if (products.page > 1) products.page-- }
@@ -56,13 +71,13 @@ onMounted(async () => { niches.value = await products.fetchNiches().catch(() => 
 
 <template>
   <section class="hero"><div><h1>Turn messy product data into ready-to-post copy.</h1><p class="hero-copy">Satu workspace untuk menyimpan produk affiliate, merapikan detail yang berantakan, dan mengulang angle caption tanpa mulai dari nol.</p></div><div class="hero-note">Posting tetap manual di X. Session browser yang menentukan akun, bukan aplikasi ini.</div></section>
-  <div class="toolbar"><input v-model="products.filters.search" class="input" placeholder="Cari produk, keyword, atau raw text..." @input="search" /><select v-model="products.filters.status" class="select"><option value="">Semua status</option><option value="raw">Raw</option><option value="reformatted">Reformatted</option><option value="ready">Ready</option></select><select v-model="products.filters.content_model" class="select"><option value="">Semua model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select><select v-model="products.filters.source_category" class="select"><option value="">Semua sumber</option><option value="import_x">X</option><option value="scrape_shopee">Shopee</option><option value="raw_text">Copas</option></select><select v-model="products.filters.niche_id" class="select"><option value="">Semua jenis barang</option><option value="uncategorized">Uncategorized</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><select v-model="products.filters.clicked" class="select"><option value="">Semua klik</option><option value="yes">Sudah diklik</option><option value="no">Belum diklik</option></select><input v-model="products.filters.cluster" class="input" placeholder="Filter cluster" /></div>
+  <div class="toolbar"><input v-model="products.filters.search" class="input" placeholder="Cari produk, keyword, atau raw text..." @input="search" /><select v-model="products.filters.status" class="select"><option value="">Semua status</option><option value="raw">Raw</option><option value="reformatted">Reformatted</option><option value="ready">Ready</option></select><select v-model="products.filters.content_model" class="select"><option value="">Semua model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="curated">Curated</option></select><select v-model="products.filters.source_category" class="select"><option value="">Semua sumber</option><option value="import_x">X</option><option value="scrape_shopee">Shopee</option><option value="raw_text">Copas</option></select><select v-model="products.filters.niche_id" class="select"><option value="">Semua jenis barang</option><option value="uncategorized">Uncategorized</option><option v-for="niche in niches" :key="niche.id" :value="niche.id">{{ niche.name }}</option></select><select v-model="products.filters.clicked" class="select"><option value="">Semua klik</option><option value="yes">Sudah diklik</option><option value="no">Belum diklik</option></select><select v-model="products.filters.sort" class="select" title="Urutkan tanggal simpan"><option value="newest">Terbaru disimpan</option><option value="oldest">Terlama disimpan</option></select><input v-model="products.filters.cluster" class="input" placeholder="Filter cluster" /><button class="button button-danger" type="button" :disabled="!purgeableModel || !selectedProductIds.length" :title="purgeableModel ? `Pilih produk ${purgeableModel} yang akan dipurge` : 'Pilih Trending atau Murah terlebih dahulu'" @click="purgeTesting">{{ purgeLabel }}</button></div>
   <section class="sync-panel"><div><h3>Sync data klik Shopee</h3><p class="muted">Upload CSV report kapan saja. Klik ID yang sama tidak dihitung ulang.</p></div><input type="file" accept=".csv,text/csv" @change="selectClickFile" /><button class="button-primary" :disabled="!clickFile || clickSyncing" @click="syncClicks">{{ clickSyncing ? 'Menyinkronkan...' : 'Sync Klik CSV' }}</button><span v-if="clickMessage" class="sync-message">{{ clickMessage }}</span></section>
   <section class="sync-panel"><div><h3>Sync komisi Shopee</h3><p class="muted">Upload CSV komisi (event_id, order_status). Otomatis hitung sales/pending/komisi per tracking tag.</p></div><input type="file" accept=".csv,text/csv" @change="selectCommissionFile" /><button class="button-primary" :disabled="!commissionFile || commissionSyncing" @click="syncCommissions">{{ commissionSyncing ? 'Menyinkronkan...' : 'Sync Komisi CSV' }}</button><span v-if="commissionMessage" class="sync-message">{{ commissionMessage }}</span><RouterLink to="/sold" class="button" style="margin-left:8px">Lihat produk terjual →</RouterLink></section>
   <div v-if="products.error" class="error-box">{{ products.error }}</div>
   <div v-else-if="products.loading && !products.items.length" class="loading">Memuat product library...</div>
   <template v-else-if="products.items.length">
-    <ProductList :items="products.items" @delete="remove" @update-model="updateModel" />
+    <ProductList :items="products.items" v-model:selected-ids="selectedProductIds" @delete="remove" @update-model="updateModel" />
     <div class="pagination">
       <button class="button" :disabled="products.page <= 1" @click="prev">‹ Prev</button>
       <span class="page-info">Hal {{ products.page }} dari {{ totalPages }} · {{ products.total }} produk</span>

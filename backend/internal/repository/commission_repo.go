@@ -79,7 +79,7 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 		}
 		if !seen[normalized] {
 			var exists bool
-			if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')=$1)`, normalized).Scan(&exists); err != nil {
+			if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')=$1) OR EXISTS(SELECT 1 FROM product_tracking_archive WHERE regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')=$1)`, normalized).Scan(&exists); err != nil {
 				return result, err
 			}
 			if exists {
@@ -101,6 +101,16 @@ func (r *CommissionRepository) Sync(ctx context.Context, events []model.Commissi
 	if err != nil {
 		return result, err
 	}
+	_, err = tx.ExecContext(ctx, `UPDATE product_tracking_archive a SET
+		sales_count=COALESCE(x.sales_count,0), pending_sales_count=COALESCE(x.pending_sales_count,0), commission_total=COALESCE(x.commission_total,0)
+		FROM (SELECT regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g') AS tag,
+			SUM(CASE WHEN lower(order_status) IN ('selesai','completed') THEN quantity ELSE 0 END)::int AS sales_count,
+			SUM(CASE WHEN lower(order_status) IN ('tertunda','pending') THEN quantity ELSE 0 END)::int AS pending_sales_count,
+			SUM(commission_total)::bigint AS commission_total FROM commission_events GROUP BY regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')) x
+		WHERE regexp_replace(lower(a.tracking_tag), '[^a-z0-9]', '', 'g')=x.tag`)
+	if err != nil {
+		return result, err
+	}
 	if err := tx.Commit(); err != nil {
 		return result, err
 	}
@@ -112,7 +122,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	args := []interface{}{}
 	argIdx := 1
 	if s := strings.TrimSpace(search); s != "" {
-		whereParts = append(whereParts, "(ce.tracking_tag ILIKE $"+fmtInt(argIdx)+" OR p.product_name ILIKE $"+fmtInt(argIdx)+" OR ce.item_name ILIKE $"+fmtInt(argIdx)+")")
+		whereParts = append(whereParts, "(ce.tracking_tag ILIKE $"+fmtInt(argIdx)+" OR COALESCE(p.product_name,a.product_name) ILIKE $"+fmtInt(argIdx)+" OR ce.item_name ILIKE $"+fmtInt(argIdx)+")")
 		args = append(args, "%"+s+"%")
 		argIdx++
 	}
@@ -130,7 +140,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	if len(whereParts) > 0 {
 		where = "WHERE " + strings.Join(whereParts, " AND ")
 	}
-	countQuery := "SELECT COUNT(*) FROM (SELECT ce.normalized_tag FROM commission_events ce LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag " + where + " GROUP BY ce.normalized_tag) s"
+	countQuery := "SELECT COUNT(*) FROM (SELECT ce.normalized_tag FROM commission_events ce LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag LEFT JOIN product_tracking_archive a ON regexp_replace(lower(a.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag " + where + " GROUP BY ce.normalized_tag) s"
 	var total int
 	countArgs := args
 	if where != "" {
@@ -144,7 +154,7 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 	}
 	query := `
 		SELECT ce.normalized_tag, ce.tracking_tag,
-			p.id, p.product_name, p.shopee_link, p.image_url,
+			COALESCE(p.id, a.product_id), COALESCE(p.product_name, a.product_name), COALESCE(p.shopee_link, a.shopee_link), p.image_url,
 			MAX(ce.item_name), MAX(ce.item_id), MAX(ce.shop_name),
 			SUM(ce.quantity)::int AS total_quantity,
 			SUM(ce.commission_total)::bigint AS total_commission,
@@ -153,8 +163,9 @@ func (r *CommissionRepository) ListSoldProducts(ctx context.Context, limit, offs
 			(p.id IS NOT NULL) AS is_in_library
 		FROM commission_events ce
 		LEFT JOIN products p ON regexp_replace(lower(p.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag
+		LEFT JOIN product_tracking_archive a ON regexp_replace(lower(a.tracking_tag), '[^a-z0-9]', '', 'g') = ce.normalized_tag
 		` + where + `
-		GROUP BY ce.normalized_tag, ce.tracking_tag, p.id, p.product_name, p.shopee_link, p.image_url
+		GROUP BY ce.normalized_tag, ce.tracking_tag, p.id, a.product_id, p.product_name, a.product_name, p.shopee_link, a.shopee_link, p.image_url
 		ORDER BY total_quantity DESC, last_ordered_at DESC
 		LIMIT $` + fmtInt(len(args)+1) + ` OFFSET $` + fmtInt(len(args)+2)
 	args = append(args, limit, offset)

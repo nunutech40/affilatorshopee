@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-const props = defineProps({ caption: { type: String, required: true }, media: { type: Array, default: () => [] } })
+const props = defineProps({ caption: { type: String, required: true }, media: { type: Array, default: () => [] }, showCopy: { type: Boolean, default: true }, disabled: { type: Boolean, default: false } })
 const copied = ref(false)
 
 function normalizeCaption(value) {
@@ -34,6 +34,7 @@ function normalizeCaption(value) {
 }
 
 async function share() {
+  if (props.disabled) return
   const shareCaption = normalizeCaption(props.caption)
   try { await navigator.clipboard.writeText(shareCaption); copied.value = true } catch { copied.value = false }
   // Simpan ke extension storage jika helper terinstall (satu kesatuan dengan web app)
@@ -46,9 +47,9 @@ async function share() {
   window.open(url, '_blank', 'noopener,noreferrer')
   setTimeout(() => { copied.value = false }, 2000)
 }
-async function copy() { try { await navigator.clipboard.writeText(normalizeCaption(props.caption)); copied.value = true } catch { copied.value = false }; setTimeout(() => { copied.value = false }, 2000) }
+async function copy() { if (props.disabled) return; try { await navigator.clipboard.writeText(normalizeCaption(props.caption)); copied.value = true } catch { copied.value = false }; setTimeout(() => { copied.value = false }, 2000) }
 </script>
 
-<template><div class="share-actions"><button class="button-primary" @click="share">{{ copied ? 'Caption copied' : 'Share ke X' }}</button><button class="button" @click="copy">Copy caption</button></div></template>
+<template><div class="share-actions"><button class="button-primary" :disabled="props.disabled" :title="props.disabled ? 'Isi promo text terlebih dahulu' : 'Share ke X'" @click="share">{{ copied ? 'Caption copied' : 'Share ke X' }}</button><button v-if="props.showCopy" class="button" :disabled="props.disabled" @click="copy">Copy caption</button></div></template>
 
 <style scoped>.share-actions { display: flex; gap: 8px; flex-wrap: wrap; }</style>

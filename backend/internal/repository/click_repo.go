@@ -56,6 +56,11 @@ func (r *ClickRepository) Sync(ctx context.Context, events []model.ClickEvent) (
 		var matched bool
 		err = tx.QueryRowContext(ctx, `UPDATE products SET click_count=click_count+1, last_clicked_at=$2 WHERE regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')=$1 RETURNING true`, normalized, event.ClickedAt).Scan(&matched)
 		if err == sql.ErrNoRows {
+			var archived bool
+			if archiveErr := tx.QueryRowContext(ctx, `UPDATE product_tracking_archive SET click_count=click_count+1, last_clicked_at=$2 WHERE regexp_replace(lower(tracking_tag), '[^a-z0-9]', '', 'g')=$1 RETURNING true`, normalized, event.ClickedAt).Scan(&archived); archiveErr == nil && archived {
+				result.Matched++
+				continue
+			}
 			if !seenUnmatched[normalized] {
 				result.Unmatched = append(result.Unmatched, event.TrackingTag)
 				seenUnmatched[normalized] = true

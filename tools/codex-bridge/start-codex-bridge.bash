@@ -43,9 +43,20 @@ fi
 
 export CODEX_BRIDGE_TOKEN
 export CODEX_BRIDGE_ADDR="${CODEX_BRIDGE_ADDR:-0.0.0.0:8787}"
+MYBUSINESS_ENV_FILE="/Users/nununugraha/mybusinessmap/.env"
+CODEX_BRIDGE_TOKEN_ALT="$(sed -n 's/^CODEX_BRIDGE_TOKEN[[:space:]]*=[[:space:]]*//p' "$MYBUSINESS_ENV_FILE" 2>/dev/null | tail -n 1)"
+CODEX_BRIDGE_TOKEN_ALT="${CODEX_BRIDGE_TOKEN_ALT#\"}"
+CODEX_BRIDGE_TOKEN_ALT="${CODEX_BRIDGE_TOKEN_ALT%\"}"
+CODEX_BRIDGE_TOKEN_ALT="${CODEX_BRIDGE_TOKEN_ALT#\'}"
+CODEX_BRIDGE_TOKEN_ALT="${CODEX_BRIDGE_TOKEN_ALT%\'}"
+export CODEX_BRIDGE_TOKEN_ALT
+export CODEX_BRIDGE_WORKDIR="${CODEX_BRIDGE_WORKDIR:-/Users/nununugraha/Documents/Kantor/Gitlab/LiveChatMobileAppNative/lib/feedback-hermess}"
+export CODEX_BRIDGE_SANDBOX="${CODEX_BRIDGE_SANDBOX:-workspace-write}"
 
 echo "Codex bridge aktif di http://127.0.0.1:8787"
 echo "Docker memakai host.docker.internal:8787"
+echo "Codex CLI workdir: $CODEX_BRIDGE_WORKDIR"
+echo "Codex CLI sandbox: $CODEX_BRIDGE_SANDBOX"
 echo "Tutup jendela Terminal ini atau tekan Ctrl+C untuk menghentikan."
 echo
 

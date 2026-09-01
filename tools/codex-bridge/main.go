@@ -46,6 +46,7 @@ type openAIErrorBody struct {
 }
 
 var token = strings.TrimSpace(os.Getenv("CODEX_BRIDGE_TOKEN"))
+var alternateToken = strings.TrimSpace(os.Getenv("CODEX_BRIDGE_TOKEN_ALT"))
 
 func main() {
 	if token == "" {
@@ -67,7 +68,7 @@ func main() {
 }
 
 func authorize(w http.ResponseWriter, r *http.Request) bool {
-	if r.Header.Get("Authorization") != "Bearer "+token {
+	if !validAuthorization(r) {
 		writeOpenAIError(w, http.StatusUnauthorized, "unauthorized", "authentication_error")
 		return false
 	}
@@ -79,7 +80,7 @@ func execute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if r.Header.Get("Authorization") != "Bearer "+token {
+	if !validAuthorization(r) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -115,8 +116,8 @@ func execute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Codex CLI tidak tersedia; set CODEX_CLI_PATH", http.StatusBadGateway)
 		return
 	}
-	cmd := exec.CommandContext(ctx, codexPath, "exec", "--ephemeral", "--sandbox", "read-only", "--skip-git-repo-check", "--json", "--model", model, prompt)
-	cmd.Dir = os.TempDir()
+	cmd := exec.CommandContext(ctx, codexPath, "exec", "--ephemeral", "--sandbox", codexSandbox(), "--skip-git-repo-check", "--json", "--model", model, prompt)
+	cmd.Dir = codexWorkdir()
 	out, err := cmd.Output()
 	if err != nil {
 		if ctx.Err() != nil {
@@ -132,6 +133,11 @@ func execute(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/x-ndjson")
 	_, _ = w.Write(out)
+}
+
+func validAuthorization(r *http.Request) bool {
+	authorization := r.Header.Get("Authorization")
+	return authorization == "Bearer "+token || (alternateToken != "" && authorization == "Bearer "+alternateToken)
 }
 
 func chatCompletions(w http.ResponseWriter, r *http.Request) {
@@ -172,6 +178,10 @@ func chatCompletions(w http.ResponseWriter, r *http.Request) {
 		writeOpenAIError(w, status, "Codex CLI gagal: "+err.Error(), code)
 		return
 	}
+	if payload.Stream {
+		writeChatStream(w, model, content)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
@@ -190,6 +200,23 @@ func chatCompletions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func writeChatStream(w http.ResponseWriter, model, content string) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	chunks := []map[string]any{
+		{"id": "codex-" + uniqueID(), "object": "chat.completion.chunk", "created": 0, "model": model, "choices": []map[string]any{{"index": 0, "delta": map[string]string{"role": "assistant"}, "finish_reason": nil}}},
+		{"id": "codex-" + uniqueID(), "object": "chat.completion.chunk", "created": 0, "model": model, "choices": []map[string]any{{"index": 0, "delta": map[string]string{"content": content}, "finish_reason": nil}}},
+		{"id": "codex-" + uniqueID(), "object": "chat.completion.chunk", "created": 0, "model": model, "choices": []map[string]any{{"index": 0, "delta": map[string]string{}, "finish_reason": "stop"}}},
+	}
+	for _, chunk := range chunks {
+		body, _ := json.Marshal(chunk)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", body)
+	}
+	_, _ = io.WriteString(w, "data: [DONE]\n\n")
+}
+
 func normalizeModel(model string) string {
 	return strings.TrimPrefix(strings.TrimSpace(model), "codex/")
 }
@@ -199,7 +226,7 @@ func messagesPrompt(messages []chatMessage) (string, error) {
 	for _, message := range messages {
 		role := strings.TrimSpace(message.Role)
 		switch role {
-		case "system", "user", "assistant":
+		case "system", "developer", "user", "assistant", "tool":
 		default:
 			return "", fmt.Errorf("unsupported message role: %s", role)
 		}
@@ -220,8 +247,8 @@ func runCodex(parent context.Context, model, prompt string) (string, int, error)
 	if codexPath == "" {
 		return "", http.StatusBadGateway, fmt.Errorf("Codex CLI tidak tersedia; set CODEX_CLI_PATH")
 	}
-	cmd := exec.CommandContext(ctx, codexPath, "exec", "--ephemeral", "--sandbox", "read-only", "--skip-git-repo-check", "--json", "--model", model, prompt)
-	cmd.Dir = os.TempDir()
+	cmd := exec.CommandContext(ctx, codexPath, "exec", "--ephemeral", "--sandbox", codexSandbox(), "--skip-git-repo-check", "--json", "--model", model, prompt)
+	cmd.Dir = codexWorkdir()
 	out, err := cmd.Output()
 	if err != nil {
 		if ctx.Err() != nil {
@@ -255,6 +282,26 @@ func findCodex() string {
 		}
 	}
 	return codexPath
+}
+
+func codexSandbox() string {
+	mode := strings.TrimSpace(os.Getenv("CODEX_BRIDGE_SANDBOX"))
+	if mode == "read-only" || mode == "workspace-write" {
+		return mode
+	}
+	return "workspace-write"
+}
+
+func codexWorkdir() string {
+	workdir := strings.TrimSpace(os.Getenv("CODEX_BRIDGE_WORKDIR"))
+	if workdir == "" {
+		return "/Users/nununugraha/Documents/Kantor/Gitlab/LiveChatMobileAppNative/lib/feedback-hermess"
+	}
+	if info, err := os.Stat(workdir); err == nil && info.IsDir() {
+		return workdir
+	}
+	log.Printf("CODEX_BRIDGE_WORKDIR tidak valid, memakai folder feedback: %s", workdir)
+	return "/Users/nununugraha/Documents/Kantor/Gitlab/LiveChatMobileAppNative/lib/feedback-hermess"
 }
 
 func parseAgentMessage(body []byte) (string, error) {

@@ -82,3 +82,8 @@ Pilih `Codex → GPT-5.6 Luna (Codex CLI)` di Settings. ID aplikasinya
 
 Bridge harus tetap hidup selama Reformat AI. Jika berhenti, produk tetap
 tersimpan sebagai raw dan dapat direformat ulang setelah bridge aktif.
+
+Untuk Hermes Mobile, launcher membatasi Codex CLI ke folder host
+`LiveChatMobileAppNative/lib/feedback-hermess` dengan sandbox
+`workspace-write`. Bridge tetap memakai `read-only` dan temp dir jika
+`CODEX_BRIDGE_WORKDIR`/`CODEX_BRIDGE_SANDBOX` tidak diset.

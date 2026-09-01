@@ -70,11 +70,12 @@ paths:
         - { $ref: '#/components/parameters/Limit' }
         - { name: search, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string, enum: [raw, reformatted, ready] } }
-        - { name: content_model, in: query, schema: { type: string, enum: [trending, branded, cheap, capture] } }
+        - { name: content_model, in: query, schema: { type: string, enum: [trending, branded, cheap, curated, capture] } }
         - { name: source_category, in: query, schema: { type: string, enum: [raw_text, import_x, scrape_shopee] } }
         - { name: niche_id, in: query, schema: { type: string } }
         - { name: cluster, in: query, schema: { type: string } }
         - { name: clicked, in: query, description: Filter by synced click count, schema: { type: string, enum: [yes, no] } }
+        - { name: sort, in: query, description: Sort by saved date, schema: { type: string, enum: [newest, oldest], default: newest } }
       responses: { '200': { $ref: '#/components/responses/Success' } }
     post:
       tags: [Products]
@@ -97,6 +98,27 @@ paths:
       tags: [Products]
       summary: Delete product and dependent data
       responses: { '204': { description: Deleted } }
+  /api/products/purge-testing:
+    post:
+      tags: [Products]
+      summary: Purge testing products while retaining tracking identity
+      description: Removes raw/caption/media-heavy product data for Trending and Murah products, while preserving product ID, Shopee link, tracking tag, and synced analytics in a lightweight archive. This is separate from the normal product delete endpoint.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                models:
+                  type: array
+                  items: { type: string, enum: [trending, cheap] }
+                  default: [trending, cheap]
+                ids:
+                  type: array
+                  description: Product IDs selected for purge. When provided, only these products are purged.
+                  items: { type: string, format: uuid }
+      responses: { '200': { $ref: '#/components/responses/Success' } }
   /api/products/{id}/niches:
     parameters: [{ $ref: '#/components/parameters/ID' }]
     put:

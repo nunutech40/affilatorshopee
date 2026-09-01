@@ -34,6 +34,7 @@ Core MVP sudah diimplementasikan dan dideploy lokal via Docker/OrbStack. Jika re
 - `extension/x-helper/` — Chrome extension untuk composer X dan upload media saat share.
 - `extension/shopee-scraper/` — Chrome extension untuk scrape halaman detail Shopee (raw text, image, dan video) lalu mengirimkannya ke web app.
 - Setiap produk memiliki tracking tag unik alfanumerik untuk pencocokan report klik/penjualan affiliate.
+- Produk Trending/Murah yang masih testing dapat dipurge lewat checklist halaman aktif; media dan data berat dibersihkan, sementara ID, link, tracking tag, dan histori sync disimpan di archive ringan. Produk yang terbukti bagus dapat diberi model Curated.
 - `docs/` — PRD, TRD, prompt AI, handoff, dan dokumentasi operasional.
 
 ## Scrape produk Shopee

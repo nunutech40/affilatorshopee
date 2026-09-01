@@ -127,6 +127,7 @@ func main() {
 		api.Get("/products/{id}", products.Get)
 		api.Patch("/products/{id}", products.Patch)
 		api.Delete("/products/{id}", products.Delete)
+		api.Post("/products/purge-testing", products.PurgeTesting)
 		api.Get("/products/{id}/caption-variations", captions.ListVariations)
 		api.Patch("/caption-variations/{variationID}", captions.PatchVariation)
 		api.Delete("/caption-variations/{variationID}", captions.DeleteVariation)

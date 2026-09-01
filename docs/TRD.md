@@ -4,7 +4,7 @@ project: AffiliatorShopee
 status: aligned-with-prd
 ---
 
-> **Implementation update 2026-08-27:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI mendukung OpenRouter, 9router, OpenCode, dan Codex CLI bridge lokal; model ditemukan dinamis dengan fallback registry, request maksimal 10 produk, content model aktif `trending`, `branded`, dan `cheap`, serta media di-download ke local storage dan dikirim melalui extension. Scraper Shopee dan helper X dipisah menjadi dua extension MV3. Referensi handoff faktual: `PROJECT-HANDOFF.md` dan `CODEX-CLI-BRIDGE.md`.
+> **Implementation update 2026-08-31:** source code sudah melampaui sebagian requirement lama di dokumen ini. Runtime AI mendukung OpenRouter, 9router, OpenCode, dan Codex CLI bridge lokal; model ditemukan dinamis dengan fallback registry, request maksimal 10 produk, content model aktif `trending`, `branded`, `cheap`, dan `curated`, serta media di-download ke local storage dan dikirim melalui extension. Scraper Shopee dan helper X dipisah menjadi dua extension MV3. Fitur purge testing menyimpan archive ringan untuk tracking tag dan menghapus media lokal. Referensi handoff faktual: `PROJECT-HANDOFF.md` dan `CODEX-CLI-BRIDGE.md`.
 
 # Technical Requirements Document - AffiliatorShopee
 
@@ -184,7 +184,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 `image_url`, `image_urls`, dan `video_url` menyimpan URL eksternal yang diberikan user. Saat produk dibuat, backend mencoba men-download setiap URL ke local storage (`STORAGE_PATH/products/{product_id}/`) dan menyimpan metadata di tabel `product_media`. Form input mendukung banyak image URL via tombol `+ Add image URL` dan satu video URL (termasuk `.mp4`). Download yang gagal tidak membatalkan pembuatan produk; kegagalan dilaporkan pada response create.
 
-`content_model` menggantikan field `model` lama agar dapat mewakili pendekatan konten: `capture` (legacy, dipetakan sebagai Trending pada prompt), `cheap`, `trending`, dan `branded`. `capture_angle` hanya digunakan bila modelnya `capture`.
+`content_model` menggantikan field `model` lama agar dapat mewakili pendekatan konten: `cheap`, `trending`, `branded`, dan `curated`. `capture` tetap diterima backend untuk data legacy, tetapi tidak lagi ditawarkan pada form/filter baru. `capture_angle` hanya digunakan bila modelnya `capture`.
 
 Status `posted` tidak disimpan pada produk. Satu produk boleh dicatat dan diposting berulang kali; riwayatnya disimpan di `post_logs`.
 
@@ -195,7 +195,7 @@ Transisi status:
 - Edit manual dengan data lengkap: `raw` atau `reformatted` menjadi `ready`.
 - Posting tidak mengubah status product.
 
-Field minimum untuk status `ready` adalah `product_name`, `shopee_link`, `cluster`, `content_model` (`capture`/`cheap`/`trending`/`branded`), dan minimal satu dari `benefit_1`, `benefit_2`, atau `benefit_3`. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi. Caption hanya dapat dibuat untuk status `reformatted` atau `ready`.
+Field minimum untuk status `ready` adalah `product_name`, `shopee_link`, `cluster`, `content_model` (`capture`/`cheap`/`trending`/`branded`/`curated`), dan minimal satu dari `benefit_1`, `benefit_2`, atau `benefit_3`. Jika `content_model` adalah `capture`, `capture_angle` juga wajib diisi. Caption hanya dapat dibuat untuk status `reformatted` atau `ready`.
 
 ### 4.2 Tabel post_logs
 
@@ -274,7 +274,7 @@ Gunakan HTTP status code yang sesuai: `200` untuk sukses, `201` untuk create, `2
 ### 5.2 Products API
 
 ```http
-GET /api/products?cluster=&content_model=&status=&search=&page=1&limit=20
+GET /api/products?cluster=&content_model=&status=&search=&clicked=&sort=newest&page=1&limit=20
 ```
 
 Default `page` adalah 1 dan default `limit` adalah 20. `limit` minimum 1 dan maksimum 100. `search` melakukan pencarian case-insensitive pada `product_name`, `keyword`, `cluster`, dan `raw_text`.
@@ -531,6 +531,12 @@ Contoh menambah media:
 ```
 
 `PATCH /api/products/{id}` tetap digunakan untuk mengubah `shopee_link`. Setiap produk juga memiliki `tracking_tag` unik yang dibuat saat save dan ditampilkan di dashboard/detail untuk dicopy ke proses pembuatan link affiliate Shopee. Saat AI menghasilkan caption, backend mengirim link affiliate sebagai fakta eksplisit dan normalizer selalu mengganti URL Shopee di output dengan `shopee_link` produk.
+
+### Purge produk testing dan tracking archive
+
+`DELETE /api/products/{id}` adalah delete biasa dan perilakunya tidak berubah. Purge testing memakai endpoint terpisah `POST /api/products/purge-testing` dan hanya menerima model `trending` atau `cheap` serta daftar ID terpilih. UI checklist “semua” hanya memilih item yang terlihat pada halaman aktif; pindah halaman mengosongkan selection. Produk `curated` tidak menjadi target purge.
+
+Purge menghapus row produk beserta data berat dan media lokal, tetapi menyalin identitas minimum (`product_id`, `shopee_link`, `tracking_tag`, nama/model, dan agregat) ke `product_tracking_archive`. Import CSV klik dan komisi mencocokkan tracking tag ke `products` maupun archive. Dengan demikian event CSV tetap tercatat dan produk testing yang kembali mendapat klik/penjualan masih dapat dikenali untuk di-scrape ulang.
 
 ## 6. Caption Template Engine
 

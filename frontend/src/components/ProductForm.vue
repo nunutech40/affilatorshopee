@@ -25,7 +25,7 @@ function submit() {
     <div class="form-grid">
       <div class="field"><label>Product name</label><input v-model="form.product_name" class="input" /></div>
       <div class="field"><label>Cluster</label><input v-model="form.cluster" class="input" placeholder="contoh: rumah tangga" /></div>
-      <div class="field"><label>Content model</label><select v-model="form.content_model" class="select"><option value="">Pilih model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="capture">Captured (legacy)</option></select></div>
+      <div class="field"><label>Content model</label><select v-model="form.content_model" class="select"><option value="">Pilih model</option><option value="trending">Trending</option><option value="branded">Branded</option><option value="cheap">Murah</option><option value="curated">Curated</option></select></div>
       <div class="field"><label>Capture angle</label><select v-model="form.capture_angle" class="select"><option value="">Tidak ada</option><option value="search">Search</option><option value="reply">Reply</option><option value="trend">Trend</option><option value="problem">Problem</option></select></div>
       <div class="field"><label>Keyword</label><input v-model="form.keyword" class="input" /></div>
       <div class="field"><label>Problem</label><input v-model="form.problem" class="input" /></div>

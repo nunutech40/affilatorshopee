@@ -42,6 +42,7 @@ Codex bridge lokal sudah dites dari dalam container pada `http://host.docker.int
 ### Dashboard
 
 - List produk dengan filter status, content model, cluster, search, dan pagination.
+- Product Library mendukung model `Curated`. Purge testing terpisah dari delete biasa: user memilih item lewat checklist pada halaman aktif, lalu hanya ID terpilih dari model Trending atau Murah yang dipurge. Pindah halaman mengosongkan checklist.
 - Bulk pilih maksimal 10 produk.
 - Bulk `Reformat AI` untuk caption baru bila diperlukan; operasi individual tetap tersedia di detail.
 - Bulk `Buat varian caption` untuk variasi caption berbasis promo yang sudah ada.
@@ -61,6 +62,7 @@ Codex bridge lokal sudah dites dari dalam container pada `http://host.docker.int
 - Detail memiliki `Reformat AI` utama yang selalu membangun promo dari raw text, serta `Reformat varian caption` yang memakai promo saat ini; varian berlaku untuk produk raw maupun import X.
 - Source category ditampilkan sebagai `Raw text`, `Import X`, atau `Scrape Shopee`.
 - Setiap produk memiliki `tracking_tag` unik yang dibuat saat save; produk lama di-backfill saat migration 009.
+- Purge testing menghapus data berat dan media lokal, tetapi menyimpan ID, link Shopee, tracking tag, dan agregat analytics di `product_tracking_archive`. Import CSV klik/komisi tetap mencocokkan tag archive.
 - Tracking tag ditampilkan di dashboard/detail dan bisa dicopy untuk dipakai saat membuat link affiliate Shopee.
 - Loading spinner dan tombol terkunci selama AI bekerja.
 - Link affiliate Shopee bisa diedit dari detail.
@@ -133,6 +135,7 @@ Timeout HTTP AI saat ini 3 menit karena Ox Alpha dapat lebih lambat daripada req
 - `../backend/internal/service/product_service.go` — validasi status dan penyimpanan hasil AI.
 - `../backend/internal/db/migrations/008_add_source_category.up.sql`, `010_add_scrape_shopee_source.up.sql` — source category `raw_text`, `import_x`, atau `scrape_shopee`.
 - `../backend/internal/db/migrations/009_add_tracking_tag.up.sql` — tracking tag unik per produk.
+- `../backend/internal/db/migrations/023_product_tracking_archive.up.sql` — model `curated` dan archive tracking untuk purge produk testing.
 - `../frontend/src/views/HomeView.vue` — dashboard.
 - `../frontend/src/views/ProductDetailView.vue` — detail, model selector, reformat, share.
 - `../frontend/src/components/ModelSelector.vue` — dropdown AI bersama.

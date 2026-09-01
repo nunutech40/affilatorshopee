@@ -150,6 +150,13 @@ func (s *ProductService) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
 }
 
+func (s *ProductService) PurgeTesting(ctx context.Context, models, ids []string) (repository.PurgeResult, error) {
+	for i, value := range models {
+		models[i] = normalizeContentModel(value)
+	}
+	return s.repo.PurgeTesting(ctx, models, ids)
+}
+
 func (s *ProductService) MarkReady(ctx context.Context, id string) error {
 	product, err := s.GetByID(ctx, id)
 	if err != nil {
@@ -213,7 +220,7 @@ func validateProductFields(product *model.Product) error {
 	if product.CaptionTemplate != "direct_product" && product.CaptionTemplate != "keyword_recommendation" && product.CaptionTemplate != "problem_specific" && product.CaptionTemplate != "cheap_value" {
 		return fmt.Errorf("%w: caption_template tidak valid", ErrValidation)
 	}
-	if product.ContentModel != nil && *product.ContentModel != "capture" && *product.ContentModel != "cheap" && *product.ContentModel != "trending" && *product.ContentModel != "branded" {
+	if product.ContentModel != nil && *product.ContentModel != "capture" && *product.ContentModel != "cheap" && *product.ContentModel != "trending" && *product.ContentModel != "branded" && *product.ContentModel != "curated" {
 		return fmt.Errorf("%w: content_model tidak valid", ErrValidation)
 	}
 	if product.CaptureAngle != nil {

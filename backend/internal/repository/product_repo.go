@@ -26,8 +26,20 @@ type ProductListFilter struct {
 	Status         string
 	Search         string
 	Clicked        string
+	Sort           string
 	Page           int
 	Limit          int
+}
+
+type PurgeResult struct {
+	Count      int
+	LocalPaths []string
+}
+
+type purgeItem struct {
+	id, link, tag string
+	name, model   *string
+	paths         []string
 }
 
 func (r *ProductRepository) Create(ctx context.Context, product *model.Product) error {
@@ -126,6 +138,10 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		return nil, 0, err
 	}
 
+	orderBy := "p.created_at DESC"
+	if filter.Sort == "oldest" {
+		orderBy = "p.created_at ASC"
+	}
 	query := fmt.Sprintf(`SELECT
 		p.id, p.raw_text, p.cleaned_raw_text, p.reformatted_text, p.product_name, p.shopee_link, p.tracking_tag, p.image_url, p.image_urls,
 		p.video_url, p.normal_price, p.sale_price, p.discount_percent, p.rating,
@@ -136,7 +152,7 @@ func (r *ProductRepository) List(ctx context.Context, filter ProductListFilter) 
 		COALESCE((SELECT COUNT(*) FROM post_logs pl WHERE pl.product_id = p.id), 0) AS post_count,
 		(SELECT MAX(pl.posted_at) FROM post_logs pl WHERE pl.product_id = p.id) AS last_posted_at,
 		p.click_count, p.last_clicked_at, p.sales_count, p.pending_sales_count, p.commission_total
-	FROM products p WHERE %s ORDER BY p.created_at DESC LIMIT $%d OFFSET $%d`, whereClause, argPos, argPos+1)
+	FROM products p WHERE %s ORDER BY %s LIMIT $%d OFFSET $%d`, whereClause, orderBy, argPos, argPos+1)
 	args = append(args, filter.Limit, (filter.Page-1)*filter.Limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -226,6 +242,84 @@ func (r *ProductRepository) update(ctx context.Context, product *model.Product, 
 func (r *ProductRepository) Delete(ctx context.Context, id string) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM products WHERE id=$1`, id)
 	return err
+}
+
+func (r *ProductRepository) PurgeTesting(ctx context.Context, models, ids []string) (PurgeResult, error) {
+	if len(models) == 0 {
+		models = []string{"trending", "cheap"}
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return PurgeResult{}, err
+	}
+	defer tx.Rollback()
+	where := `p.content_model = ANY($1) AND p.content_model <> 'curated'`
+	args := []interface{}{pq.Array(models)}
+	if len(ids) > 0 {
+		where += ` AND p.id = ANY($2)`
+		args = append(args, pq.Array(ids))
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT p.id, p.shopee_link, p.tracking_tag, p.product_name, p.content_model, pm.local_path
+		FROM products p LEFT JOIN product_media pm ON pm.product_id=p.id
+		WHERE `+where, args...)
+	if err != nil {
+		return PurgeResult{}, err
+	}
+	items := map[string]*purgeItem{}
+	for rows.Next() {
+		var id, link, tag string
+		var name, model, path sql.NullString
+		if err := rows.Scan(&id, &link, &tag, &name, &model, &path); err != nil {
+			rows.Close()
+			return PurgeResult{}, err
+		}
+		v := items[id]
+		if v == nil {
+			v = &purgeItem{id: id, link: link, tag: tag}
+			if name.Valid {
+				v.name = &name.String
+			}
+			if model.Valid {
+				v.model = &model.String
+			}
+			items[id] = v
+		}
+		if path.Valid && path.String != "" {
+			v.paths = append(v.paths, path.String)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return PurgeResult{}, err
+	}
+	rows.Close()
+	result := PurgeResult{}
+	for _, v := range items {
+		_, err = tx.ExecContext(ctx, `INSERT INTO product_tracking_archive (product_id, shopee_link, tracking_tag, product_name, content_model)
+			VALUES ($1,$2,$3,$4,$5) ON CONFLICT (product_id) DO UPDATE SET shopee_link=EXCLUDED.shopee_link, tracking_tag=EXCLUDED.tracking_tag, product_name=EXCLUDED.product_name, content_model=EXCLUDED.content_model, deleted_at=CURRENT_TIMESTAMP`, v.id, v.link, v.tag, v.name, v.model)
+		if err != nil {
+			return PurgeResult{}, err
+		}
+		result.LocalPaths = append(result.LocalPaths, v.paths...)
+		result.Count++
+	}
+	if len(items) > 0 {
+		if _, err = tx.ExecContext(ctx, `DELETE FROM products WHERE id = ANY($1)`, pq.Array(keys(items))); err != nil {
+			return PurgeResult{}, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return PurgeResult{}, err
+	}
+	return result, nil
+}
+
+func keys(items map[string]*purgeItem) []string {
+	out := make([]string, 0, len(items))
+	for id := range items {
+		out = append(out, id)
+	}
+	return out
 }
 
 func (r *ProductRepository) UpdateStatus(ctx context.Context, id, status string) error {

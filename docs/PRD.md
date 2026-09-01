@@ -61,6 +61,7 @@ Web app dengan fitur:
 - Detail Bank Konten menyediakan varian manual tanpa AI: user menambah editor kosong, menulis/copas sendiri, menyalin raw atau varian, dan menyimpan setiap varian secara terpisah.
 - Riset X menggunakan extension untuk menangkap post/thread utama beserta media utama; user tetap mereview sebelum insert ke database.
 - Library Produk dapat difilter berdasarkan produk yang sudah atau belum mendapat klik dari hasil sync CSV Shopee.
+- Library Produk memiliki model `Curated` untuk produk testing yang terbukti bagus. Produk Trending/Murah dapat dipurge secara bulk berdasarkan checklist pada halaman aktif agar media dan data berat tidak memenuhi storage.
 - Scraper Shopee menangkap harga aktif, harga normal/coret, dan diskon dari blok harga agar prompt branded dapat memakai deal faktual.
 
 ## 7. Flowchart Bisnis
@@ -251,7 +252,7 @@ flowchart TD
 | cluster | string | Kategori/cluster |
 | keyword | string | Keyword utama untuk hook |
 | problem | string | Problem yang ingin diangkat |
-| content_model | enum | capture legacy / cheap / trending / branded |
+| content_model | enum | cheap / trending / branded / curated; `capture` tetap diterima untuk data legacy |
 | capture_angle | enum | search / reply / trend / problem |
 | benefit_1 | string | Benefit utama |
 | benefit_2 | string | Benefit kedua |

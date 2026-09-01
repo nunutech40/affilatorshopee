@@ -64,6 +64,11 @@ type productPatch struct {
 	Status           *string   `json:"status"`
 }
 
+type purgeTestingRequest struct {
+	Models []string `json:"models"`
+	IDs    []string `json:"ids"`
+}
+
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	page := parsePositive(query.Get("page"), 1)
@@ -73,7 +78,7 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	items, total, err := h.products.List(r.Context(), repository.ProductListFilter{
 		Cluster: query.Get("cluster"), NicheID: query.Get("niche_id"), ContentModel: query.Get("content_model"), SourceCategory: query.Get("source_category"),
-		Status: query.Get("status"), Search: query.Get("search"), Clicked: query.Get("clicked"), Page: page, Limit: limit,
+		Status: query.Get("status"), Search: query.Get("search"), Clicked: query.Get("clicked"), Sort: query.Get("sort"), Page: page, Limit: limit,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal mengambil produk")
@@ -180,6 +185,22 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProductHandler) PurgeTesting(w http.ResponseWriter, r *http.Request) {
+	request := purgeTestingRequest{}
+	if r.Body != nil {
+		_ = decodeJSON(w, r, &request)
+	}
+	result, err := h.products.PurgeTesting(r.Context(), request.Models, request.IDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "DATABASE_ERROR", "Gagal menghapus produk testing")
+		return
+	}
+	if h.media != nil {
+		h.media.DeleteLocalPaths(result.LocalPaths)
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"purged": result.Count, "media_deleted": len(result.LocalPaths)})
 }
 
 func applyProductPatch(product *model.Product, patch productPatch) {
